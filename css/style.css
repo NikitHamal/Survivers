@@ -1,0 +1,453 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #0a0a15;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
+}
+
+#gameContainer {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+#gameCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    background: #1a2a1a;
+}
+
+#ui {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: #fff;
+    font-size: 11px;
+    pointer-events: none;
+    user-select: none;
+}
+
+.ui-panel {
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid #4a4a6a;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    min-width: 130px;
+}
+
+.ui-panel h3 {
+    color: #ffd700;
+    margin-bottom: 4px;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+}
+
+.resource-bar {
+    display: flex;
+    align-items: center;
+    margin: 2px 0;
+    font-size: 10px;
+}
+
+.resource-icon {
+    width: 10px;
+    height: 10px;
+    margin-right: 5px;
+    border-radius: 2px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+#minimap {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    border: 2px solid #4a4a6a;
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+#minimapCanvas {
+    image-rendering: pixelated;
+    display: block;
+}
+
+#bottomPanel {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+    pointer-events: auto;
+}
+
+.action-btn {
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid #4a4a6a;
+    color: #fff;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 9px;
+    transition: all 0.15s;
+    border-radius: 3px;
+}
+
+.action-btn:hover {
+    background: #3a3a5a;
+    border-color: #ffd700;
+}
+
+.action-btn:active {
+    transform: scale(0.95);
+}
+
+.action-btn .key {
+    color: #ffd700;
+    font-weight: bold;
+}
+
+#survivorPanel {
+    position: absolute;
+    bottom: 55px;
+    left: 10px;
+    color: #fff;
+    font-size: 9px;
+    max-height: 150px;
+    overflow-y: auto;
+    pointer-events: auto;
+}
+
+.survivor-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 2px 0;
+    padding: 3px 5px;
+    background: rgba(50, 50, 80, 0.6);
+    border-radius: 3px;
+}
+
+.survivor-icon {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+#buildMenu,
+#survivorMenu {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(10, 10, 20, 0.98);
+    border: 3px solid #ffd700;
+    padding: 20px;
+    display: none;
+    z-index: 100;
+    max-height: 70vh;
+    overflow-y: auto;
+    pointer-events: auto;
+    border-radius: 8px;
+    min-width: 320px;
+}
+
+.menu-title {
+    color: #ffd700;
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.menu-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.menu-item {
+    background: #1a1a2a;
+    border: 2px solid #3a3a5a;
+    padding: 10px 8px;
+    text-align: center;
+    cursor: pointer;
+    color: #fff;
+    font-size: 9px;
+    border-radius: 4px;
+    transition: all 0.15s;
+}
+
+.menu-item:hover {
+    border-color: #ffd700;
+    background: #2a2a4a;
+    transform: translateY(-2px);
+}
+
+.menu-item.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.menu-item.disabled:hover {
+    transform: none;
+    border-color: #3a3a5a;
+}
+
+.close-btn {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    color: #ff6666;
+    cursor: pointer;
+    font-size: 18px;
+    transition: transform 0.15s;
+}
+
+.close-btn:hover {
+    transform: scale(1.2);
+}
+
+#notification {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(10, 10, 20, 0.98);
+    border: 2px solid #ffd700;
+    padding: 20px 30px;
+    color: #fff;
+    text-align: center;
+    display: none;
+    z-index: 150;
+    border-radius: 8px;
+    max-width: 350px;
+}
+
+.notif-btn {
+    margin: 12px 5px 0;
+    padding: 8px 20px;
+    background: #3a3a5a;
+    border: 2px solid #5a5a7a;
+    color: #fff;
+    cursor: pointer;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    transition: all 0.15s;
+}
+
+.notif-btn:hover {
+    background: #5a5a7a;
+}
+
+.notif-btn.accept {
+    background: #2d5a2d;
+    border-color: #4a8a4a;
+}
+
+.notif-btn.accept:hover {
+    background: #3d7a3d;
+}
+
+.notif-btn.reject {
+    background: #5a2d2d;
+    border-color: #8a4a4a;
+}
+
+.notif-btn.reject:hover {
+    background: #7a3d3d;
+}
+
+#inventory {
+    position: absolute;
+    bottom: 55px;
+    right: 10px;
+    pointer-events: auto;
+}
+
+.inv-slot {
+    width: 32px;
+    height: 32px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid #4a4a6a;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 1px;
+    cursor: pointer;
+    position: relative;
+    border-radius: 3px;
+    transition: border-color 0.15s;
+}
+
+.inv-slot:hover {
+    border-color: #8a8aaa;
+}
+
+.inv-slot.selected {
+    border-color: #00ff00;
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.4);
+}
+
+.inv-count {
+    position: absolute;
+    bottom: 1px;
+    right: 2px;
+    font-size: 8px;
+    color: #fff;
+    text-shadow: 1px 1px #000;
+}
+
+#dayNightOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    transition: background 3s ease;
+    border-radius: 0;
+}
+
+.stat-bar {
+    width: 100px;
+    height: 8px;
+    background: #222;
+    border: 1px solid #444;
+    margin-top: 3px;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.stat-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+#startScreen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, #0a0a15 0%, #1a1a2e 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    color: #fff;
+}
+
+#startScreen h1 {
+    color: #ffd700;
+    font-size: 28px;
+    margin-bottom: 8px;
+    text-shadow: 2px 2px 4px #000;
+    letter-spacing: 2px;
+}
+
+#startScreen p {
+    max-width: 450px;
+    text-align: center;
+    margin: 8px 0;
+    font-size: 11px;
+    color: #aaa;
+    line-height: 1.5;
+}
+
+#startBtn {
+    margin-top: 25px;
+    padding: 12px 35px;
+    font-size: 16px;
+    background: linear-gradient(180deg, #3d7a3d 0%, #2d5a2d 100%);
+    border: 3px solid #ffd700;
+    color: #fff;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    border-radius: 6px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+#startBtn:hover {
+    background: linear-gradient(180deg, #4d9a4d 0%, #3d7a3d 100%);
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+.controls-info {
+    margin-top: 25px;
+    font-size: 10px;
+    color: #666;
+    text-align: center;
+    line-height: 1.8;
+}
+
+.controls-info span {
+    color: #ffd700;
+}
+
+#gameOver {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(80, 0, 0, 0.95);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    color: #fff;
+}
+
+#gameOver h1 {
+    color: #ff4444;
+    font-size: 42px;
+    text-shadow: 2px 2px 4px #000;
+}
+
+#gameOver p {
+    margin: 10px 0;
+    color: #ccc;
+}
+
+#fpsCounter {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #888;
+    font-size: 10px;
+    pointer-events: none;
+}
+
+#coordsDisplay {
+    position: absolute;
+    bottom: 10px;
+    right: 120px;
+    color: #666;
+    font-size: 9px;
+    pointer-events: none;
+}

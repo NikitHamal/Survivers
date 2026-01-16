@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jungle Survivors - Zombie Apocalypse</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="dayNightOverlay"></div>
+
+        <div id="fpsCounter">FPS: 60</div>
+        <div id="coordsDisplay">X: 0 Y: 0</div>
+
+        <div id="ui">
+            <div class="ui-panel">
+                <h3>☀️ Day <span id="dayCount">1</span> - <span id="timeOfDay">Morning</span></h3>
+                <div class="stat-bar" style="width:110px;height:6px;">
+                    <div id="timeFill" class="stat-fill"
+                        style="width:0%;background:linear-gradient(90deg,#ff9900,#ffd700);"></div>
+                </div>
+            </div>
+            <div class="ui-panel">
+                <h3>❤️ Player Stats</h3>
+                <div style="font-size:10px;">HP: <span id="healthText">100</span>/<span id="maxHealthText">100</span>
+                </div>
+                <div class="stat-bar">
+                    <div id="healthFill" class="stat-fill"
+                        style="width:100%;background:linear-gradient(90deg,#cc2222,#ff4444);"></div>
+                </div>
+                <div style="font-size:10px;margin-top:3px;">Hunger: <span id="hungerText">100</span></div>
+                <div class="stat-bar">
+                    <div id="hungerFill" class="stat-fill"
+                        style="width:100%;background:linear-gradient(90deg,#cc6600,#ff9944);"></div>
+                </div>
+                <div style="font-size:10px;margin-top:3px;">Lv.<span id="levelText">1</span> - XP: <span
+                        id="expText">0</span>/<span id="expNeededText">100</span></div>
+                <div class="stat-bar">
+                    <div id="expFill" class="stat-fill"
+                        style="width:0%;background:linear-gradient(90deg,#22aa22,#44ff44);"></div>
+                </div>
+            </div>
+            <div class="ui-panel">
+                <h3>📦 Resources</h3>
+                <div class="resource-bar">
+                    <div class="resource-icon" style="background:#8B4513"></div>Wood: <span id="woodCount">0</span>
+                </div>
+                <div class="resource-bar">
+                    <div class="resource-icon" style="background:#707070"></div>Stone: <span id="stoneCount">0</span>
+                </div>
+                <div class="resource-bar">
+                    <div class="resource-icon" style="background:#5a5a7a"></div>Iron: <span id="ironCount">0</span>
+                </div>
+                <div class="resource-bar">
+                    <div class="resource-icon" style="background:#dd5555"></div>Food: <span id="foodCount">20</span>
+                </div>
+            </div>
+            <div class="ui-panel">
+                <h3>👥 Survivors: <span id="survivorCount">1</span></h3>
+                <div style="font-size:9px;color:#888;">Press [T] to manage</div>
+            </div>
+        </div>
+
+        <div id="minimap">
+            <canvas id="minimapCanvas" width="120" height="120"></canvas>
+        </div>
+
+        <div id="survivorPanel" class="ui-panel">
+            <h3>Team</h3>
+            <div id="survivorList"></div>
+        </div>
+
+        <div id="inventory">
+            <div class="ui-panel">
+                <h3>Hotbar [1-5]</h3>
+                <div id="invSlots"></div>
+            </div>
+        </div>
+
+        <div id="bottomPanel">
+            <button class="action-btn" onclick="openBuildMenu()"><span class="key">[B]</span> Build</button>
+            <button class="action-btn" onclick="toggleSurvivorMenu()"><span class="key">[T]</span> Team</button>
+            <button class="action-btn" onclick="toggleFollow()"><span class="key">[F]</span> Follow</button>
+            <button class="action-btn" onclick="useItem()"><span class="key">[E]</span> Use</button>
+            <button class="action-btn" onclick="attackAction()"><span class="key">[SPACE]</span> Attack</button>
+        </div>
+
+        <div id="buildMenu">
+            <span class="close-btn" onclick="closeBuildMenu()">✕</span>
+            <div class="menu-title">🔨 Build Structures</div>
+            <div class="menu-grid" id="buildGrid"></div>
+            <div style="margin-top:12px;font-size:9px;color:#888;text-align:center;">Click on ground near player to
+                place</div>
+        </div>
+
+        <div id="survivorMenu">
+            <span class="close-btn" onclick="toggleSurvivorMenu()">✕</span>
+            <div class="menu-title">👥 Team Management</div>
+            <div id="roleAssignments"></div>
+        </div>
+
+        <div id="notification">
+            <div id="notifText"></div>
+            <div id="notifButtons"></div>
+        </div>
+
+        <div id="startScreen">
+            <h1>🌴 JUNGLE SURVIVORS 🧟</h1>
+            <p>The world has fallen to zombies. You are one of the few survivors, stranded in a mysterious jungle.</p>
+            <p>Build your base, gather resources, recruit survivors, and survive the deadly nights!</p>
+            <p style="color:#ff6666;">⚠️ Zombies attack at night - prepare your defenses!</p>
+            <div class="controls-info">
+                <span>WASD</span> or <span>Arrow Keys</span> - Move<br>
+                <span>SPACE</span> - Attack | <span>E</span> - Interact/Eat<br>
+                <span>B</span> - Build | <span>T</span> - Team Management<br>
+                <span>F</span> - Toggle Follow | <span>M</span> - Expand Minimap<br>
+                <span>Click</span> - Harvest/Place Buildings
+            </div>
+            <button id="startBtn" onclick="startGame()">▶ START SURVIVAL</button>
+        </div>
+
+        <div id="gameOver">
+            <h1>GAME OVER</h1>
+            <p id="deathReason">You have perished...</p>
+            <p>Survived <span id="finalDays">0</span> days</p>
+            <button id="startBtn" onclick="location.reload()" style="margin-top:20px;">🔄 Try Again</button>
+        </div>
+    </div>
+
+    <!-- Game Scripts -->
+    <script src="js/constants.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/world.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/entities.js"></script>
+    <script src="js/render.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/main.js"></script>
+</body>
+
+</html>
