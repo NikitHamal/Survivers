@@ -4,6 +4,7 @@ function updateUI() {
     document.getElementById('stoneCount').textContent = resources.stone;
     document.getElementById('ironCount').textContent = resources.iron;
     document.getElementById('foodCount').textContent = resources.food;
+    document.getElementById('survivorCount').textContent = survivors.length;
 
     document.getElementById('healthText').textContent = Math.floor(player.health);
     document.getElementById('maxHealthText').textContent = player.maxHealth;

@@ -29,53 +29,75 @@
         <div id="fpsCounter">FPS: 60</div>
         <div id="coordsDisplay">X: 0 Y: 0</div>
 
-        <div id="ui">
-            <div class="ui-panel">
-                <h3><i class="material-icons">wb_sunny</i> Day <span id="dayCount">1</span> - <span
-                        id="timeOfDay">Morning</span></h3>
-                <div class="stat-bar" id="timeBar">
-                    <div id="timeFill" class="stat-fill"
-                        style="width:0%;background:linear-gradient(90deg,#ff9900,#ffd700);"></div>
+        <div id="topBar">
+            <div class="top-left">
+                <span class="logo">JUNGLE <span class="logo-accent">SURVIVORS</span></span>
+            </div>
+
+            <div class="top-center">
+                <div class="day-info">
+                    <i class="material-icons">wb_sunny</i>
+                    <span id="timeOfDay">Morning</span>
+                    <span class="day-badge">Day <span id="dayCount">1</span></span>
+                </div>
+                <div class="time-progress">
+                    <div id="timeFill" class="time-fill" style="width:0%;"></div>
                 </div>
             </div>
-            <div class="ui-panel">
-                <h3><i class="material-icons">favorite</i> Player Stats</h3>
-                <div class="stat-text">HP: <span id="healthText">100</span>/<span id="maxHealthText">100</span>
+
+            <div class="top-right">
+                <div class="top-resource">
+                    <i class="fa-solid fa-tree"></i>
+                    <span id="woodCount">0</span>
                 </div>
-                <div class="stat-bar">
-                    <div id="healthFill" class="stat-fill"
-                        style="width:100%;background:linear-gradient(90deg,#cc2222,#ff4444);"></div>
+                <div class="top-resource">
+                    <i class="fa-solid fa-mountain"></i>
+                    <span id="stoneCount">0</span>
                 </div>
-                <div class="stat-text">Hunger: <span id="hungerText">100</span></div>
-                <div class="stat-bar">
-                    <div id="hungerFill" class="stat-fill"
-                        style="width:100%;background:linear-gradient(90deg,#cc6600,#ff9944);"></div>
+                <div class="top-resource">
+                    <i class="fa-solid fa-cube"></i>
+                    <span id="ironCount">0</span>
                 </div>
-                <div class="stat-text">Lv.<span id="levelText">1</span> - XP: <span id="expText">0</span>/<span
-                        id="expNeededText">100</span></div>
-                <div class="stat-bar">
-                    <div id="expFill" class="stat-fill"
-                        style="width:0%;background:linear-gradient(90deg,#22aa22,#44ff44);"></div>
+                <div class="top-resource">
+                    <i class="fa-solid fa-apple-whole"></i>
+                    <span id="foodCount">20</span>
                 </div>
-            </div>
-            <div class="ui-panel">
-                <h3><i class="material-icons">inventory_2</i> Resources</h3>
-                <div class="resource-bar">
-                    <div class="resource-icon" style="background:#8B4513"></div>Wood: <span id="woodCount">0</span>
-                </div>
-                <div class="resource-bar">
-                    <div class="resource-icon" style="background:#707070"></div>Stone: <span id="stoneCount">0</span>
-                </div>
-                <div class="resource-bar">
-                    <div class="resource-icon" style="background:#5a5a7a"></div>Iron: <span id="ironCount">0</span>
-                </div>
-                <div class="resource-bar">
-                    <div class="resource-icon" style="background:#dd5555"></div>Food: <span id="foodCount">20</span>
+                <div class="top-resource">
+                    <i class="fa-solid fa-users"></i>
+                    <span id="survivorCount">1</span>
                 </div>
             </div>
-            <div class="ui-panel">
-                <h3><i class="material-icons">groups</i> Survivors: <span id="survivorCount">1</span></h3>
-                <div class="survivor-hint">Press [T] to manage</div>
+        </div>
+
+        <div id="statsUI">
+            <div class="stat-group">
+                <div class="stat-header">
+                    <i class="material-icons">favorite</i>
+                    <span>HP: <span id="healthText">100</span>/<span id="maxHealthText">100</span></span>
+                </div>
+                <div class="stat-bar-small">
+                    <div id="healthFill" class="stat-fill-small" style="width:100%; background:#ff4757;"></div>
+                </div>
+            </div>
+            <div class="stat-group">
+                <div class="stat-header">
+                    <i class="material-icons">restaurant</i>
+                    <span>Hunger: <span id="hungerText">100</span></span>
+                </div>
+                <div class="stat-bar-small">
+                    <div id="hungerFill" class="stat-fill-small" style="width:100%; background:#ffa502;"></div>
+                </div>
+            </div>
+            <div class="stat-group">
+                <div class="stat-header">
+                    <i class="material-icons">trending_up</i>
+                    <span>Level <span id="levelText">1</span> <span
+                            style="font-size: 8px; opacity: 0.6; margin-left: auto;">XP: <span
+                                id="expText">0</span>/<span id="expNeededText">100</span></span></span>
+                </div>
+                <div class="stat-bar-small">
+                    <div id="expFill" class="stat-fill-small" style="width:0%; background:#2ed573;"></div>
+                </div>
             </div>
         </div>
 
