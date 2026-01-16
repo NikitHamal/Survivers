@@ -443,3 +443,199 @@ function renderMinimap() {
     minimapCtx.lineWidth = 2;
     minimapCtx.strokeRect(0, 0, size, size);
 }
+// ============= NEW SYSTEM UI HANDLERS =============
+
+function toggleQuestMenu() {
+    const menu = document.getElementById('questMenu');
+    if (!menu) return;
+
+    if (menu.style.display === 'block') {
+        menu.style.display = 'none';
+        gameState.paused = false;
+    } else {
+        closeAllMenus();
+        menu.style.display = 'block';
+        gameState.paused = true;
+        if (typeof QuestSystem !== 'undefined') QuestSystem.updateQuestUI();
+    }
+}
+
+function toggleSkillMenu() {
+    const menu = document.getElementById('skillMenu');
+    if (!menu) return;
+
+    if (menu.style.display === 'block') {
+        menu.style.display = 'none';
+        gameState.paused = false;
+    } else {
+        closeAllMenus();
+        menu.style.display = 'block';
+        gameState.paused = true;
+        if (typeof SkillSystem !== 'undefined') {
+            SkillSystem.updateSkillUI();
+            SkillSystem.updatePerkUI();
+        }
+    }
+}
+
+function showSkillTab(tab) {
+    const skillGrid = document.getElementById('skillTreeGrid');
+    const perkGrid = document.getElementById('perkTreeGrid');
+    const tabs = document.querySelectorAll('.skill-tabs .tab-btn');
+
+    tabs.forEach(t => t.classList.remove('active'));
+
+    if (tab === 'skills') {
+        skillGrid.style.display = 'grid';
+        perkGrid.style.display = 'none';
+        tabs[0].classList.add('active');
+    } else {
+        skillGrid.style.display = 'none';
+        perkGrid.style.display = 'grid';
+        tabs[1].classList.add('active');
+    }
+}
+
+function toggleAchievementMenu() {
+    const menu = document.getElementById('achievementMenu');
+    if (!menu) return;
+
+    if (menu.style.display === 'block') {
+        menu.style.display = 'none';
+        gameState.paused = false;
+    } else {
+        closeAllMenus();
+        menu.style.display = 'block';
+        gameState.paused = true;
+        updateAchievementUI();
+    }
+}
+
+function updateAchievementUI() {
+    if (typeof AchievementSystem === 'undefined') return;
+
+    const container = document.getElementById('achievementList');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    const achievements = AchievementSystem.getAchievementList();
+    const count = AchievementSystem.getUnlockedCount();
+    const total = AchievementSystem.getTotalCount();
+    const percent = AchievementSystem.getCompletionPercent();
+
+    // These elements exist in index.html
+    const countEl = document.getElementById('achievedCount');
+    const totalEl = document.getElementById('achievedTotal');
+    const percentEl = document.getElementById('achievedPercent');
+
+    if (countEl) countEl.textContent = count;
+    if (totalEl) totalEl.textContent = total;
+    if (percentEl) percentEl.textContent = Math.round(percent);
+
+    achievements.forEach(a => {
+        const div = document.createElement('div');
+        div.className = `achievement-item ${a.unlocked ? 'unlocked' : ''}`;
+
+        div.innerHTML = `
+            <div class="achievement-icon">${a.unlocked ? a.icon : '❓'}</div>
+            <div class="achievement-details">
+                <span class="achievement-name">${a.name} ${a.tier > 1 ? '(Tier ' + a.tier + ')' : ''}</span>
+                <span class="achievement-desc">${a.description}</span>
+                <div class="achievement-progress-container">
+                    Progress: ${a.progress}/${a.maxProgress}
+                    <div class="achievement-bar">
+                        <div class="achievement-fill" style="width: ${a.progressPercent}%"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(div);
+    });
+}
+
+function toggleCraftingMenu() {
+    const menu = document.getElementById('craftingMenu');
+    if (!menu) return;
+
+    if (menu.style.display === 'block') {
+        menu.style.display = 'none';
+        gameState.paused = false;
+    } else {
+        closeAllMenus();
+        menu.style.display = 'block';
+        gameState.paused = true;
+        if (typeof CraftingSystem !== 'undefined') {
+            CraftingSystem.updateRecipeUI();
+            CraftingSystem.updateResearchUI();
+        }
+    }
+}
+
+function showCraftingTab(tab) {
+    const recipes = document.getElementById('recipeList');
+    const research = document.getElementById('researchList');
+    const tabs = document.querySelectorAll('#craftingMenu .tab-btn');
+
+    tabs.forEach(t => t.classList.remove('active'));
+
+    if (tab === 'recipes') {
+        recipes.style.display = 'grid';
+        research.style.display = 'none';
+        tabs[0].classList.add('active');
+    } else {
+        recipes.style.display = 'none';
+        research.style.display = 'grid';
+        tabs[1].classList.add('active');
+    }
+}
+
+function toggleEquipmentMenu() {
+    const menu = document.getElementById('equipmentMenu');
+    if (!menu) return;
+
+    if (menu.style.display === 'block') {
+        menu.style.display = 'none';
+        gameState.paused = false;
+    } else {
+        closeAllMenus();
+        menu.style.display = 'block';
+        gameState.paused = true;
+        if (typeof EquipmentSystem !== 'undefined') {
+            EquipmentSystem.updateEquipmentUI();
+            EquipmentSystem.updateInventoryUI();
+            EquipmentSystem.updateStatsUI();
+        }
+    }
+}
+
+function closeAllMenus() {
+    const menus = ['buildMenu', 'survivorMenu', 'questMenu', 'skillMenu', 'achievementMenu', 'craftingMenu', 'equipmentMenu'];
+    menus.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    if (typeof closeBuildMenu === 'function') closeBuildMenu();
+}
+
+function interact() {
+    // Basic interaction: eat food if available
+    if (resources.food >= 5 && player.health < player.maxHealth) {
+        resources.food -= 5;
+        player.health = Math.min(player.maxHealth, player.health + 10);
+        showNotification("Ate some food. Health +10", []);
+    } else if (resources.food < 5) {
+        showNotification("Not enough food!", []);
+    } else {
+        showNotification("Health is full.", []);
+    }
+}
+
+function attackAction() {
+    // Set space key as pressed in input state to trigger attack in game loop
+    if (typeof inputState !== 'undefined') {
+        inputState.space = true;
+        // The attack logic in game.js handles the actual hit
+    }
+}

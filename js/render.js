@@ -221,6 +221,24 @@ function render(alpha = 1) {
     // Darkness / Lighting System (Re-enabled as requested)
     renderDarkness(ctx, camX, camY, alpha);
 
+    // Weather Visuals
+    if (typeof WeatherSystem !== 'undefined') {
+        WeatherSystem.drawWeatherEffects(ctx);
+    }
+
+    // System World UI (Markers, Boss Bars, Horde Status)
+    if (typeof EventSystem !== 'undefined') {
+        EventSystem.drawEventMarkers(ctx);
+    }
+
+    if (typeof BossSystem !== 'undefined') {
+        BossSystem.drawBossUI(ctx);
+    }
+
+    if (typeof HordeSystem !== 'undefined') {
+        HordeSystem.drawHordeUI(ctx);
+    }
+
     // Post-processing effects
     renderPostProcessing();
 
@@ -233,7 +251,8 @@ function render(alpha = 1) {
         const tile = getTile(Math.floor(player.x), Math.floor(player.y));
         debugText += ` | Tile: ${tile} | Solid: ${isSolid(tile)}`;
     }
-    document.getElementById('coordsDisplay').textContent = debugText;
+    const coordsEl = document.getElementById('coordsDisplay');
+    if (coordsEl) coordsEl.textContent = debugText;
 }
 
 function renderEntityShadow(x, y, w, h) {
@@ -275,8 +294,21 @@ function renderGroundLayer(tile, sx, sy, wx, wy) {
     } else if (tile === TILES.WATER) {
         renderWater(px, py, s, wx, wy);
     } else {
-        // Enhanced grass
-        renderGrass(px, py, s, wx, wy, tile);
+        // Enhanced grass with Biome support
+        if (typeof BiomeSystem !== 'undefined') {
+            const biomeColor = BiomeSystem.getTileColor(tile, wx, wy);
+            ctx.fillStyle = biomeColor;
+            ctx.fillRect(px, py, s, s);
+
+            // Add biome-specific patterns
+            const pattern = seededRandom(wx, wy);
+            if (pattern > 0.7) {
+                ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                ctx.fillRect(px + s * 0.2, py + s * 0.2, s * 0.6, s * 0.6);
+            }
+        } else {
+            renderGrass(px, py, s, wx, wy, tile);
+        }
     }
 }
 

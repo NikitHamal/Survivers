@@ -10,7 +10,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/hud.css">
+    <link rel="stylesheet" href="css/menus.css">
+    <link rel="stylesheet" href="css/systems.css">
+    <link rel="stylesheet" href="css/overlays.css">
+    <link rel="stylesheet" href="css/debug.css">
 </head>
 
 <body>
@@ -77,7 +84,7 @@
             <div id="minimapHint">Press [M] to Toggle</div>
         </div>
 
-        <div id="survivorPanel" class="ui-panel">
+        <div id="survivorPanel" class="ui-panel" style="display:none;">
             <h3>Team</h3>
             <div id="survivorList"></div>
         </div>
@@ -91,9 +98,14 @@
 
         <div id="bottomPanel">
             <button class="action-btn" onclick="openBuildMenu()"><span class="key">[B]</span> Build</button>
+            <button class="action-btn" onclick="toggleQuestMenu()"><span class="key">[Q]</span> Quests</button>
+            <button class="action-btn" onclick="toggleSkillMenu()"><span class="key">[K]</span> Skills</button>
+            <button class="action-btn" onclick="toggleCraftingMenu()"><span class="key">[C]</span> Craft</button>
+            <button class="action-btn" onclick="toggleEquipmentMenu()"><span class="key">[I]</span> Gear</button>
+            <button class="action-btn" onclick="toggleAchievementMenu()"><span class="key">[J]</span> Trophies</button>
             <button class="action-btn" onclick="toggleSurvivorMenu()"><span class="key">[T]</span> Team</button>
             <button class="action-btn" onclick="toggleFollow()"><span class="key">[F]</span> Follow</button>
-            <button class="action-btn" onclick="useItem()"><span class="key">[E]</span> Use</button>
+            <button class="action-btn" onclick="interact()"><span class="key">[E]</span> Use</button>
             <button class="action-btn" onclick="attackAction()"><span class="key">[SPACE]</span> Attack</button>
         </div>
 
@@ -116,18 +128,72 @@
             <div id="notifButtons"></div>
         </div>
 
+        <!-- NEW SYSTEM PANELS -->
+        <div id="questMenu" class="ui-panel menu-dialog">
+            <span class="close-btn" onclick="toggleQuestMenu()">✕</span>
+            <div class="menu-title">📜 Quest Log</div>
+            <div id="questListContainer"></div>
+        </div>
+
+        <div id="skillMenu" class="ui-panel menu-dialog">
+            <span class="close-btn" onclick="toggleSkillMenu()">✕</span>
+            <div class="menu-title">🧬 Skills & Perks</div>
+            <div id="skillPointsDisplay">Skill Points: 0 | Perk Points: 0</div>
+            <div class="skill-tabs">
+                <button class="tab-btn active" onclick="showSkillTab('skills')">Skills</button>
+                <button class="tab-btn" onclick="showSkillTab('perks')">Perks</button>
+            </div>
+            <div id="skillTreeGrid" class="skill-grid"></div>
+            <div id="perkTreeGrid" class="skill-grid" style="display:none;"></div>
+        </div>
+
+        <div id="craftingMenu" class="ui-panel menu-dialog">
+            <span class="close-btn" onclick="toggleCraftingMenu()">✕</span>
+            <div class="menu-title">🔧 Crafting & Research</div>
+            <div class="skill-tabs">
+                <button class="tab-btn active" onclick="showCraftingTab('recipes')">Recipes</button>
+                <button class="tab-btn" onclick="showCraftingTab('research')">Research</button>
+            </div>
+            <div id="recipeList" class="menu-grid"></div>
+            <div id="researchList" class="menu-grid" style="display:none;"></div>
+        </div>
+
+        <div id="equipmentMenu" class="ui-panel menu-dialog">
+            <span class="close-btn" onclick="toggleEquipmentMenu()">✕</span>
+            <div class="menu-title">🛡️ Equipment & Gear</div>
+            <div id="equipmentContent" style="display: flex; gap: 20px;">
+                <div id="statsPanel" style="flex: 1; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                </div>
+                <div id="slotsPanel" style="flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
+            </div>
+            <div id="inventoryPanel" style="margin-top: 20px; border-top: 1px solid #333; padding-top: 20px;">
+                <h4>Inventory</h4>
+                <div id="fullInventoryGrid" class="menu-grid"></div>
+            </div>
+        </div>
+
+        <div id="achievementMenu" class="ui-panel menu-dialog">
+            <span class="close-btn" onclick="toggleAchievementMenu()">✕</span>
+            <div class="menu-title">🏆 Achievements</div>
+            <div class="achievement-stats">
+                Unlocked: <span id="achievedCount">0</span>/<span id="achievedTotal">0</span> (<span
+                    id="achievedPercent">0</span>%)
+            </div>
+            <div id="achievementList" class="achievement-grid"></div>
+        </div>
+
         <div id="startScreen">
-            <h1><i class="material-icons" style="font-size: 48px;">forest</i> JUNGLE SURVIVORS <i class="material-icons"
-                    style="font-size: 48px;">coronavirus</i></h1>
+            <h1>JUNGLE SURVIVORS</h1>
             <p>The world has fallen to zombies. You are one of the few survivors, stranded in a mysterious jungle.</p>
             <p>Build your base, gather resources, recruit survivors, and survive the deadly nights!</p>
-            <p style="color:#ff6666;">⚠️ Zombies attack at night - prepare your defenses!</p>
+            <p style="color:var(--danger); font-weight: bold;">⚠️ Zombies attack at night - prepare your defenses!</p>
             <div class="controls-info">
                 <span>WASD</span> or <span>Arrow Keys</span> - Move<br>
                 <span>SPACE</span> - Attack | <span>E</span> - Interact/Eat<br>
-                <span>B</span> - Build | <span>T</span> - Team Management<br>
+                <span>B</span> - Build | <span>C</span> - Craft | <span>I</span> - Gear<br>
+                <span>T</span> - Team | <span>Q</span> - Quests | <span>K</span> - Skills<br>
                 <span>F</span> - Toggle Follow | <span>M</span> - Expand Minimap<br>
-                <span>Click</span> - Harvest/Place Buildings
+                <span>Click</span> - Harvest/Place/Inspect
             </div>
             <button id="startBtn" onclick="startGame()">▶ START SURVIVAL</button>
         </div>
@@ -199,13 +265,28 @@
             </div>
         </div>
     </div>
-    </div>
 
     <!-- Game Scripts -->
     <script src="js/constants.js"></script>
-    <script src="js/debug.js"></script>
-    <script src="js/state.js"></script>
     <script src="js/utils.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/debug.js"></script>
+
+    <!-- New Systems -->
+    <script src="js/save-system.js"></script>
+    <script src="js/event-system.js"></script>
+    <script src="js/weather-system.js"></script>
+    <script src="js/biome-system.js"></script>
+    <script src="js/achievement-system.js"></script>
+    <script src="js/skill-system.js"></script>
+    <script src="js/quest-system.js"></script>
+    <script src="js/crafting-system.js"></script>
+    <script src="js/equipment-system.js"></script>
+    <script src="js/building-upgrade-system.js"></script>
+    <script src="js/horde-system.js"></script>
+    <script src="js/morale-system.js"></script>
+    <script src="js/boss-system.js"></script>
+
     <script src="js/world.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/pathfinding.js"></script>

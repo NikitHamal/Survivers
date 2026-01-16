@@ -173,6 +173,18 @@ function fixedUpdate(dt) {
     updateSurvivors(dt);
     updateProjectiles(dt);
 
+    // New Systems Update
+    if (typeof WeatherSystem !== 'undefined') WeatherSystem.update(dt);
+    if (typeof BiomeSystem !== 'undefined') BiomeSystem.update(dt);
+    if (typeof BossSystem !== 'undefined') BossSystem.update(dt);
+    if (typeof HordeSystem !== 'undefined') HordeSystem.update(dt);
+    if (typeof MoraleSystem !== 'undefined') MoraleSystem.update(dt);
+    if (typeof EventSystem !== 'undefined') EventSystem.update(dt);
+    if (typeof SkillSystem !== 'undefined') SkillSystem.updateAbilityCooldowns(dt);
+    if (typeof BuildingUpgradeSystem !== 'undefined') BuildingUpgradeSystem.update(dt);
+    if (typeof CraftingSystem !== 'undefined') CraftingSystem.updateCrafting(dt);
+    if (typeof EquipmentSystem !== 'undefined') EquipmentSystem.updateBuffs(dt);
+
     // Tower updates (always check, let tower system decide based on night)
     updateTowers(dt);
 
@@ -474,6 +486,15 @@ function variableUpdate(dt) {
     updateParticles(dt);
     updateDamageNumbers(dt);
     updateUI();
+
+    // System Specific UI Updates
+    if (typeof QuestSystem !== 'undefined' && timing.frameCount % 60 === 0) {
+        QuestSystem.updateQuestUI();
+    }
+    if (typeof AchievementSystem !== 'undefined' && timing.frameCount % 300 === 0) {
+        // Achievements check periodically
+        AchievementSystem.checkAchievements();
+    }
 }
 
 function updatePlayerAnimation(dt) {

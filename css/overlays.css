@@ -1,0 +1,162 @@
+#dayNightOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    transition: background 3s ease;
+    z-index: 10;
+}
+
+#notification {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--bg-panel);
+    border: 3px solid var(--primary-gold);
+    padding: 35px 50px;
+    color: var(--text-main);
+    text-align: center;
+    display: none;
+    z-index: 1500;
+    border-radius: var(--border-radius-lg);
+    max-width: 550px;
+    box-shadow: 0 0 100px rgba(0, 0, 0, 0.9);
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -60%) scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+.notif-btn {
+    margin: 20px 10px 0;
+    padding: 12px 30px;
+    background: var(--bg-card);
+    border: 2px solid var(--border-main);
+    color: var(--text-main);
+    cursor: pointer;
+    border-radius: var(--border-radius-sm);
+    font-family: inherit;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.notif-btn:hover {
+    border-color: var(--primary-gold);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.notif-btn.accept {
+    background: var(--success);
+    border: none;
+    color: #0f101a;
+}
+
+.notif-btn.reject {
+    background: var(--danger);
+    border: none;
+    color: white;
+}
+
+#startScreen,
+#gameOver {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    text-align: center;
+}
+
+#startScreen {
+    background: radial-gradient(circle, #1a1a2e 0%, #0a0a15 100%);
+}
+
+#startScreen h1 {
+    color: var(--primary-gold);
+    font-size: 64px;
+    margin-bottom: 30px;
+    text-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
+    letter-spacing: 8px;
+    text-transform: uppercase;
+}
+
+#startScreen p {
+    color: var(--text-sub);
+    max-width: 700px;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.controls-info {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-top: 30px;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 20px 40px;
+    border-radius: var(--border-radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.controls-info span {
+    color: var(--primary-orange);
+    font-weight: bold;
+}
+
+#startBtn {
+    margin-top: 50px;
+    padding: 20px 80px;
+    font-size: 28px;
+    background: linear-gradient(180deg, var(--success), #27ae60);
+    border: 4px solid var(--primary-gold);
+    color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 900;
+    border-radius: var(--border-radius-lg);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-transform: uppercase;
+    letter-spacing: 4px;
+}
+
+#startBtn:hover {
+    transform: scale(1.1) translateY(-5px);
+    box-shadow: 0 15px 40px rgba(46, 213, 115, 0.4);
+}
+
+#gameOver {
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+}
+
+#gameOver h1 {
+    color: var(--danger);
+    font-size: 80px;
+    text-shadow: 0 0 40px rgba(255, 71, 87, 0.5);
+    margin-bottom: 20px;
+}
+
+#fpsCounter {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    color: var(--text-dim);
+    font-size: 11px;
+    opacity: 0.5;
+}
