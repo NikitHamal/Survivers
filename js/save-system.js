@@ -4,7 +4,7 @@
 // Handles saving and loading game state to/from LocalStorage
 // with compression, versioning, and corruption recovery
 
-const SaveSystem = (function() {
+const SaveSystem = (function () {
     'use strict';
 
     // ============= CONFIGURATION =============
@@ -553,7 +553,6 @@ const SaveSystem = (function() {
         }
 
         timing.gameTime = saveData.gameTime;
-        }
 
         // Update UI
         if (typeof updateSurvivorList === 'function') {

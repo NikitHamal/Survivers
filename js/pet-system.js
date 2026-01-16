@@ -4,7 +4,7 @@
 // Complete pet system with taming, AI, equipment,
 // breeding, and special abilities
 
-const PetSystem = (function() {
+const PetSystem = (function () {
     'use strict';
 
     // ============= CONFIGURATION =============
@@ -46,7 +46,13 @@ const PetSystem = (function() {
         BREEDING_MIN_AGE: 5,
         BREEDING_COOLDOWN: 72,
         BREEDING_TRUST_THRESHOLD: 70,
-        BREEDING_HAPPINESS_THRESHOLD: 60
+        BREEDING_HAPPINESS_THRESHOLD: 60,
+
+        // Wildlife spawning
+        SPAWN_INTERVAL: 30,             // Try to spawn every 30 seconds
+        SPAWN_CHANCE: 0.7,              // 70% chance to spawn on each interval
+        MAX_WILD_ANIMALS: 10,           // Maximum wild animals in current area
+        DESPAWN_DISTANCE: 25            // Distance at which animals despawn
     };
 
     // ============= PET DEFINITIONS =============
@@ -547,6 +553,8 @@ const PetSystem = (function() {
     let tamingSession = null;
     let playerMount = null;
     let nextPetId = 1;
+
+    let spawnTimer = 0;                 // Current spawn cooldown timer
     let nextAnimalId = 1;
 
     // ============= HELPER FUNCTIONS =============
@@ -607,17 +615,19 @@ const PetSystem = (function() {
     // ============= PET CLASS =============
     class Pet {
         constructor(typeId, x, y, isWild = false) {
-            const type = PET_TYPES[typeId];
+            const type = PET_TYPES[typeId] || PET_TYPES[typeId?.toUpperCase()];
             if (!type) {
                 console.error(`Invalid pet type: ${typeId}`);
-                return null;
+                this.isValid = false;
+                return;
             }
 
+            this.isValid = true;
             this.id = nextPetId++;
             this.typeId = typeId;
             this.type = type;
-            this.x = x;
-            this.y = y;
+            this.x = x !== undefined ? x : (typeof player !== 'undefined' ? player.x : 0);
+            this.y = y !== undefined ? y : (typeof player !== 'undefined' ? player.y : 0);
             this.isWild = isWild;
             this.isTamed = !isWild;
 
@@ -808,7 +818,7 @@ const PetSystem = (function() {
             const allAbilities = Object.keys(PET_ABILITIES);
             const availableAbilities = allAbilities.filter(
                 a => !this.abilities.includes(a) &&
-                PET_TYPES[this.typeId].abilities.includes(a.split('_')[0]) === false
+                    PET_TYPES[this.typeId].abilities.includes(a.split('_')[0]) === false
             );
 
             if (availableAbilities.length > 0) {
@@ -1327,6 +1337,17 @@ const PetSystem = (function() {
 
     // ============= UPDATE FUNCTIONS =============
     function update(dt) {
+        // Update spawn timer
+        spawnTimer += dt;
+        if (spawnTimer >= CONFIG.SPAWN_INTERVAL) {
+            spawnTimer = 0;
+            if (wildAnimals.length < CONFIG.MAX_WILD_ANIMALS && Math.random() < CONFIG.SPAWN_CHANCE) {
+                // Spawn 1-3 animals nearby
+                const count = 1 + Math.floor(Math.random() * 3);
+                spawnNearbyWildAnimals(player.x, player.y, count);
+            }
+        }
+
         // Update taming session
         if (tamingSession && tamingSession.isActive) {
             tamingSession.update(dt);
@@ -1352,6 +1373,16 @@ const PetSystem = (function() {
         // Update wild animals
         for (const animal of [...wildAnimals]) {
             animal.update(dt);
+
+            // Despawn if too far from player
+            const dist = Math.sqrt((animal.x - player.x) ** 2 + (animal.y - player.y) ** 2);
+            if (dist > CONFIG.DESPAWN_DISTANCE) {
+                const idx = wildAnimals.indexOf(animal);
+                if (idx !== -1) {
+                    wildAnimals.splice(idx, 1);
+                }
+                continue;
+            }
 
             // Remove dead animals
             if (animal.health <= 0) {
@@ -1411,7 +1442,11 @@ const PetSystem = (function() {
     // ============= PET MANAGEMENT =============
     function addPet(typeId, x, y) {
         const pet = new Pet(typeId, x, y, false);
+        if (!pet.isValid) return null;
         pets.push(pet);
+        if (typeof showNotification === 'function') {
+            showNotification(`Debug: Added ${pet.type.name} at (${pet.x.toFixed(1)}, ${pet.y.toFixed(1)})`, []);
+        }
         EventBus.emit('pet:added', { pet: pet });
         return pet;
     }
@@ -1469,61 +1504,79 @@ const PetSystem = (function() {
     }
 
     function renderPet(ctx, pet) {
-        const screenX = (pet.x - camera.x) * TILE_SIZE + ctx.canvas.width / 2;
-        const screenY = (pet.y - camera.y) * TILE_SIZE + ctx.canvas.height / 2;
+        if (!pet || !pet.type) return;
 
-        const size = pet.size * TILE_SIZE * 0.8;
+        const s = TILE_SIZE * SCALE;
+        const cam = typeof camera !== 'undefined' ? camera : { x: 0, y: 0 };
+        const screenX = (pet.x - 0.5) * s - cam.x;
+        const screenY = (pet.y - 0.5) * s - cam.y;
+
+        // Skip if off-screen
+        if (screenX < -s || screenX > ctx.canvas.width + s || screenY < -s || screenY > ctx.canvas.height + s) return;
+
+        const size = pet.size * s * 0.8;
+
+        ctx.save();
 
         // Draw shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.beginPath();
-        ctx.ellipse(screenX, screenY + size * 0.4, size * 0.4, size * 0.2, 0, 0, Math.PI * 2);
+        ctx.ellipse(screenX + s * 0.5, screenY + size * 0.4 + s * 0.5, size * 0.4, size * 0.2, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        // Draw outline
+        ctx.strokeStyle = '#1a1a2e';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(screenX + s * 0.5, screenY + s * 0.5, size * 0.5 + 1, size * 0.6 + 1, 0, 0, Math.PI * 2);
+        ctx.stroke();
 
         // Draw pet body
         ctx.fillStyle = pet.type.color;
         ctx.beginPath();
-        ctx.ellipse(screenX, screenY, size * 0.5, size * 0.6, 0, 0, Math.PI * 2);
+        ctx.ellipse(screenX + s * 0.5, screenY + s * 0.5, size * 0.5, size * 0.6, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Draw direction indicator
-        const eyeOffset = pet.direction * size * 0.2;
+        const eyeOffset = (pet.direction || 1) * size * 0.2;
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(screenX + eyeOffset, screenY - size * 0.2, size * 0.15, 0, Math.PI * 2);
+        ctx.arc(screenX + s * 0.5 + eyeOffset, screenY + s * 0.5 - size * 0.2, size * 0.15, 0, Math.PI * 2);
         ctx.fill();
 
         // Draw pet icon
-        ctx.font = `${size}px Arial`;
+        ctx.font = `${Math.floor(size)}px Pixelify Sans, Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(pet.type.icon, screenX, screenY);
+        ctx.fillText(pet.type.icon, screenX + s * 0.5, screenY + s * 0.5);
 
-        // Draw status indicators
+        // Status indicators
         if (!pet.isWild) {
             // Health bar
             const healthPercent = pet.health / pet.getMaxHealth();
             const barWidth = size;
             const barHeight = 4;
-            const barY = screenY - size * 0.8;
+            const barY = screenY + s * 0.5 - size * 0.9;
 
             ctx.fillStyle = '#333';
-            ctx.fillRect(screenX - barWidth / 2, barY, barWidth, barHeight);
+            ctx.fillRect(screenX + s * 0.5 - barWidth / 2, barY, barWidth, barHeight);
             ctx.fillStyle = healthPercent > 0.5 ? '#00ff00' : healthPercent > 0.25 ? '#ffff00' : '#ff0000';
-            ctx.fillRect(screenX - barWidth / 2, barY, barWidth * healthPercent, barHeight);
+            ctx.fillRect(screenX + s * 0.5 - barWidth / 2, barY, barWidth * healthPercent, barHeight);
 
             // Hunger indicator
             if (pet.hunger < CONFIG.HUNGER_CRITICAL) {
                 ctx.font = '12px Arial';
                 ctx.fillStyle = '#ff0000';
-                ctx.fillText('⚠️', screenX + size * 0.5, barY);
+                ctx.fillText('⚠️', screenX + s * 0.5 + size * 0.5, barY);
             }
         }
 
         // Draw taming UI if active
         if (tamingSession && tamingSession.pet === pet) {
-            renderTamingUI(ctx, screenX, screenY - size);
+            renderTamingUI(ctx, screenX + s * 0.5, screenY + s * 0.5 - size);
         }
+
+        ctx.restore();
     }
 
     function renderTamingUI(ctx, x, y) {

@@ -177,3 +177,143 @@
     color: var(--primary-gold);
     font-weight: bold;
 }
+
+/* Stats and Equipment UI */
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text-sub);
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stat-value {
+    color: var(--primary-gold);
+    font-weight: bold;
+}
+
+.buff-tag {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(var(--primary-gold-rgb), 0.1);
+    border: 1px solid var(--primary-gold);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    color: var(--primary-gold);
+    margin-bottom: 5px;
+}
+
+/* Equipment slot specifics */
+.equipment-slot {
+    background: var(--bg-card);
+    border: 1px solid var(--border-main);
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    position: relative;
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.equipment-slot:hover {
+    border-color: var(--primary-gold);
+}
+
+.equipment-slot.filled {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.durability-bar {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    right: 4px;
+    height: 3px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.durability-fill {
+    height: 100%;
+    background: #44ff44;
+}
+
+.empty-slot {
+    color: #444;
+    font-size: 20px;
+}
+
+.inventory-slot {
+    background: var(--bg-card);
+    border: 1px solid var(--border-main);
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    position: relative;
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.inventory-slot:hover {
+    border-color: var(--primary-gold);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.item-quantity {
+    position: absolute;
+    bottom: 2px;
+    right: 4px;
+    font-size: 10px;
+    color: #fff;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px #000;
+}
+
+.item-warning {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    color: #e74c3c;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+/* Rarity colors */
+.rarity-common {
+    border-color: #aaaaaa;
+}
+
+.rarity-uncommon {
+    border-color: #55ff55;
+}
+
+.rarity-rare {
+    border-color: #5555ff;
+}
+
+.rarity-epic {
+    border-color: #aa55ff;
+}
+
+.rarity-legendary {
+    border-color: #ffaa00;
+}

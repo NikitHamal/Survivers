@@ -4,7 +4,7 @@
 // Complete weather system with various weather types,
 // gameplay effects, visual effects, and biome integration
 
-const WeatherSystem = (function() {
+const WeatherSystem = (function () {
     'use strict';
 
     // ============= CONFIGURATION =============
@@ -14,7 +14,7 @@ const WeatherSystem = (function() {
         MAX_WEATHER_DURATION: 600,      // Maximum weather duration
         TRANSITION_DURATION: 30,        // Weather transition time in seconds
         STORM_LIGHTNING_CHANCE: 0.02,   // Chance per second for lightning
-        PARTICLE_LIMIT: 500,            // Max weather particles
+        PARTICLE_LIMIT: 2000,            // Max weather particles
         WIND_CHANGE_SPEED: 0.5          // How fast wind direction changes
     };
 
@@ -81,8 +81,8 @@ const WeatherSystem = (function() {
                 skyColor: '#708090',
                 ambientLight: 0.7,
                 particleType: 'rain',
-                particleDensity: 0.8,
-                screenOverlay: 'rgba(100, 120, 140, 0.1)'
+                particleDensity: 1.2,
+                screenOverlay: 'rgba(100, 120, 140, 0.15)'
             },
             sounds: ['rain', 'thunder_distant'],
             puddleChance: 0.01
@@ -104,11 +104,11 @@ const WeatherSystem = (function() {
                 lightningDamage: 50
             },
             visual: {
-                skyColor: '#404850',
-                ambientLight: 0.5,
+                skyColor: '#303840',
+                ambientLight: 0.3,
                 particleType: 'heavy_rain',
-                particleDensity: 1.5,
-                screenOverlay: 'rgba(60, 80, 100, 0.2)',
+                particleDensity: 2.5,
+                screenOverlay: 'rgba(30, 40, 60, 0.3)',
                 lightningFlash: true
             },
             sounds: ['rain_heavy', 'thunder', 'wind_strong'],
@@ -465,7 +465,7 @@ const WeatherSystem = (function() {
                 particle.vy = 8 + Math.random() * 4;
                 particle.vx = windSpeed * Math.cos(windDirection) * 2;
                 particle.size = 1;
-                particle.color = '#8899aa';
+                particle.color = '#ffffff';
                 particle.type = 'rain';
                 break;
 
@@ -473,7 +473,7 @@ const WeatherSystem = (function() {
                 particle.vy = 12 + Math.random() * 6;
                 particle.vx = windSpeed * Math.cos(windDirection) * 3;
                 particle.size = 2;
-                particle.color = '#667788';
+                particle.color = '#ffffff';
                 particle.type = 'rain';
                 break;
 

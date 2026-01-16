@@ -4,7 +4,7 @@
 // Complete equipment system with weapons, armor, tools,
 // item management, and stat modifications
 
-const EquipmentSystem = (function() {
+const EquipmentSystem = (function () {
     'use strict';
 
     // ============= CONFIGURATION =============
@@ -453,6 +453,151 @@ const EquipmentSystem = (function() {
             craftable: true,
             recipe: { food: 8, wood: 3 },
             description: 'Cures poison and provides temporary immunity.'
+        },
+
+        // === LEGENDARY & ACHIEVEMENT REWARDS ===
+        legendary_sword: {
+            id: 'legendary_sword',
+            name: 'Excalibur',
+            type: ITEM_TYPES.WEAPON,
+            slot: EQUIPMENT_SLOTS.WEAPON,
+            icon: '🗡️',
+            rarity: 'LEGENDARY',
+            stats: { damage: 65, attackSpeed: 1.3, critChance: 0.25, critDamage: 2.5 },
+            durability: 1000,
+            maxDurability: 1000,
+            craftable: false,
+            description: 'A sword of mythic power. Legends say it was pulled from a stone.'
+        },
+        titans_heart: {
+            id: 'titans_heart',
+            name: "Titan's Heart",
+            type: ITEM_TYPES.ARMOR,
+            slot: EQUIPMENT_SLOTS.ACCESSORY,
+            icon: '💎',
+            rarity: 'LEGENDARY',
+            stats: { maxHealth: 200, damageReduction: 0.15, healthRegen: 2.0 },
+            durability: 999,
+            maxDurability: 999,
+            craftable: false,
+            description: 'The pulsing core of a defeated titan. Grants immense vitality.'
+        },
+        queens_crown: {
+            id: 'queens_crown',
+            name: "Queen's Crown",
+            type: ITEM_TYPES.ARMOR,
+            slot: EQUIPMENT_SLOTS.HEAD,
+            icon: '👑',
+            rarity: 'EPIC',
+            stats: { defense: 25, maxHealth: 60, critChance: 0.1, thorns: 0.2 },
+            durability: 400,
+            maxDurability: 400,
+            craftable: false,
+            description: 'A royal crown that commands respect and punishes attackers.'
+        },
+        legendary_armor: {
+            id: 'legendary_armor',
+            name: 'Aegis Plate',
+            type: ITEM_TYPES.ARMOR,
+            slot: EQUIPMENT_SLOTS.CHEST,
+            icon: '🛡️',
+            rarity: 'LEGENDARY',
+            stats: { defense: 50, maxHealth: 150, damageReduction: 0.3, resistAll: 0.2 },
+            durability: 1000,
+            maxDurability: 1000,
+            craftable: false,
+            description: 'Indestructible armor forged by gods. The ultimate protection.'
+        },
+        blood_moon_charm: {
+            id: 'blood_moon_charm',
+            name: 'Blood Moon Charm',
+            type: ITEM_TYPES.ARMOR,
+            slot: EQUIPMENT_SLOTS.ACCESSORY,
+            icon: '🏮',
+            rarity: 'EPIC',
+            stats: { damage: 20, lifesteal: 0.15, critDamage: 0.5 },
+            durability: 999,
+            maxDurability: 999,
+            craftable: false,
+            description: 'A charm glowing with malevolent red light. Feeds on the blood of enemies.'
+        },
+        explorers_boots: {
+            id: 'explorers_boots',
+            name: "Explorer's Boots",
+            type: ITEM_TYPES.ARMOR,
+            slot: EQUIPMENT_SLOTS.LEGS,
+            icon: '👢',
+            rarity: 'RARE',
+            stats: { defense: 12, speed: 0.4, terrainPenaltyReduction: 0.5 },
+            durability: 350,
+            maxDurability: 350,
+            craftable: false,
+            description: 'Worn boots that have seen many worlds. Makes travel much easier.'
+        },
+        fire_resistance_potion: {
+            id: 'fire_resistance_potion',
+            name: 'Fire Resist Potion',
+            type: ITEM_TYPES.CONSUMABLE,
+            icon: '🧪',
+            rarity: 'RARE',
+            effect: { fireResist: 0.8, duration: 60 },
+            stackable: true,
+            maxStack: 5,
+            craftable: true,
+            recipe: { food: 25, iron: 10 },
+            description: 'Temporary near-immunity to extreme heat and lava.'
+        },
+        alchemist_kit: {
+            id: 'alchemist_kit',
+            name: 'Alchemist Kit',
+            type: ITEM_TYPES.ARMOR,
+            slot: EQUIPMENT_SLOTS.ACCESSORY,
+            icon: '🎒',
+            rarity: 'EPIC',
+            stats: { potionDuration: 0.5, potionEffect: 0.3 },
+            durability: 999,
+            maxDurability: 999,
+            craftable: false,
+            description: 'A bag full of brewing essentials and catalysts.'
+        },
+        quest_compass: {
+            id: 'quest_compass',
+            name: 'Quest Compass',
+            type: ITEM_TYPES.ARMOR,
+            slot: EQUIPMENT_SLOTS.ACCESSORY,
+            icon: '🧭',
+            rarity: 'RARE',
+            stats: { range: 15, expBonus: 0.1 },
+            durability: 999,
+            maxDurability: 999,
+            craftable: false,
+            description: 'Always points towards destiny. Increases experience gain.'
+        },
+        hero_armor: {
+            id: 'hero_armor',
+            name: "Hero's Plate",
+            type: ITEM_TYPES.ARMOR,
+            slot: EQUIPMENT_SLOTS.CHEST,
+            icon: '🎖️',
+            rarity: 'EPIC',
+            stats: { defense: 35, maxHealth: 80, speed: 0.2, damage: 10 },
+            durability: 600,
+            maxDurability: 600,
+            craftable: false,
+            description: 'Armor worn by the saviors of old. Well-balanced and powerful.'
+        },
+        golden_crown: {
+            id: 'golden_crown',
+            name: 'Golden Crown',
+            type: ITEM_TYPES.ARMOR,
+            slot: EQUIPMENT_SLOTS.HEAD,
+            icon: '👑',
+            rarity: 'LEGENDARY',
+            stats: { defense: 40, maxHealth: 100, critChance: 0.2, goldBonus: 1.0 },
+            durability: 999,
+            maxDurability: 999,
+            craftable: false,
+            description: 'The ultimate symbol of completion. You have mastered this world.'
         }
     };
 
@@ -864,7 +1009,7 @@ const EquipmentSystem = (function() {
 
     // ============= UI UPDATE FUNCTIONS =============
     function updateInventoryUI() {
-        const container = document.getElementById('inventoryGrid');
+        const container = document.getElementById('fullInventoryGrid');
         if (!container) return;
 
         container.innerHTML = '';
@@ -889,6 +1034,20 @@ const EquipmentSystem = (function() {
     }
 
     function updateEquipmentUI() {
+        const slotsPanel = document.getElementById('slotsPanel');
+        if (!slotsPanel) return;
+
+        // If slots don't exist, create them
+        if (slotsPanel.children.length === 0) {
+            for (const slotName of Object.values(EQUIPMENT_SLOTS)) {
+                const div = document.createElement('div');
+                div.id = `equip-${slotName}`;
+                div.className = 'equipment-slot empty';
+                div.innerHTML = '<span class="empty-slot">+</span>';
+                slotsPanel.appendChild(div);
+            }
+        }
+
         for (const [slot, item] of Object.entries(playerEquipment)) {
             const element = document.getElementById(`equip-${slot}`);
             if (!element) continue;
@@ -910,6 +1069,54 @@ const EquipmentSystem = (function() {
                 element.onclick = null;
             }
         }
+    }
+
+    function updateStatsUI() {
+        const container = document.getElementById('statsPanel');
+        if (!container) return;
+
+        const stats = getPlayerStats();
+        container.innerHTML = `
+            <h4>Player Stats</h4>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span>Damage:</span>
+                    <span class="stat-value">${Math.floor(stats.damage)}</span>
+                </div>
+                <div class="stat-item">
+                    <span>Defense:</span>
+                    <span class="stat-value">${Math.floor(stats.defense)}</span>
+                </div>
+                <div class="stat-item">
+                    <span>Max HP:</span>
+                    <span class="stat-value">${Math.floor(stats.maxHealth)}</span>
+                </div>
+                <div class="stat-item">
+                    <span>Attack Speed:</span>
+                    <span class="stat-value">${stats.attackSpeed.toFixed(1)}x</span>
+                </div>
+                <div class="stat-item">
+                    <span>Crit Chance:</span>
+                    <span class="stat-value">${Math.round(stats.critChance * 100)}%</span>
+                </div>
+                <div class="stat-item">
+                    <span>Movement:</span>
+                    <span class="stat-value">${stats.speed.toFixed(1)}</span>
+                </div>
+            </div>
+            
+            <div class="active-buffs" style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                <h5 style="margin: 0 0 5px 0;">Active Effects</h5>
+                ${activeBuffs.length === 0 ? '<span style="color:#666; font-size:10px;">No active effects</span>' :
+                activeBuffs.map(b => `
+                        <div class="buff-tag">
+                            <span>${b.name}</span>
+                            <span class="buff-timer">${Math.ceil(b.remainingTime)}s</span>
+                        </div>
+                    `).join('')
+            }
+            </div>
+        `;
     }
 
     function updateHotbarUI() {
@@ -945,14 +1152,20 @@ const EquipmentSystem = (function() {
         if (item.type === ITEM_TYPES.WEAPON || item.type === ITEM_TYPES.ARMOR) {
             options.push({
                 text: 'Equip',
-                action: () => equipItem(item)
+                action: () => {
+                    equipItem(item);
+                    updateStatsUI();
+                }
             });
         }
 
         if (item.type === ITEM_TYPES.CONSUMABLE) {
             options.push({
                 text: 'Use',
-                action: () => useConsumable(item)
+                action: () => {
+                    useConsumable(item);
+                    updateStatsUI();
+                }
             });
         }
 
@@ -980,7 +1193,12 @@ const EquipmentSystem = (function() {
                 `<strong>${item.icon} ${item.name}</strong><br>
                 <small>Durability: ${item.durability}/${item.maxDurability}</small>`,
                 [
-                    { text: 'Unequip', action: () => unequipItem(slot), class: 'accept' },
+                    {
+                        text: 'Unequip', action: () => {
+                            unequipItem(slot);
+                            updateStatsUI();
+                        }, class: 'accept'
+                    },
                     { text: 'Repair', action: () => repairItem(item), class: 'accept' }
                 ]
             );
@@ -1055,6 +1273,7 @@ const EquipmentSystem = (function() {
         // UI
         updateInventoryUI,
         updateEquipmentUI,
+        updateStatsUI,
         updateHotbarUI,
 
         // Save/Load

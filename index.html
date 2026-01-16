@@ -257,22 +257,30 @@
                     <div class="nutrition-item">
                         <div class="nutrition-label">Calories</div>
                         <div class="nutrition-value" id="nutritionCalories">0 / 2000</div>
-                        <div class="nutrition-bar"><div id="caloriesFill" class="nutrition-fill"></div></div>
+                        <div class="nutrition-bar">
+                            <div id="caloriesFill" class="nutrition-fill"></div>
+                        </div>
                     </div>
                     <div class="nutrition-item">
                         <div class="nutrition-label">Protein</div>
                         <div class="nutrition-value" id="nutritionProtein">0 / 50g</div>
-                        <div class="nutrition-bar"><div id="proteinFill" class="nutrition-fill"></div></div>
+                        <div class="nutrition-bar">
+                            <div id="proteinFill" class="nutrition-fill"></div>
+                        </div>
                     </div>
                     <div class="nutrition-item">
                         <div class="nutrition-label">Carbs</div>
                         <div class="nutrition-value" id="nutritionCarbs">0 / 250g</div>
-                        <div class="nutrition-bar"><div id="carbsFill" class="nutrition-fill"></div></div>
+                        <div class="nutrition-bar">
+                            <div id="carbsFill" class="nutrition-fill"></div>
+                        </div>
                     </div>
                     <div class="nutrition-item">
                         <div class="nutrition-label">Vitamins</div>
                         <div class="nutrition-value" id="nutritionVitamins">0 / 100</div>
-                        <div class="nutrition-bar"><div id="vitaminsFill" class="nutrition-fill"></div></div>
+                        <div class="nutrition-bar">
+                            <div id="vitaminsFill" class="nutrition-fill"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -311,13 +319,19 @@
         <div class="menu-title">⚡ GOD MODE / DEBUG ⚡</div>
 
         <div class="debug-section">
-            <h4>Player</h4>
+            <h4>Player & Movement</h4>
             <div class="debug-row">
-                <button class="debug-btn" onclick="debugToggleGodMode()">Invincible: <span
+                <button class="debug-btn" onclick="debugToggleGodMode()">God Mode: <span
                         id="debugInvincible">OFF</span></button>
-                <button class="debug-btn" onclick="debugHealAll()">Heal All</button>
+                <button class="debug-btn" onclick="debugToggleSpeedHack()">Speed Hack: <span
+                        id="debugSpeed">OFF</span></button>
                 <button class="debug-btn" onclick="debugToggleCollision()">Collision: <span
                         id="debugCollision">OFF</span></button>
+                <button class="debug-btn" onclick="debugHealAll()">Heal All</button>
+                <button class="debug-btn" onclick="debugMaxStats()">Max Lvl/Stats</button>
+                <button class="debug-btn" onclick="debugUnlockAll()">Unlock All</button>
+                <button class="debug-btn" onclick="debugToggleInvisibility()">Invisibility: <span
+                        id="debugInvisibility">OFF</span></button>
             </div>
         </div>
 
@@ -356,12 +370,23 @@
         </div>
 
         <div class="debug-section">
-            <h4>World</h4>
+            <h4>World & Time</h4>
             <div class="debug-row">
                 <button class="debug-btn" onclick="debugTime(true)">Set Day</button>
                 <button class="debug-btn" onclick="debugTime(false)">Set Night</button>
                 <button class="debug-btn" onclick="debugSpawnSurvivor()">Spawn Survivor</button>
+                <button class="debug-btn" onclick="debugAdvanceTime(1)">+1 Hour</button>
+                <button class="debug-btn" onclick="debugRainToggle()">Toggle Rain</button>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <h4>Combat & Pets</h4>
+            <div class="debug-row">
                 <button class="debug-btn" onclick="debugSpawnZombie()">Spawn Zombie</button>
+                <button class="debug-btn danger" onclick="debugKillAllZombies()">KILL ALL ZOMBIES</button>
+                <button class="debug-btn" onclick="debugSpawnPet()">Spawn Random Pet</button>
+                <button class="debug-btn" onclick="debugTameNearby()">Tame Nearby Animals</button>
             </div>
         </div>
     </div>

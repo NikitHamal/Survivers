@@ -226,6 +226,11 @@ class ZombieAI extends EntityAI {
     }
 
     updateDayBehavior(dt) {
+        if (window.invisibility) {
+            this.moveTarget = null;
+            return;
+        }
+
         // Flee from player
         const dx = this.entity.x - player.x;
         const dy = this.entity.y - player.y;
@@ -244,8 +249,8 @@ class ZombieAI extends EntityAI {
 
     findTarget() {
         // Simple nearest target logic
-        let nearest = player;
-        let minDist = (player.x - this.entity.x) ** 2 + (player.y - this.entity.y) ** 2;
+        let nearest = window.invisibility ? null : player;
+        let minDist = nearest ? ((player.x - this.entity.x) ** 2 + (player.y - this.entity.y) ** 2) : Infinity;
 
         for (const s of survivors) {
             if (s.isPlayer || s.health <= 0) continue;
