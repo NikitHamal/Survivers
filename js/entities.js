@@ -104,6 +104,11 @@ function spawnZombie() {
         // Attach AI
         newZombie.ai = new ZombieAI(newZombie);
 
+        // Elite Check
+        if (typeof EliteSystem !== 'undefined' && EliteSystem.shouldBeElite()) {
+            EliteSystem.makeElite(newZombie);
+        }
+
         zombies.push(newZombie);
 
         return true;
@@ -181,6 +186,17 @@ function processDeadZombies(deadZombies, currentDay) {
     if (deadZombies.length === 0) return;
 
     for (const z of deadZombies) {
+        // Audio
+        if (typeof AudioSystem !== 'undefined') {
+            AudioSystem.play(z.isMiniBoss ? 'boss_death' : 'zombie_death', { position: { x: z.x, y: z.y } });
+        }
+
+        // Elite/Mini-Boss Handling
+        if (typeof EliteSystem !== 'undefined') {
+            if (z.isElite) EliteSystem.handleEliteDeath(z);
+            if (z.isMiniBoss) EliteSystem.handleMiniBossDeath(z);
+        }
+
         // Loot drop
         if (Math.random() < ZOMBIE_CONFIG.LOOT_DROP_CHANCE) {
             resources.food += 1 + Math.floor(Math.random() * 2);

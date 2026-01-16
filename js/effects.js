@@ -824,6 +824,46 @@ function renderDarkness(ctx, camX, camY, alpha = 1) {
         }
     });
 
+    // Trap lights
+    if (typeof TrapSystem !== 'undefined') {
+        const traps = TrapSystem.getTraps ? TrapSystem.getTraps() : [];
+        traps.forEach(t => {
+            if (t.destroyed) return;
+            const tX = t.x * TILE_SIZE * SCALE - camX;
+            const tY = t.y * TILE_SIZE * SCALE - camY;
+
+            // Only process if on screen
+            if (tX > -100 && tX < canvas.width + 100 && tY > -100 && tY < canvas.height + 100) {
+                if (t.typeId === 'tesla_coil') {
+                    const flicker = Math.sin(gameTime * 15 + t.id) * 10;
+                    lights.push({
+                        x: tX,
+                        y: tY - 10,
+                        radius: (60 + flicker) * SCALE,
+                        intensity: 0.6 + Math.sin(gameTime * 10) * 0.2,
+                        color: { r: 100, g: 200, b: 255 }
+                    });
+                } else if (t.typeId === 'landmine' && Math.sin(gameTime * 6 + t.id) > 0.7) {
+                    lights.push({
+                        x: tX,
+                        y: tY,
+                        radius: 15 * SCALE,
+                        intensity: 0.8,
+                        color: { r: 255, g: 50, b: 50 }
+                    });
+                } else if (t.typeId === 'flame_geyser' && t.activeEffect === 'fire') {
+                    lights.push({
+                        x: tX,
+                        y: tY,
+                        radius: (100 + Math.random() * 20) * SCALE,
+                        intensity: 0.9,
+                        color: { r: 255, g: 150, b: 50 }
+                    });
+                }
+            }
+        });
+    }
+
     // Render all lights
     lights.forEach(light => {
         const gradient = darkCtx.createRadialGradient(

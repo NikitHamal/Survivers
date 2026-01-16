@@ -184,6 +184,11 @@ function fixedUpdate(dt) {
     if (typeof BuildingUpgradeSystem !== 'undefined') BuildingUpgradeSystem.update(dt);
     if (typeof CraftingSystem !== 'undefined') CraftingSystem.updateCrafting(dt);
     if (typeof EquipmentSystem !== 'undefined') EquipmentSystem.updateBuffs(dt);
+    if (typeof EliteSystem !== 'undefined') EliteSystem.update(dt);
+    if (typeof MountSystem !== 'undefined') MountSystem.update(dt);
+    if (typeof TrapSystem !== 'undefined') TrapSystem.update(dt);
+    if (typeof TradingSystem !== 'undefined') TradingSystem.update(dt);
+    if (typeof AudioSystem !== 'undefined') AudioSystem.update(gameState);
 
     // Tower updates (always check, let tower system decide based on night)
     updateTowers(dt);
@@ -706,6 +711,10 @@ function init() {
     // Setup UI
     if (typeof setupInventoryUI === 'function') {
         setupInventoryUI();
+    }
+
+    if (typeof AudioSystem !== 'undefined') {
+        AudioSystem.initialize();
     }
 
     gameState.initialized = true;

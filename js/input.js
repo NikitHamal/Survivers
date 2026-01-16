@@ -37,6 +37,11 @@ function handleKeyPress(e) {
         case 'KeyM':
             toggleMinimap();
             break;
+        case 'ShiftLeft':
+            if (typeof MountSystem !== 'undefined') {
+                MountSystem.toggleSprint();
+            }
+            break;
         case 'Escape':
             closeAllMenus();
             if (document.getElementById('minimap')) document.getElementById('minimap').classList.remove('expanded');
@@ -268,6 +273,45 @@ function interact() {
     const dirs = [[1, 0], [0, 1], [-1, 0], [0, -1]];
     const dir = dirs[player.direction];
 
+    // 1. Merchant Interaction
+    if (typeof TradingSystem !== 'undefined') {
+        const merchant = TradingSystem.getMerchantAt(player.x + dir[0] * 0.8, player.y + dir[1] * 0.8) ||
+            TradingSystem.getMerchantAt(player.x, player.y);
+        if (merchant) {
+            TradingSystem.interactWithMerchant(merchant);
+            return;
+        }
+    }
+
+    // 2. Mount Interaction
+    if (typeof MountSystem !== 'undefined') {
+        const checkRange = 1.0;
+        const targetX = player.x + dir[0] * 0.8;
+        const targetY = player.y + dir[1] * 0.8;
+
+        // Check for mounting/dismounting first if already mounted
+        if (MountSystem.isMounted()) {
+            MountSystem.dismount();
+            return;
+        }
+
+        const wildMount = MountSystem.getWildMounts().find(m =>
+            Math.sqrt((m.x - targetX) ** 2 + (m.y - targetY) ** 2) < checkRange
+        );
+        if (wildMount) {
+            MountSystem.startTaming(wildMount);
+            return;
+        }
+
+        const ownedMount = MountSystem.getOwnedMounts().find(m =>
+            Math.sqrt((m.x - targetX) ** 2 + (m.y - targetY) ** 2) < checkRange
+        );
+        if (ownedMount) {
+            MountSystem.mountUp(ownedMount);
+            return;
+        }
+    }
+
     // Check tile in front first, then tile standing on
     const checkCoords = [
         { x: Math.floor(player.x + dir[0] * 0.8), y: Math.floor(player.y + dir[1] * 0.8) },
@@ -314,8 +358,22 @@ function interact() {
 function attackAction() {
     if (player.attackCooldown > 0) return;
 
+    // Mount Ability Check
+    if (typeof MountSystem !== 'undefined' && MountSystem.isMounted()) {
+        const mount = MountSystem.getCurrentMount();
+        if (mount && mount.type && mount.type.abilities && mount.type.abilities.length > 0) {
+            MountSystem.useAbility(mount.type.abilities[0]);
+            player.attackCooldown = 0.5; // Shared cooldown
+            return;
+        }
+    }
+
     player.attackCooldown = 0.4;
     camera.shake = 5;
+
+    if (typeof AudioSystem !== 'undefined') {
+        AudioSystem.play('player_attack');
+    }
 
     const damage = 18 + player.level * 3;
 

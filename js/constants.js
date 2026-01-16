@@ -28,5 +28,15 @@ const BUILDINGS = [
     { name: 'Cannon', icon: '💣', cost: { stone: 25, iron: 20 }, tile: TILES.CANNON, desc: 'Heavy damage' },
     { name: 'Workbench', icon: '🔧', cost: { wood: 15 }, tile: TILES.WORKBENCH, desc: 'Crafting' },
     { name: 'Chest', icon: '📦', cost: { wood: 10 }, tile: TILES.CHEST, desc: 'Storage' },
-    { name: 'Bed', icon: '🛏️', cost: { wood: 15 }, tile: TILES.BED, desc: 'Rest & heal' }
+    { name: 'Bed', icon: '🛏️', cost: { wood: 15 }, tile: TILES.BED, desc: 'Rest & heal' },
+    // Traps
+    { name: 'Spike Trap', icon: '🌵', cost: { wood: 10, stone: 2 }, trapId: 'spike_trap', desc: 'Auto-damages enemies' },
+    { name: 'Bear Trap', icon: '🪤', cost: { iron: 5 }, trapId: 'bear_trap', desc: 'Roots enemies' },
+    { name: 'Landmine', icon: '💣', cost: { iron: 8, stone: 5 }, trapId: 'landmine', desc: 'Powerful explosive' },
+    { name: 'Explosive Barrel', icon: '𛢩', cost: { wood: 20, stone: 5 }, trapId: 'explosive_barrel', desc: 'Large AoE dmg' },
+    { name: 'Tesla Coil', icon: '⚡', cost: { iron: 15, stone: 10 }, trapId: 'tesla_coil', desc: 'Chaining shocks' },
+    { name: 'Auto-Turret', icon: '🎯', cost: { iron: 25, stone: 15 }, trapId: 'turret_trap', desc: 'Auto-attacks' },
+    // Vehicles
+    { name: 'Wooden Cart', icon: '🛒', cost: { wood: 40, iron: 10 }, vehicleId: 'cart', desc: 'Haul resources' },
+    { name: 'War Chariot', icon: '🏎️', cost: { wood: 60, iron: 30 }, vehicleId: 'war_chariot', desc: 'Fast combat vehicle' }
 ];

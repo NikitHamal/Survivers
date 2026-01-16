@@ -305,6 +305,14 @@ class ZombieAI extends EntityAI {
         target.health -= this.entity.damage;
         spawnParticles(target.x, target.y, '#ff4444', 5);
         addDamageNumber(target.x, target.y - 0.5, this.entity.damage, '#ff4444');
+
+        if (typeof AudioSystem !== 'undefined') {
+            if (target.isPlayer) {
+                AudioSystem.play('player_hit');
+            } else {
+                AudioSystem.play('zombie_hit', { position: { x: target.x, y: target.y } });
+            }
+        }
     }
 }
 

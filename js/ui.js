@@ -159,7 +159,17 @@ function placeBuild(x, y) {
         resources[r] -= amt;
     });
 
-    if (selectedBuilding.tile === TILES.HOUSE) {
+    if (selectedBuilding.trapId && typeof TrapSystem !== 'undefined') {
+        TrapSystem.createTrap(selectedBuilding.trapId, x, y, { free: true });
+    } else if (selectedBuilding.vehicleId && typeof MountSystem !== 'undefined') {
+        MountSystem.craftVehicle(selectedBuilding.vehicleId);
+        // Vehicles usually spawn near player, but we can set their position if possible
+        const vehicle = MountSystem.getOwnedMounts().find(m => m.typeId === selectedBuilding.vehicleId && m.isBeingRidden === false); // Simplified
+        if (vehicle) {
+            vehicle.x = x + 0.5;
+            vehicle.y = y + 0.5;
+        }
+    } else if (selectedBuilding.tile === TILES.HOUSE) {
         setTile(x, y, TILES.HOUSE);
         setTile(x + 1, y, TILES.HOUSE_BASE);
         setTile(x, y + 1, TILES.HOUSE_BASE);

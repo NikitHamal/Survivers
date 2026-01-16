@@ -235,6 +235,22 @@ function render(alpha = 1) {
         BossSystem.drawBossUI(ctx);
     }
 
+    if (typeof TrapSystem !== 'undefined') {
+        TrapSystem.draw(ctx, camX, camY);
+    }
+
+    if (typeof MountSystem !== 'undefined') {
+        MountSystem.draw(ctx, camX, camY);
+    }
+
+    if (typeof TradingSystem !== 'undefined') {
+        TradingSystem.draw(ctx, camX, camY);
+    }
+
+    if (typeof EliteSystem !== 'undefined') {
+        EliteSystem.draw(ctx, camX, camY);
+    }
+
     if (typeof HordeSystem !== 'undefined') {
         HordeSystem.drawHordeUI(ctx);
     }

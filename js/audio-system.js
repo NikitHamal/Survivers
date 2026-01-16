@@ -4,7 +4,7 @@
 // Production-grade audio system with spatial sound,
 // dynamic music, ambient soundscapes, and audio pooling
 
-const AudioSystem = (function() {
+const AudioSystem = (function () {
     'use strict';
 
     // ============= CONFIGURATION =============
@@ -139,6 +139,20 @@ const AudioSystem = (function() {
             pitchVariation: 0.15,
             frequencies: [150, 100, 50],
             duration: 0.4,
+            type: 'death'
+        },
+        boss_spawn: {
+            category: 'sfx',
+            volume: 0.8,
+            frequencies: [80, 120, 160, 200],
+            duration: 1.2,
+            type: 'fanfare'
+        },
+        boss_death: {
+            category: 'sfx',
+            volume: 0.9,
+            frequencies: [100, 60, 30],
+            duration: 2.0,
             type: 'death'
         },
         explosion: {
@@ -1110,7 +1124,7 @@ const AudioSystem = (function() {
 
         setTimeout(() => {
             instance.sources.forEach(s => {
-                try { s.stop(); } catch (e) {}
+                try { s.stop(); } catch (e) { }
             });
             activeAmbient.delete(soundId);
         }, fadeOut * 1000 + 100);
