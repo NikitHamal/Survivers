@@ -4,7 +4,7 @@ window.onload = init;
 
 // Random survivor spawn logic
 setInterval(() => {
-    if (!gameRunning || isNight || gamePaused) return;
+    if (!gameState.running || isNight || gameState.paused) return;
     if (Math.random() > 0.25) return;
 
     const names = ['Alex', 'Jordan', 'Sam', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Quinn', 'Avery', 'Blake', 'Drew', 'Jamie', 'Jesse', 'Robin', 'Sage'];

@@ -1,3 +1,7 @@
+function lerp(a, b, t) {
+    return a + (b - a) * t;
+}
+
 function seededRandom(x, y) {
     const n = Math.sin(x * 12.9898 + y * 78.233 + seed) * 43758.5453;
     return n - Math.floor(n);
@@ -19,3 +23,6 @@ function noise2D(x, y) {
 
     return a * (1 - ux) * (1 - uy) + b * ux * (1 - uy) + c * (1 - ux) * uy + d * ux * uy;
 }
+
+// Particle logic moved to effects.js
+// Use spawnParticles() from effects.js instead

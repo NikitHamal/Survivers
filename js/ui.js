@@ -46,9 +46,9 @@ function toggleMinimap() {
     }
 
     if (minimap.classList.contains('expanded')) {
-        gamePaused = true;
+        gameState.paused = true;
     } else {
-        gamePaused = false;
+        gameState.paused = false;
     }
 }
 
@@ -58,7 +58,7 @@ function selectInventorySlot(idx) {
     });
 }
 
-function showNotification(text, buttons) {
+function showNotification(text, buttons = []) {
     const notif = document.getElementById('notification');
     document.getElementById('notifText').innerHTML = text;
 
@@ -76,23 +76,16 @@ function showNotification(text, buttons) {
         btn.onclick = () => {
             b.action();
             notif.style.display = 'none';
-            gamePaused = false;
+            gameState.paused = false;
         };
         btnContainer.appendChild(btn);
     });
 
     if (buttons.length > 0) {
-        gamePaused = true;
+        gameState.paused = true;
     }
 
     notif.style.display = 'block';
-}
-
-function gameOver(reason) {
-    gameRunning = false;
-    document.getElementById('deathReason').textContent = reason;
-    document.getElementById('finalDays').textContent = dayCount;
-    document.getElementById('gameOver').style.display = 'flex';
 }
 
 function addDamageNumber(x, y, amount, color) {
@@ -126,12 +119,12 @@ function openBuildMenu() {
     });
 
     document.getElementById('buildMenu').style.display = 'block';
-    gamePaused = true;
+    gameState.paused = true;
 }
 
 function closeBuildMenu() {
     document.getElementById('buildMenu').style.display = 'none';
-    gamePaused = false;
+    gameState.paused = false;
     buildMode = false;
     selectedBuilding = null;
 }
@@ -140,7 +133,7 @@ function selectBuilding(idx) {
     selectedBuilding = BUILDINGS[idx];
     buildMode = true;
     document.getElementById('buildMenu').style.display = 'none';
-    gamePaused = false;
+    gameState.paused = false;
 }
 
 function canBuild(x, y) {
@@ -155,6 +148,7 @@ function placeBuild(x, y) {
     });
 
     setTile(x, y, selectedBuilding.tile);
+
     spawnParticles(x + 0.5, y + 0.5, '#ffd700', 8);
     player.exp += 20;
     checkLevelUp();
@@ -169,7 +163,7 @@ function toggleSurvivorMenu() {
     const menu = document.getElementById('survivorMenu');
     if (menu.style.display === 'block') {
         menu.style.display = 'none';
-        gamePaused = false;
+        gameState.paused = false;
         return;
     }
 
@@ -195,7 +189,7 @@ function toggleSurvivorMenu() {
     }
 
     menu.style.display = 'block';
-    gamePaused = true;
+    gameState.paused = true;
 }
 
 function assignRole(idx, role) {
@@ -227,4 +221,118 @@ function updateSurvivorList() {
     }
 
     document.getElementById('survivorCount').textContent = survivors.length;
+}
+
+// ============= CANVAS UI RENDERERS =============
+
+function renderDamageNumbers(ctx, camX, camY) {
+    if (!damageNumbers) return;
+
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    damageNumbers.forEach(d => {
+        const sx = d.x * TILE_SIZE * SCALE - camX;
+        const sy = d.y * TILE_SIZE * SCALE - camY;
+        ctx.globalAlpha = d.life;
+        ctx.fillStyle = '#000';
+        ctx.fillText(d.amount, sx + 1, sy + 1);
+        ctx.fillStyle = d.color;
+        ctx.fillText(d.amount, sx, sy);
+    });
+    ctx.globalAlpha = 1;
+}
+
+function renderMinimap() {
+    if (!minimapCtx || !minimapCanvas) return;
+
+    const size = minimapCanvas.width;
+    minimapCtx.fillStyle = '#0a1a0a';
+    minimapCtx.fillRect(0, 0, size, size);
+
+    const mapScale = 2;
+    const halfSize = size / 2;
+    const range = Math.floor(halfSize / mapScale);
+
+    // Use ImageData for much faster tile rendering
+    const imgData = minimapCtx.createImageData(size, size);
+    const data = imgData.data;
+
+    // Helper to set pixel in ImageData
+    const setPixel = (x, y, r, g, b) => {
+        if (x < 0 || x >= size || y < 0 || y >= size) return;
+        const idx = (y * size + x) * 4;
+        data[idx] = r;
+        data[idx + 1] = g;
+        data[idx + 2] = b;
+        data[idx + 3] = 255;
+    };
+
+    const colors = {
+        [TILES.GRASS]: [42, 74, 26],
+        [TILES.TREE]: [26, 58, 10],
+        [TILES.WATER]: [42, 74, 122],
+        [TILES.WALL]: [90, 74, 58],
+        [TILES.WALL_BROKEN]: [90, 74, 58],
+        [TILES.FLOOR]: [106, 90, 74],
+        [TILES.HOUSE]: [106, 90, 74],
+        [TILES.STONE]: [90, 90, 90],
+        [TILES.IRON]: [90, 90, 90],
+        [TILES.CAMPFIRE]: [170, 68, 0],
+        [TILES.TOWER]: [74, 74, 106],
+        [TILES.CANNON]: [74, 74, 106],
+        [TILES.BUSH]: [34, 139, 34]
+    };
+
+    for (let dy = -range; dy < range; dy++) {
+        for (let dx = -range; dx < range; dx++) {
+            const wx = Math.floor(player.x + dx);
+            const wy = Math.floor(player.y + dy);
+            const tile = getTile(wx, wy);
+
+            const color = colors[tile] || [42, 74, 26];
+
+            // Draw mapScale x mapScale block
+            for (let py = 0; py < mapScale; py++) {
+                for (let px = 0; px < mapScale; px++) {
+                    setPixel(
+                        Math.floor(halfSize + dx * mapScale + px),
+                        Math.floor(halfSize + dy * mapScale + py),
+                        color[0], color[1], color[2]
+                    );
+                }
+            }
+        }
+    }
+
+    minimapCtx.putImageData(imgData, 0, 0);
+
+    // Zombies
+    minimapCtx.fillStyle = '#ff4444';
+    zombies.forEach(z => {
+        const dx = z.x - player.x;
+        const dy = z.y - player.y;
+        if (Math.abs(dx) < range && Math.abs(dy) < range) {
+            minimapCtx.fillRect(halfSize + dx * mapScale - 1, halfSize + dy * mapScale - 1, 3, 3);
+        }
+    });
+
+    // Survivors
+    minimapCtx.fillStyle = '#44ff44';
+    survivors.forEach(s => {
+        if (s.isPlayer) return;
+        const dx = s.x - player.x;
+        const dy = s.y - player.y;
+        if (Math.abs(dx) < range && Math.abs(dy) < range) {
+            minimapCtx.fillRect(halfSize + dx * mapScale - 1, halfSize + dy * mapScale - 1, 2, 2);
+        }
+    });
+
+    // Player
+    minimapCtx.fillStyle = '#4488ff';
+    minimapCtx.fillRect(halfSize - 2, halfSize - 2, 4, 4);
+
+    // Border
+    minimapCtx.strokeStyle = '#4a4a6a';
+    minimapCtx.lineWidth = 2;
+    minimapCtx.strokeRect(0, 0, size, size);
 }

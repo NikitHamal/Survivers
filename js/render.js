@@ -1,11 +1,28 @@
 // ============= RENDERING =============
-function render() {
+let lastAlpha = 1;
+
+function lerp(a, b, t) {
+    return a + (b - a) * t;
+}
+
+function render(alpha = 1) {
+    lastAlpha = alpha;
     ctx.fillStyle = '#1a2a1a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // Interpolated player position for camera and sorting
+    const renderPX = lerp(player.prevX ?? player.x, player.x, alpha);
+    const renderPY = lerp(player.prevY ?? player.y, player.y, alpha);
+
+    // Apply screen shake
+    const shakeX = (Math.random() - 0.5) * camera.shake;
+    const shakeY = (Math.random() - 0.5) * camera.shake;
+    const camX = camera.x + shakeX;
+    const camY = camera.y + shakeY;
+
     // Visible tile range
-    const startTileX = Math.floor(camera.x / SCALE / TILE_SIZE) - 1;
-    const startTileY = Math.floor(camera.y / SCALE / TILE_SIZE) - 1;
+    const startTileX = Math.floor(camX / SCALE / TILE_SIZE) - 1;
+    const startTileY = Math.floor(camY / SCALE / TILE_SIZE) - 1;
     const endTileX = startTileX + Math.ceil(canvas.width / SCALE / TILE_SIZE) + 3;
     const endTileY = startTileY + Math.ceil(canvas.height / SCALE / TILE_SIZE) + 3;
 
@@ -13,8 +30,8 @@ function render() {
     for (let y = startTileY; y <= endTileY; y++) {
         for (let x = startTileX; x <= endTileX; x++) {
             const tile = getTile(x, y);
-            const sx = x * TILE_SIZE * SCALE - camera.x;
-            const sy = y * TILE_SIZE * SCALE - camera.y;
+            const sx = x * TILE_SIZE * SCALE - camX;
+            const sy = y * TILE_SIZE * SCALE - camY;
             renderTile(tile, sx, sy, x, y);
         }
     }
@@ -24,27 +41,31 @@ function render() {
 
     // Add survivors
     survivors.forEach(s => {
-        entities.push({ type: 'survivor', data: s, y: s.y });
+        const rx = lerp(s.prevX ?? s.x, s.x, alpha);
+        const ry = lerp(s.prevY ?? s.y, s.y, alpha);
+        entities.push({ type: 'survivor', data: s, x: rx, y: ry, sortY: ry });
     });
 
     // Add zombies
     zombies.forEach(z => {
-        entities.push({ type: 'zombie', data: z, y: z.y });
+        const rx = lerp(z.prevX ?? z.x, z.x, alpha);
+        const ry = lerp(z.prevY ?? z.y, z.y, alpha);
+        entities.push({ type: 'zombie', data: z, x: rx, y: ry, sortY: ry });
     });
 
     // Sort by Y for proper layering
-    entities.sort((a, b) => a.y - b.y);
+    entities.sort((a, b) => a.sortY - b.sortY);
 
     // Render entities
     entities.forEach(e => {
         if (e.type === 'survivor') {
             if (e.data.isPlayer) {
-                renderPlayer();
+                renderPlayer(e.x, e.y, camX, camY);
             } else {
-                renderSurvivor(e.data);
+                renderSurvivor(e.data, e.x, e.y, camX, camY);
             }
         } else if (e.type === 'zombie') {
-            renderZombie(e.data);
+            renderZombie(e.data, e.x, e.y, camX, camY);
         }
     });
 
@@ -59,28 +80,10 @@ function render() {
     });
 
     // Render particles
-    particles.forEach(p => {
-        const sx = p.x * TILE_SIZE * SCALE - camera.x;
-        const sy = p.y * TILE_SIZE * SCALE - camera.y;
-        ctx.globalAlpha = Math.min(1, p.life * 2);
-        ctx.fillStyle = p.color;
-        ctx.fillRect(sx - p.size / 2, sy - p.size / 2, p.size * SCALE, p.size * SCALE);
-    });
-    ctx.globalAlpha = 1;
+    renderParticles(ctx, camX, camY);
 
     // Render damage numbers
-    ctx.font = 'bold 12px Arial';
-    ctx.textAlign = 'center';
-    damageNumbers.forEach(d => {
-        const sx = d.x * TILE_SIZE * SCALE - camera.x;
-        const sy = d.y * TILE_SIZE * SCALE - camera.y;
-        ctx.globalAlpha = d.life;
-        ctx.fillStyle = '#000';
-        ctx.fillText(d.amount, sx + 1, sy + 1);
-        ctx.fillStyle = d.color;
-        ctx.fillText(d.amount, sx, sy);
-    });
-    ctx.globalAlpha = 1;
+    renderDamageNumbers(ctx, camX, camY);
 
     // Build preview
     if (buildMode && selectedBuilding) {
@@ -98,26 +101,164 @@ function render() {
         ctx.strokeRect(sx, sy, TILE_SIZE * SCALE, TILE_SIZE * SCALE);
     }
 
+    // Render move target marker
+    renderMoveTarget(camX, camY);
+
+    // Debug: Render collision circles (press F3 to toggle)
+    if (window.debugCollision) {
+        renderDebugCollision(camX, camY);
+    }
+
+    // Darkness / Lighting System
+    renderDarkness(ctx, camX, camY, alpha);
+
     // Minimap
     renderMinimap();
 
-    // Coords
-    document.getElementById('coordsDisplay').textContent = `X: ${Math.floor(player.x)} Y: ${Math.floor(player.y)}`;
+    // Coords + debug info
+    let debugText = `X: ${player.x.toFixed(2)} Y: ${player.y.toFixed(2)}`;
+    if (window.debugCollision) {
+        const tile = getTile(Math.floor(player.x), Math.floor(player.y));
+        debugText += ` | Tile: ${tile} | Solid: ${isSolid(tile)}`;
+    }
+    document.getElementById('coordsDisplay').textContent = debugText;
+}
+
+// renderDarkness moved to effects.js
+
+function renderDebugCollision(camX, camY) {
+    const startX = Math.floor((camX) / TILE_SIZE / SCALE) - 1;
+    const startY = Math.floor((camY) / TILE_SIZE / SCALE) - 1;
+    const endX = startX + Math.ceil(canvas.width / TILE_SIZE / SCALE) + 2;
+    const endY = startY + Math.ceil(canvas.height / TILE_SIZE / SCALE) + 2;
+
+    for (let wy = startY; wy <= endY; wy++) {
+        for (let wx = startX; wx <= endX; wx++) {
+            const tile = getTile(wx, wy);
+            if (!isSolid(tile)) continue;
+
+            const collision = getTileCollision(tile);
+            const sx = (wx + 0.5) * TILE_SIZE * SCALE - camX;
+            const sy = (wy + 0.5) * TILE_SIZE * SCALE - camY;
+            const radius = collision.radius * TILE_SIZE * SCALE;
+
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.7;
+            ctx.beginPath();
+            ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Show tile type
+            ctx.fillStyle = '#ff0000';
+            ctx.font = '10px monospace';
+            ctx.fillText(tile.toString(), sx - 5, sy + 3);
+        }
+    }
+
+    // Draw player collision circle
+    const px = player.x * TILE_SIZE * SCALE - camX;
+    const py = player.y * TILE_SIZE * SCALE - camY;
+    ctx.strokeStyle = '#00ff00';
+    ctx.beginPath();
+    ctx.arc(px, py, 0.25 * TILE_SIZE * SCALE, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.globalAlpha = 1;
+}
+
+function renderMoveTarget(camX, camY) {
+    if (!player.moveTarget) return;
+
+    const sx = player.moveTarget.x * TILE_SIZE * SCALE - camX;
+    const sy = player.moveTarget.y * TILE_SIZE * SCALE - camY;
+
+    // Pulsing effect
+    const pulse = Math.sin(Date.now() * 0.008) * 0.3 + 0.7;
+    const radius = TILE_SIZE * SCALE * 0.4 * pulse;
+
+    // Outer ring
+    ctx.strokeStyle = '#44ff44';
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.8 * pulse;
+    ctx.beginPath();
+    ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Inner dot
+    ctx.fillStyle = '#88ff88';
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = 1;
 }
 
 function renderTile(tile, sx, sy, wx, wy) {
     const s = TILE_SIZE * SCALE;
 
     // Base grass with variation
-    const grassShade = ((wx + wy) % 2 === 0) ? '#3a5a28' : '#3d5d2b';
-    ctx.fillStyle = grassShade;
-    ctx.fillRect(sx, sy, s, s);
+    // Determine base background
+    let useFloorBackground = false;
 
-    // Small grass detail
-    if (tile === TILES.GRASS && seededRandom(wx * 3, wy * 3) > 0.7) {
-        ctx.fillStyle = '#4a6a38';
-        ctx.fillRect(sx + s * 0.3, sy + s * 0.6, s * 0.1, s * 0.25);
-        ctx.fillRect(sx + s * 0.6, sy + s * 0.5, s * 0.1, s * 0.3);
+    // List of constructed tiles that should have a floor foundation
+    const structures = [
+        TILES.HOUSE,
+        TILES.CHEST,
+        TILES.WORKBENCH,
+        TILES.BED,
+        TILES.TOWER,
+        TILES.CANNON,
+        TILES.SPIKES,
+        TILES.WALL,
+        TILES.WALL_BROKEN,
+        TILES.CAMPFIRE
+    ];
+
+    if (structures.includes(tile)) {
+        useFloorBackground = true;
+    } else if (tile === TILES.TREE) {
+        // Special check for trees: if surrounded by floor, draw floor background
+        // Check 4 neighbors
+        let floorNeighbors = 0;
+        const neighbors = [
+            getTile(wx + 1, wy),
+            getTile(wx - 1, wy),
+            getTile(wx, wy + 1),
+            getTile(wx, wy - 1)
+        ];
+
+        for (const t of neighbors) {
+            if (t === TILES.FLOOR || structures.includes(t)) {
+                floorNeighbors++;
+            }
+        }
+
+        if (floorNeighbors >= 3) {
+            useFloorBackground = true;
+        }
+    }
+
+    if (useFloorBackground) {
+        // Floor background
+        ctx.fillStyle = '#6a5a4a';
+        ctx.fillRect(sx, sy, s, s);
+        ctx.fillStyle = '#5a4a3a';
+        ctx.fillRect(sx + s * 0.48, sy, s * 0.04, s);
+        ctx.fillRect(sx, sy + s * 0.48, s, s * 0.04);
+    } else {
+        // Base grass with variation
+        const grassShade = ((wx + wy) % 2 === 0) ? '#3a5a28' : '#3d5d2b';
+        ctx.fillStyle = grassShade;
+        ctx.fillRect(sx, sy, s, s);
+
+        // Small grass detail (only if grass or valid natural tile)
+        if (tile === TILES.GRASS && seededRandom(wx * 3, wy * 3) > 0.7) {
+            ctx.fillStyle = '#4a6a38';
+            ctx.fillRect(sx + s * 0.3, sy + s * 0.6, s * 0.1, s * 0.25);
+            ctx.fillRect(sx + s * 0.6, sy + s * 0.5, s * 0.1, s * 0.3);
+        }
     }
 
     switch (tile) {
@@ -183,6 +324,7 @@ function renderTile(tile, sx, sy, wx, wy) {
             break;
 
         case TILES.WALL:
+            // Wall uses floor background now, just draw wall detail
             ctx.fillStyle = '#5a4a3a';
             ctx.fillRect(sx, sy, s, s);
             ctx.fillStyle = '#6a5a4a';
@@ -212,29 +354,57 @@ function renderTile(tile, sx, sy, wx, wy) {
         case TILES.CAMPFIRE:
             ctx.fillStyle = '#5a4a3a';
             ctx.fillRect(sx, sy, s, s);
-            // Stones
+
+            // Stones in a circle
             ctx.fillStyle = '#4a4a4a';
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const dist = s * 0.3;
+                ctx.beginPath();
+                ctx.arc(sx + s / 2 + Math.cos(angle) * dist, sy + s / 2 + Math.sin(angle) * dist, s * 0.08, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Glow effect (base)
+            const glowSize = (Math.sin(gameTime * 8) * 0.1 + 1.0) * s * 0.4;
+            const gradient = ctx.createRadialGradient(sx + s / 2, sy + s / 2, 0, sx + s / 2, sy + s / 2, glowSize);
+            gradient.addColorStop(0, 'rgba(255, 150, 50, 0.4)');
+            gradient.addColorStop(1, 'rgba(255, 100, 0, 0)');
+            ctx.fillStyle = gradient;
             ctx.beginPath();
-            ctx.arc(sx + s / 2, sy + s * 0.65, s * 0.3, 0, Math.PI * 2);
+            ctx.arc(sx + s / 2, sy + s / 2, glowSize, 0, Math.PI * 2);
             ctx.fill();
-            // Fire
-            const flicker = Math.sin(gameTime * 10) * 2 + Math.sin(gameTime * 15) * 1;
+
+            // Fire layers
+            const flicker = Math.sin(gameTime * 12) * 2 + Math.sin(gameTime * 19) * 1;
+
+            // Outer flame
             ctx.fillStyle = '#ff4400';
             ctx.beginPath();
             ctx.moveTo(sx + s * 0.25, sy + s * 0.75);
-            ctx.lineTo(sx + s * 0.5, sy + s * 0.2 + flicker);
-            ctx.lineTo(sx + s * 0.75, sy + s * 0.75);
+            ctx.quadraticCurveTo(sx + s * 0.5, sy + s * 0.1 + flicker, sx + s * 0.75, sy + s * 0.75);
             ctx.fill();
+
+            // Inner flame
             ctx.fillStyle = '#ffaa00';
             ctx.beginPath();
             ctx.moveTo(sx + s * 0.35, sy + s * 0.7);
-            ctx.lineTo(sx + s * 0.5, sy + s * 0.35 + flicker);
-            ctx.lineTo(sx + s * 0.65, sy + s * 0.7);
+            ctx.quadraticCurveTo(sx + s * 0.5, sy + s * 0.3 + flicker * 0.7, sx + s * 0.65, sy + s * 0.7);
             ctx.fill();
-            ctx.fillStyle = '#ffdd44';
+
+            // Core
+            ctx.fillStyle = '#fffFAA';
             ctx.beginPath();
-            ctx.arc(sx + s / 2, sy + s * 0.55, s * 0.1, 0, Math.PI * 2);
+            ctx.arc(sx + s / 2, sy + s * 0.55 + flicker * 0.2, s * 0.1, 0, Math.PI * 2);
             ctx.fill();
+
+            // Floating sparks (simplified, just a few pixels)
+            if (Math.random() < 0.1) {
+                const sparkX = sx + s * (0.3 + Math.random() * 0.4);
+                const sparkY = sy + s * (0.2 + Math.random() * 0.4);
+                ctx.fillStyle = '#ffdd44';
+                ctx.fillRect(sparkX, sparkY, 1, 1);
+            }
             break;
 
         case TILES.HOUSE:
@@ -318,13 +488,29 @@ function renderTile(tile, sx, sy, wx, wy) {
             ctx.fillStyle = '#dddddd';
             ctx.fillRect(sx + s * 0.15, sy + s * 0.4, s * 0.25, s * 0.2);
             break;
+
+        case TILES.SPIKES:
+            ctx.fillStyle = '#4a3a2a';
+            ctx.fillRect(sx, sy, s, s);
+            ctx.fillStyle = '#888';
+            for (let i = 0; i < 4; i++) {
+                const ox = (i % 2) * s * 0.4 + s * 0.2;
+                const oy = Math.floor(i / 2) * s * 0.4 + s * 0.2;
+                ctx.beginPath();
+                ctx.moveTo(ox + sx - s * 0.1, oy + sy + s * 0.1);
+                ctx.lineTo(ox + sx, oy + sy - s * 0.1);
+                ctx.lineTo(ox + sx + s * 0.1, oy + sy + s * 0.1);
+                ctx.fill();
+            }
+            break;
     }
 }
 
-function renderPlayer() {
-    const sx = player.x * TILE_SIZE * SCALE - camera.x;
-    const sy = player.y * TILE_SIZE * SCALE - camera.y;
+function renderPlayer(renderX, renderY, camX, camY) {
     const s = TILE_SIZE * SCALE;
+    // Align sprite center/feet with physics position
+    const sx = (renderX - 0.5) * s - camX;
+    const sy = (renderY - 0.9) * s - camY;
 
     // Hit flash
     if (player.hitTimer > 0) {
@@ -373,10 +559,10 @@ function renderPlayer() {
     ctx.globalAlpha = 1;
 }
 
-function renderSurvivor(s) {
-    const sx = s.x * TILE_SIZE * SCALE - camera.x;
-    const sy = s.y * TILE_SIZE * SCALE - camera.y;
+function renderSurvivor(s, renderX, renderY, camX, camY) {
     const size = TILE_SIZE * SCALE;
+    const sx = (renderX - 0.5) * size - camX;
+    const sy = (renderY - 0.9) * size - camY;
 
     if (sx < -size || sx > canvas.width + size || sy < -size || sy > canvas.height + size) return;
 
@@ -408,10 +594,10 @@ function renderSurvivor(s) {
     ctx.fillText(s.role[0], sx + size / 2, sy + size * 0.15);
 }
 
-function renderZombie(z) {
-    const sx = z.x * TILE_SIZE * SCALE - camera.x;
-    const sy = z.y * TILE_SIZE * SCALE - camera.y;
+function renderZombie(z, renderX, renderY, camX, camY) {
     const s = TILE_SIZE * SCALE;
+    const sx = (renderX - 0.5) * s - camX;
+    const sy = (renderY - 0.9) * s - camY;
 
     if (sx < -s * 2 || sx > canvas.width + s || sy < -s * 2 || sy > canvas.height + s) return;
 
@@ -451,63 +637,4 @@ function renderZombie(z) {
     }
 }
 
-function renderMinimap() {
-    const size = minimapCanvas.width;
-    minimapCtx.fillStyle = '#0a1a0a';
-    minimapCtx.fillRect(0, 0, size, size);
-
-    const mapScale = 2;
-    const halfSize = size / 2;
-    const range = Math.floor(halfSize / mapScale);
-
-    // Tiles
-    for (let dy = -range; dy < range; dy++) {
-        for (let dx = -range; dx < range; dx++) {
-            const wx = Math.floor(player.x + dx);
-            const wy = Math.floor(player.y + dy);
-            const tile = getTile(wx, wy);
-
-            let color = '#2a4a1a';
-            if (tile === TILES.TREE) color = '#1a3a0a';
-            else if (tile === TILES.WATER) color = '#2a4a7a';
-            else if (tile === TILES.WALL || tile === TILES.WALL_BROKEN) color = '#5a4a3a';
-            else if (tile === TILES.FLOOR || tile === TILES.HOUSE) color = '#6a5a4a';
-            else if (tile === TILES.STONE || tile === TILES.IRON) color = '#5a5a5a';
-            else if (tile === TILES.CAMPFIRE) color = '#aa4400';
-            else if (tile === TILES.TOWER || tile === TILES.CANNON) color = '#4a4a6a';
-
-            minimapCtx.fillStyle = color;
-            minimapCtx.fillRect(halfSize + dx * mapScale, halfSize + dy * mapScale, mapScale, mapScale);
-        }
-    }
-
-    // Zombies
-    minimapCtx.fillStyle = '#ff4444';
-    zombies.forEach(z => {
-        const dx = z.x - player.x;
-        const dy = z.y - player.y;
-        if (Math.abs(dx) < range && Math.abs(dy) < range) {
-            minimapCtx.fillRect(halfSize + dx * mapScale - 1, halfSize + dy * mapScale - 1, 3, 3);
-        }
-    });
-
-    // Survivors
-    minimapCtx.fillStyle = '#44ff44';
-    survivors.forEach(s => {
-        if (s.isPlayer) return;
-        const dx = s.x - player.x;
-        const dy = s.y - player.y;
-        if (Math.abs(dx) < range && Math.abs(dy) < range) {
-            minimapCtx.fillRect(halfSize + dx * mapScale - 1, halfSize + dy * mapScale - 1, 2, 2);
-        }
-    });
-
-    // Player
-    minimapCtx.fillStyle = '#4488ff';
-    minimapCtx.fillRect(halfSize - 2, halfSize - 2, 4, 4);
-
-    // Border
-    minimapCtx.strokeStyle = '#4a4a6a';
-    minimapCtx.lineWidth = 2;
-    minimapCtx.strokeRect(0, 0, size, size);
-}
+// renderMinimap moved to ui.js
