@@ -2,7 +2,7 @@
 const LOOP_CONFIG = {
     MAX_DT: 0.1,                    // Maximum delta time (100ms)
     FIXED_DT: 1 / 60,               // Fixed timestep (60 Hz)
-    MAX_FIXED_STEPS: 5,             // Maximum fixed updates per frame (prevent spiral)
+    MAX_FIXED_STEPS: 10,            // Maximum fixed updates per frame (increased to handle MAX_DT)
     TARGET_FPS: 60,
 
     // Camera
@@ -228,28 +228,35 @@ function updatePlayerMovement(dt) {
     }
 
     // If not using keyboard, follow click-to-move path
-    if (!usingKeyboard && player.path && player.pathIndex < player.path.length) {
-        const node = player.path[player.pathIndex];
-        const dx = node.x - player.x;
-        const dy = node.y - player.y;
-        const distToNode = Math.sqrt(dx * dx + dy * dy);
+    if (!usingKeyboard && player.path && player.path.length > 0) {
+        // CRITICAL FIX: Loop to handle reaching multiple waypoints in one frame
+        // and immediately start moving to the next one
+        while (player.pathIndex < player.path.length) {
+            const node = player.path[player.pathIndex];
+            const dx = node.x - player.x;
+            const dy = node.y - player.y;
+            const distToNode = Math.sqrt(dx * dx + dy * dy);
 
-        if (distToNode < 0.15) {
-            // Reached this node, move to next
-            player.pathIndex++;
-
-            if (player.pathIndex >= player.path.length) {
-                // Reached destination
-                cancelPlayerPath();
+            if (distToNode < PATHFINDING_CONFIG.NODE_REACH_THRESHOLD) {
+                // Reached this node, advance to next
+                player.pathIndex++;
+                
+                // Check if we've completed the path
+                if (player.pathIndex >= player.path.length) {
+                    cancelPlayerPath();
+                    break;
+                }
+                // Continue loop to get direction to next node immediately
+            } else {
+                // Not at node yet - set movement direction
+                moveX = dx / distToNode;
+                moveY = dy / distToNode;
+                break;
             }
-        } else {
-            // Move towards current path node
-            moveX = dx / distToNode;
-            moveY = dy / distToNode;
         }
     }
 
-    // Normalize diagonal movement (for keyboard)
+    // Normalize diagonal movement (for keyboard only)
     if (usingKeyboard && moveX !== 0 && moveY !== 0) {
         const invSqrt2 = 1 / Math.sqrt(2);
         moveX *= invSqrt2;
@@ -270,17 +277,57 @@ function updatePlayerMovement(dt) {
         // Smaller collision radius allows passing through 1-tile gaps
         const PLAYER_RADIUS = 0.25;
 
-        // Apply movement with collision (try each axis separately)
+        // Try full movement first
+        let movedX = false;
+        let movedY = false;
+
+        // Apply X movement with collision
         if (!isSolidAt(newX, player.y, PLAYER_RADIUS)) {
             player.x = newX;
-        } else if (!isSolidAt(player.x + moveX * speed * 0.5, player.y, PLAYER_RADIUS)) {
-            player.x += moveX * speed * 0.5;
+            movedX = true;
+        } else {
+            // Try sliding with reduced speed
+            const slideX = player.x + moveX * speed * 0.5;
+            if (!isSolidAt(slideX, player.y, PLAYER_RADIUS)) {
+                player.x = slideX;
+                movedX = true;
+            }
         }
 
+        // Apply Y movement with collision
         if (!isSolidAt(player.x, newY, PLAYER_RADIUS)) {
             player.y = newY;
-        } else if (!isSolidAt(player.x, player.y + moveY * speed * 0.5, PLAYER_RADIUS)) {
-            player.y += moveY * speed * 0.5;
+            movedY = true;
+        } else {
+            // Try sliding with reduced speed
+            const slideY = player.y + moveY * speed * 0.5;
+            if (!isSolidAt(player.x, slideY, PLAYER_RADIUS)) {
+                player.y = slideY;
+                movedY = true;
+            }
+        }
+
+        // CRITICAL: If completely blocked while following path, try to repath
+        if (!movedX && !movedY && player.path && player.pathIndex < player.path.length) {
+            player.stuckTime = (player.stuckTime || 0) + dt;
+            
+            if (player.stuckTime > 0.5) {
+                // Stuck for too long, try to repath
+                console.debug('Player stuck, attempting repath');
+                const target = player.moveTarget;
+                if (target) {
+                    cancelPlayerPath();
+                    // Small delay before repathing to avoid spam
+                    setTimeout(() => {
+                        if (!player.path && target) {
+                            setPlayerMoveTarget(target.x, target.y);
+                        }
+                    }, 100);
+                }
+                player.stuckTime = 0;
+            }
+        } else {
+            player.stuckTime = 0;
         }
     }
 }

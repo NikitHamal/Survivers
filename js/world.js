@@ -442,14 +442,13 @@ function updateBuildingTracking(wx, wy, oldTile, newTile) {
 
 function getBuildingMaxHealth(tileType) {
     const healthMap = {
-        [TILES.WALL]: 100,
-        [TILES.WALL_BROKEN]: 50,
-        [TILES.TOWER]: 150,
-        [TILES.CANNON]: 200,
-        [TILES.HOUSE]: 200,
-        [TILES.FARM]: 75,
-        [TILES.CAMPFIRE]: 50,
-        [TILES.SPIKES]: 100
+        [TILES.WALL]: 150, // Buffed health since broken walls are gone
+        [TILES.TOWER]: 200,
+        [TILES.CANNON]: 250,
+        [TILES.HOUSE]: 500, // House is bigger and tougher
+        [TILES.FARM]: 100,
+        [TILES.CAMPFIRE]: 80,
+        [TILES.SPIKES]: 120
     };
 
     return healthMap[tileType] || 100;
@@ -472,8 +471,8 @@ function isSolid(tile) {
 
     // Buildings that block
     if (tile === TILES.WALL) return true;
-    if (tile === TILES.WALL_BROKEN) return true;
     if (tile === TILES.HOUSE) return true;
+    if (tile === TILES.HOUSE_BASE) return true;
     if (tile === TILES.TOWER) return true;
     if (tile === TILES.CANNON) return true;
 
@@ -490,9 +489,9 @@ function isPassable(tile) {
         TILES.STONE,
         TILES.IRON,
         TILES.WALL,
-        TILES.WALL_BROKEN,
         TILES.WATER,
         TILES.HOUSE,
+        TILES.HOUSE_BASE,
         TILES.TOWER,
         TILES.CANNON
     ];
@@ -573,10 +572,10 @@ function getTileCollision(tile) {
 
         // Buildings - full tile blocking
         case TILES.WALL:
-        case TILES.WALL_BROKEN:
             return { radius: 0.5 }; // Full tile block
         case TILES.HOUSE:
-            return { radius: 0.48 }; // Almost full tile
+        case TILES.HOUSE_BASE:
+            return { radius: 0.5 }; // Full tile block for larger house
         case TILES.TOWER:
         case TILES.CANNON:
             return { radius: 0.45 };
@@ -661,26 +660,22 @@ function generateStartingBase() {
     for (let i = -5; i <= 5; i++) {
         // North wall (y = -5)
         if (i !== 0 && i !== -1) { // 2-tile gap at center
-            const wallType = baseRandom(i, -5) > 0.2 ? TILES.WALL : TILES.WALL_BROKEN;
-            setTile(i, -5, wallType);
+            setTile(i, -5, TILES.WALL);
         }
 
         // South wall (y = 5)
         if (i !== 0 && i !== 1) {
-            const wallType = baseRandom(i, 5) > 0.2 ? TILES.WALL : TILES.WALL_BROKEN;
-            setTile(i, 5, wallType);
+            setTile(i, 5, TILES.WALL);
         }
 
         // West wall (x = -5)
         if (i !== 0 && i !== -1 && i > -5 && i < 5) {
-            const wallType = baseRandom(-5, i) > 0.2 ? TILES.WALL : TILES.WALL_BROKEN;
-            setTile(-5, i, wallType);
+            setTile(-5, i, TILES.WALL);
         }
 
         // East wall (x = 5)
         if (i !== 0 && i !== 1 && i > -5 && i < 5) {
-            const wallType = baseRandom(5, i) > 0.2 ? TILES.WALL : TILES.WALL_BROKEN;
-            setTile(5, i, wallType);
+            setTile(5, i, TILES.WALL);
         }
     }
 
@@ -690,10 +685,11 @@ function generateStartingBase() {
     setTile(-5, 5, TILES.WALL);
     setTile(5, 5, TILES.WALL);
 
-    // === Buildings placed along edges, not blocking center ===
-
-    // House in northwest corner (away from center)
-    setTile(-3, -3, TILES.HOUSE);
+    // House in northwest corner (2x2)
+    setTile(-4, -4, TILES.HOUSE);
+    setTile(-3, -4, TILES.HOUSE_BASE);
+    setTile(-4, -3, TILES.HOUSE_BASE);
+    setTile(-3, -3, TILES.HOUSE_BASE);
 
     // Chest in northeast area
     setTile(3, -3, TILES.CHEST);

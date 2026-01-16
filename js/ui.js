@@ -139,7 +139,19 @@ function selectBuilding(idx) {
 function canBuild(x, y) {
     const tile = getTile(x, y);
     const dist = Math.sqrt((x + 0.5 - player.x) ** 2 + (y + 0.5 - player.y) ** 2);
-    return (tile === TILES.GRASS || tile === TILES.FLOOR) && dist < 4;
+
+    // Houses are 2x2
+    if (selectedBuilding.tile === TILES.HOUSE) {
+        for (let dy = 0; dy < 2; dy++) {
+            for (let dx = 0; dx < 2; dx++) {
+                const nt = getTile(x + dx, y + dy);
+                if (nt !== TILES.GRASS && nt !== TILES.FLOOR) return false;
+            }
+        }
+        return dist < 12;
+    }
+
+    return (tile === TILES.GRASS || tile === TILES.FLOOR) && dist < 12;
 }
 
 function placeBuild(x, y) {
@@ -147,7 +159,14 @@ function placeBuild(x, y) {
         resources[r] -= amt;
     });
 
-    setTile(x, y, selectedBuilding.tile);
+    if (selectedBuilding.tile === TILES.HOUSE) {
+        setTile(x, y, TILES.HOUSE);
+        setTile(x + 1, y, TILES.HOUSE_BASE);
+        setTile(x, y + 1, TILES.HOUSE_BASE);
+        setTile(x + 1, y + 1, TILES.HOUSE_BASE);
+    } else {
+        setTile(x, y, selectedBuilding.tile);
+    }
 
     spawnParticles(x + 0.5, y + 0.5, '#ffd700', 8);
     player.exp += 20;
@@ -272,7 +291,6 @@ function renderMinimap() {
         [TILES.TREE]: [26, 58, 10],
         [TILES.WATER]: [42, 74, 122],
         [TILES.WALL]: [90, 74, 58],
-        [TILES.WALL_BROKEN]: [90, 74, 58],
         [TILES.FLOOR]: [106, 90, 74],
         [TILES.HOUSE]: [106, 90, 74],
         [TILES.STONE]: [90, 90, 90],

@@ -87,31 +87,64 @@ function handleRightClick(e) {
 
     // Right-click now cancels movement and removes the marker
     cancelPlayerPath();
-
-    // Optional: Add a small visual feedback that path was cancelled
-    spawnParticles(player.x, player.y, '#ff4444', 3);
 }
 
 function setPlayerMoveTarget(worldX, worldY) {
-    // Set destination
+    // Clear any existing path first
+    cancelPlayerPath();
+    
+    // Store the intended destination
     player.moveTarget = { x: worldX, y: worldY };
 
-    // Calculate path
+    // Calculate path using A*
     const path = pathfinder.findPath(player.x, player.y, worldX, worldY);
 
     if (path && path.length > 0) {
         player.path = path;
         player.pathIndex = 0;
-
-        // Visual feedback - spawn particles at destination
-        spawnParticles(worldX, worldY, '#44ff44', 5);
+        console.debug(`Path found with ${path.length} nodes`);
+    } else if (path && path.length === 0) {
+        // Empty path means we're already at the destination tile
+        console.debug('Already at destination');
+        player.moveTarget = null;
     } else {
-        // No path found, try direct movement
-        player.path = [{ x: worldX, y: worldY }];
-        player.pathIndex = 0;
-
-        // Yellow particles for "might not be reachable"
-        spawnParticles(worldX, worldY, '#ffff44', 5);
+        // No path found - try direct movement for short distances
+        const dist = Math.sqrt((worldX - player.x) ** 2 + (worldY - player.y) ** 2);
+        
+        if (dist < 2) {
+            // Short distance, try direct path
+            player.path = [{ x: worldX, y: worldY }];
+            player.pathIndex = 0;
+            console.debug('Using direct path for short distance');
+        } else {
+            // Long distance with no path - try to find nearest walkable
+            const nearest = pathfinder.findNearestWalkable(
+                Math.floor(worldX), 
+                Math.floor(worldY), 
+                Math.floor(player.x), 
+                Math.floor(player.y)
+            );
+            
+            if (nearest) {
+                const newPath = pathfinder.findPath(
+                    player.x, player.y, 
+                    nearest.x + 0.5, nearest.y + 0.5
+                );
+                
+                if (newPath && newPath.length > 0) {
+                    player.path = newPath;
+                    player.pathIndex = 0;
+                    player.moveTarget = { x: nearest.x + 0.5, y: nearest.y + 0.5 };
+                    console.debug(`Rerouted to nearest walkable with ${newPath.length} nodes`);
+                } else {
+                    console.debug('Could not find path to nearest walkable');
+                    player.moveTarget = null;
+                }
+            } else {
+                console.debug('No walkable tiles near destination');
+                player.moveTarget = null;
+            }
+        }
     }
 }
 
@@ -119,6 +152,7 @@ function cancelPlayerPath() {
     player.path = null;
     player.pathIndex = 0;
     player.moveTarget = null;
+    player.stuckTime = 0;
 }
 
 function isHarvestable(tile) {
@@ -136,7 +170,7 @@ function determineHarvestedGround(x, y) {
         getTile(x, y - 1)
     ];
 
-    const structures = [TILES.FLOOR, TILES.HOUSE, TILES.CHEST, TILES.WORKBENCH, TILES.BED, TILES.WALL, TILES.WALL_BROKEN, TILES.CAMPFIRE];
+    const structures = [TILES.FLOOR, TILES.HOUSE, TILES.CHEST, TILES.WORKBENCH, TILES.BED, TILES.WALL, TILES.CAMPFIRE];
     let floorCount = 0;
 
     for (const t of neighbors) {

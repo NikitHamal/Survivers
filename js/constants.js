@@ -9,10 +9,10 @@ const MAX_DT = 0.1; // Max delta time to prevent spiral
 // Tile types
 const TILES = {
     GRASS: 0, TREE: 1, STONE: 2, IRON: 3, WATER: 4,
-    WALL: 5, WALL_BROKEN: 6, FLOOR: 7, CAMPFIRE: 8,
+    WALL: 5, FLOOR: 7, CAMPFIRE: 8,
     HOUSE: 9, FARM: 10, TOWER: 11, CANNON: 12,
     WORKBENCH: 13, CHEST: 14, BED: 15, BUSH: 16,
-    SPIKES: 17
+    SPIKES: 17, HOUSE_BASE: 18
 };
 
 const ROLES = ['None', 'Builder', 'Soldier', 'Guard', 'Farmer', 'Woodcutter', 'Miner', 'Hunter', 'Medic'];
