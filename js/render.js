@@ -452,15 +452,17 @@ function renderZombie(z) {
 }
 
 function renderMinimap() {
+    const size = minimapCanvas.width;
     minimapCtx.fillStyle = '#0a1a0a';
-    minimapCtx.fillRect(0, 0, 120, 120);
+    minimapCtx.fillRect(0, 0, size, size);
 
-    const mapScale = 1;
-    const halfSize = 60;
+    const mapScale = 2;
+    const halfSize = size / 2;
+    const range = Math.floor(halfSize / mapScale);
 
     // Tiles
-    for (let dy = -30; dy < 30; dy++) {
-        for (let dx = -30; dx < 30; dx++) {
+    for (let dy = -range; dy < range; dy++) {
+        for (let dx = -range; dx < range; dx++) {
             const wx = Math.floor(player.x + dx);
             const wy = Math.floor(player.y + dy);
             const tile = getTile(wx, wy);
@@ -484,7 +486,7 @@ function renderMinimap() {
     zombies.forEach(z => {
         const dx = z.x - player.x;
         const dy = z.y - player.y;
-        if (Math.abs(dx) < 30 && Math.abs(dy) < 30) {
+        if (Math.abs(dx) < range && Math.abs(dy) < range) {
             minimapCtx.fillRect(halfSize + dx * mapScale - 1, halfSize + dy * mapScale - 1, 3, 3);
         }
     });
@@ -495,7 +497,7 @@ function renderMinimap() {
         if (s.isPlayer) return;
         const dx = s.x - player.x;
         const dy = s.y - player.y;
-        if (Math.abs(dx) < 30 && Math.abs(dy) < 30) {
+        if (Math.abs(dx) < range && Math.abs(dy) < range) {
             minimapCtx.fillRect(halfSize + dx * mapScale - 1, halfSize + dy * mapScale - 1, 2, 2);
         }
     });
@@ -506,6 +508,6 @@ function renderMinimap() {
 
     // Border
     minimapCtx.strokeStyle = '#4a4a6a';
-    minimapCtx.lineWidth = 1;
-    minimapCtx.strokeRect(0, 0, 120, 120);
+    minimapCtx.lineWidth = 2;
+    minimapCtx.strokeRect(0, 0, size, size);
 }

@@ -19,26 +19,26 @@
         <div id="ui">
             <div class="ui-panel">
                 <h3>☀️ Day <span id="dayCount">1</span> - <span id="timeOfDay">Morning</span></h3>
-                <div class="stat-bar" style="width:110px;height:6px;">
+                <div class="stat-bar" id="timeBar">
                     <div id="timeFill" class="stat-fill"
                         style="width:0%;background:linear-gradient(90deg,#ff9900,#ffd700);"></div>
                 </div>
             </div>
             <div class="ui-panel">
                 <h3>❤️ Player Stats</h3>
-                <div style="font-size:10px;">HP: <span id="healthText">100</span>/<span id="maxHealthText">100</span>
+                <div class="stat-text">HP: <span id="healthText">100</span>/<span id="maxHealthText">100</span>
                 </div>
                 <div class="stat-bar">
                     <div id="healthFill" class="stat-fill"
                         style="width:100%;background:linear-gradient(90deg,#cc2222,#ff4444);"></div>
                 </div>
-                <div style="font-size:10px;margin-top:3px;">Hunger: <span id="hungerText">100</span></div>
+                <div class="stat-text">Hunger: <span id="hungerText">100</span></div>
                 <div class="stat-bar">
                     <div id="hungerFill" class="stat-fill"
                         style="width:100%;background:linear-gradient(90deg,#cc6600,#ff9944);"></div>
                 </div>
-                <div style="font-size:10px;margin-top:3px;">Lv.<span id="levelText">1</span> - XP: <span
-                        id="expText">0</span>/<span id="expNeededText">100</span></div>
+                <div class="stat-text">Lv.<span id="levelText">1</span> - XP: <span id="expText">0</span>/<span
+                        id="expNeededText">100</span></div>
                 <div class="stat-bar">
                     <div id="expFill" class="stat-fill"
                         style="width:0%;background:linear-gradient(90deg,#22aa22,#44ff44);"></div>
@@ -61,12 +61,12 @@
             </div>
             <div class="ui-panel">
                 <h3>👥 Survivors: <span id="survivorCount">1</span></h3>
-                <div style="font-size:9px;color:#888;">Press [T] to manage</div>
+                <div class="survivor-hint">Press [T] to manage</div>
             </div>
         </div>
 
         <div id="minimap">
-            <canvas id="minimapCanvas" width="120" height="120"></canvas>
+            <canvas id="minimapCanvas" width="200" height="200"></canvas>
         </div>
 
         <div id="survivorPanel" class="ui-panel">
