@@ -20,13 +20,35 @@ function updateUI() {
 
 function setupInventoryUI() {
     const container = document.getElementById('invSlots');
-    const items = ['🪓', '⛏️', '🗡️', '🍖', '💊'];
+    const items = ['🪓', '⛏️', '🗡️', '🍖', '💊']; // Restored original emojis
     for (let i = 0; i < 5; i++) {
         const slot = document.createElement('div');
         slot.className = 'inv-slot';
-        slot.innerHTML = `<span style="font-size:14px;">${items[i]}</span><span class="inv-count">${i + 1}</span>`;
+        slot.innerHTML = `<span style="font-size:24px;">${items[i]}</span><span class="inv-count">${i + 1}</span>`;
         slot.onclick = () => selectInventorySlot(i);
         container.appendChild(slot);
+    }
+}
+
+function toggleMinimap() {
+    const minimap = document.getElementById('minimap');
+    const backdrop = document.getElementById('minimapBackdrop');
+    minimap.classList.toggle('expanded');
+
+    if (backdrop) {
+        if (minimap.classList.contains('expanded')) {
+            backdrop.style.display = 'block';
+            setTimeout(() => backdrop.classList.add('active'), 10);
+        } else {
+            backdrop.classList.remove('active');
+            setTimeout(() => backdrop.style.display = 'none', 500);
+        }
+    }
+
+    if (minimap.classList.contains('expanded')) {
+        gamePaused = true;
+    } else {
+        gamePaused = false;
     }
 }
 
@@ -87,10 +109,10 @@ function openBuildMenu() {
         const div = document.createElement('div');
         div.className = 'menu-item' + (canAfford ? '' : ' disabled');
         div.innerHTML = `
-            <div style="font-size:22px;margin-bottom:4px;">${b.icon}</div>
-            <div style="font-weight:bold;">${b.name}</div>
-            <div style="font-size:8px;color:#888;margin:3px 0;">${b.desc}</div>
-            <div style="font-size:8px;color:#aaa;">
+            <div style="margin-bottom:4px; font-size:32px; height:40px; display:flex; align-items:center; justify-content:center;">${b.icon}</div>
+            <div style="font-weight:bold; font-size:14px;">${b.name}</div>
+            <div style="font-size:10px;color:#888;margin:3px 0;line-height:1.2;">${b.desc}</div>
+            <div style="font-size:10px;color:#aaa;">
                 ${Object.entries(b.cost).map(([r, a]) => {
             const hasEnough = resources[r] >= a;
             return `<span style="color:${hasEnough ? '#8f8' : '#f88'}">${r}:${a}</span>`;
@@ -192,14 +214,14 @@ function updateSurvivorList() {
         div.innerHTML = `
             <div class="survivor-icon" style="background:${iconColor}"></div>
             <span>${s.name.split(' ')[0]}</span>
-            <span style="color:#666;font-size:8px;">${s.role}</span>
+            <span style="color:#666;font-size:12px;margin-left:auto;">${s.role}</span>
         `;
         list.appendChild(div);
     });
 
     if (survivors.length > 6) {
         const more = document.createElement('div');
-        more.style.cssText = 'color:#888;font-size:9px;padding:2px;';
+        more.style.cssText = 'color:#888;font-size:12px;padding:2px;';
         more.textContent = `+${survivors.length - 6} more...`;
         list.appendChild(more);
     }

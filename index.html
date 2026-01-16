@@ -5,6 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jungle Survivors - Zombie Apocalypse</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
 
@@ -12,20 +17,22 @@
     <div id="gameContainer">
         <canvas id="gameCanvas"></canvas>
         <div id="dayNightOverlay"></div>
+        <div id="minimapBackdrop" onclick="toggleMinimap()"></div>
 
         <div id="fpsCounter">FPS: 60</div>
         <div id="coordsDisplay">X: 0 Y: 0</div>
 
         <div id="ui">
             <div class="ui-panel">
-                <h3>☀️ Day <span id="dayCount">1</span> - <span id="timeOfDay">Morning</span></h3>
+                <h3><i class="material-icons">wb_sunny</i> Day <span id="dayCount">1</span> - <span
+                        id="timeOfDay">Morning</span></h3>
                 <div class="stat-bar" id="timeBar">
                     <div id="timeFill" class="stat-fill"
                         style="width:0%;background:linear-gradient(90deg,#ff9900,#ffd700);"></div>
                 </div>
             </div>
             <div class="ui-panel">
-                <h3>❤️ Player Stats</h3>
+                <h3><i class="material-icons">favorite</i> Player Stats</h3>
                 <div class="stat-text">HP: <span id="healthText">100</span>/<span id="maxHealthText">100</span>
                 </div>
                 <div class="stat-bar">
@@ -45,7 +52,7 @@
                 </div>
             </div>
             <div class="ui-panel">
-                <h3>📦 Resources</h3>
+                <h3><i class="material-icons">inventory_2</i> Resources</h3>
                 <div class="resource-bar">
                     <div class="resource-icon" style="background:#8B4513"></div>Wood: <span id="woodCount">0</span>
                 </div>
@@ -60,13 +67,14 @@
                 </div>
             </div>
             <div class="ui-panel">
-                <h3>👥 Survivors: <span id="survivorCount">1</span></h3>
+                <h3><i class="material-icons">groups</i> Survivors: <span id="survivorCount">1</span></h3>
                 <div class="survivor-hint">Press [T] to manage</div>
             </div>
         </div>
 
-        <div id="minimap">
+        <div id="minimap" onclick="toggleMinimap()">
             <canvas id="minimapCanvas" width="200" height="200"></canvas>
+            <div id="minimapHint">Press [M] to Toggle</div>
         </div>
 
         <div id="survivorPanel" class="ui-panel">
@@ -109,7 +117,8 @@
         </div>
 
         <div id="startScreen">
-            <h1>🌴 JUNGLE SURVIVORS 🧟</h1>
+            <h1><i class="material-icons" style="font-size: 48px;">forest</i> JUNGLE SURVIVORS <i class="material-icons"
+                    style="font-size: 48px;">coronavirus</i></h1>
             <p>The world has fallen to zombies. You are one of the few survivors, stranded in a mysterious jungle.</p>
             <p>Build your base, gather resources, recruit survivors, and survive the deadly nights!</p>
             <p style="color:#ff6666;">⚠️ Zombies attack at night - prepare your defenses!</p>

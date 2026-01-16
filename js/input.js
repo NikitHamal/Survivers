@@ -19,9 +19,13 @@ function handleKeyPress(e) {
             e.preventDefault();
             attackAction();
             break;
+        case 'KeyM':
+            toggleMinimap();
+            break;
         case 'Escape':
             closeBuildMenu();
             document.getElementById('survivorMenu').style.display = 'none';
+            document.getElementById('minimap').classList.remove('expanded');
             buildMode = false;
             break;
         case 'Digit1': case 'Digit2': case 'Digit3': case 'Digit4': case 'Digit5':
@@ -130,7 +134,7 @@ function interact() {
 
     // Chest
     if (tile === TILES.CHEST) {
-        showNotification('📦 Chest contains supplies!', [{
+        showNotification('<i class="material-icons">inventory_2</i> Chest contains supplies!', [{
             text: 'Take All',
             action: () => {
                 resources.food += 5;
@@ -175,7 +179,7 @@ function attackAction() {
 
 function toggleFollow() {
     followMode = !followMode;
-    showNotification(followMode ? '👥 Team following you!' : '👥 Team returned to duties.', []);
+    showNotification(followMode ? '<i class="material-icons">diversity_3</i> Team following you!' : '<i class="material-icons">diversity_3</i> Team returned to duties.', []);
 }
 
 function useItem() {

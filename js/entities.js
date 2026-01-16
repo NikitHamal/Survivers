@@ -104,7 +104,7 @@ function updateZombies(dt) {
                         s.health -= z.damage;
                         if (s.health <= 0) {
                             survivors = survivors.filter(sv => sv !== s);
-                            showNotification(`💀 ${s.name} was killed!`, []);
+                            showNotification(`<i class="material-icons">skull</i> ${s.name} was killed!`, []);
                         }
                     }
                 });
@@ -272,7 +272,7 @@ function checkLevelUp() {
         player.expToLevel = Math.floor(player.expToLevel * 1.4);
         player.maxHealth += 15;
         player.health = player.maxHealth;
-        showNotification(`🎉 Level Up! Now level ${player.level}!`, []);
+        showNotification(`<i class="material-icons">military_tech</i> Level Up! Now level ${player.level}!`, []);
         spawnParticles(player.x, player.y, '#ffd700', 15);
     }
 }

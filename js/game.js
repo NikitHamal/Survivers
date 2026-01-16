@@ -44,7 +44,7 @@ function fixedUpdate(dt) {
     if (timeOfDay >= 1) {
         timeOfDay = 0;
         dayCount++;
-        showNotification(`☀️ Day ${dayCount} begins!`, [{ text: 'OK', action: () => { } }]);
+        showNotification(`<i class="material-icons">wb_sunny</i> Day ${dayCount} begins!`, [{ text: 'OK', action: () => { } }]);
     }
 
     updateDayNight();

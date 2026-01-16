@@ -11,7 +11,7 @@ setInterval(() => {
     const name = names[Math.floor(Math.random() * names.length)];
 
     showNotification(
-        `🙋 A survivor named ${name} wants to join!`,
+        `<i class="material-icons">contact_emergency</i> A survivor named ${name} wants to join!`,
         [
             {
                 text: '✓ Accept', class: 'accept', action: () => {
