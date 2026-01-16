@@ -178,8 +178,11 @@ function placeBuild(x, y) {
 }
 
 // ============= SURVIVOR MANAGEMENT =============
+// ============= SURVIVOR MANAGEMENT =============
 function toggleSurvivorMenu() {
     const menu = document.getElementById('survivorMenu');
+
+    // Toggle
     if (menu.style.display === 'block') {
         menu.style.display = 'none';
         gameState.paused = false;
@@ -190,18 +193,57 @@ function toggleSurvivorMenu() {
     container.innerHTML = '';
 
     if (survivors.length <= 1) {
-        container.innerHTML = '<p style="color:#888;text-align:center;">No team members yet.<br>Survivors will come during daytime!</p>';
+        container.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">No team members yet.<br>Survivors will come during daytime!</p>';
     } else {
         survivors.forEach((s, i) => {
             if (s.isPlayer) return;
 
             const div = document.createElement('div');
-            div.style.cssText = 'background:#1a1a2a;padding:10px 12px;margin:6px 0;border-radius:5px;color:#fff;display:flex;justify-content:space-between;align-items:center;';
+            div.className = 'survivor-manage-item';
+
+            // Health percentage for visual bar
+            const hpPercent = (s.health / s.maxHealth) * 100;
+            const hpColor = hpPercent > 50 ? '#44ff44' : hpPercent > 25 ? '#ffff44' : '#ff4444';
+
             div.innerHTML = `
-                <span><strong>${s.name}</strong> <span style="color:#888;font-size:10px;">HP:${s.health}</span></span>
-                <select onchange="assignRole(${i}, this.value)" style="background:#2a2a4a;color:#fff;border:1px solid #4a4a6a;padding:4px 8px;border-radius:3px;cursor:pointer;">
-                    ${ROLES.map(r => `<option value="${r}" ${s.role === r ? 'selected' : ''}>${r}</option>`).join('')}
-                </select>
+                <div class="survivor-info">
+                    <div class="survivor-name">${s.name}</div>
+                    <div class="survivor-stats">
+                        <span>Role: ${s.role}</span>
+                        <span>Lv.1</span>
+                    </div>
+                </div>
+                
+                <div style="display:flex; flex-direction:column; gap:4px; align-items:center;">
+                    <div class="survivor-hp-bar">
+                        <div class="survivor-hp-fill" style="width:${hpPercent}%; background:${hpColor}"></div>
+                    </div>
+                    <span style="font-size:9px; color:#888">${Math.floor(s.health)}/${s.maxHealth}</span>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <!-- Custom Select for Role -->
+                    <div class="custom-select-wrapper" id="roleSelect_${i}">
+                        <div class="custom-select">
+                            <div class="custom-select__trigger" onclick="toggleRoleSelect(${i})">
+                                <span>${s.role}</span>
+                                <i class="material-icons" style="font-size:14px;">arrow_drop_down</i>
+                            </div>
+                            <div class="custom-select-options">
+                                ${ROLES.map(r => `
+                                    <span class="custom-option" onclick="assignRole(${i}, '${r}')" data-value="${r}">
+                                        ${r}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Follow Toggle -->
+                    <div class="follow-toggle ${s.isFollowing ? 'active' : ''}" onclick="toggleIndividualFollow(${i})" title="Toggle Follow">
+                        <i class="material-icons">${s.isFollowing ? 'directions_run' : 'front_hand'}</i>
+                    </div>
+                </div>
             `;
             container.appendChild(div);
         });
@@ -209,11 +251,58 @@ function toggleSurvivorMenu() {
 
     menu.style.display = 'block';
     gameState.paused = true;
+
+    // Close dropdowns when clicking outside
+    window.onclick = function (e) {
+        if (!e.target.closest('.custom-select')) {
+            document.querySelectorAll('.custom-select').forEach(el => el.classList.remove('open'));
+        }
+    }
+}
+
+// Custom Select Logic
+window.toggleRoleSelect = function (idx) {
+    const wrapper = document.getElementById(`roleSelect_${idx}`);
+    const select = wrapper.querySelector('.custom-select');
+    const item = wrapper.closest('.survivor-manage-item');
+
+    // Close others
+    document.querySelectorAll('.custom-select').forEach(el => {
+        if (el !== select) {
+            el.classList.remove('open');
+            const otherItem = el.closest('.survivor-manage-item');
+            if (otherItem) otherItem.style.zIndex = '1';
+        }
+    });
+
+    select.classList.toggle('open');
+    if (select.classList.contains('open')) {
+        item.style.zIndex = '1000'; // Bring this item to top so dropdown is visible
+    } else {
+        item.style.zIndex = '1';
+    }
+
+    // Prevent window.onclick from closing immediately
+    if (typeof event !== 'undefined') event.stopPropagation();
 }
 
 function assignRole(idx, role) {
     survivors[idx].role = role;
+    // Update the UI text immediately
+    const wrapper = document.getElementById(`roleSelect_${idx}`);
+    if (wrapper) {
+        wrapper.querySelector('.custom-select__trigger span').textContent = role;
+        wrapper.querySelector('.custom-select').classList.remove('open');
+    }
     updateSurvivorList();
+    event.stopPropagation();
+}
+
+function toggleIndividualFollow(idx) {
+    survivors[idx].isFollowing = !survivors[idx].isFollowing;
+    // Re-render to update icon state (lazy way, or update class directly)
+    toggleSurvivorMenu(); // Just re-open to refresh is easiest for now
+    updateSurvivorList(); // If we show follow status in list
 }
 
 function updateSurvivorList() {

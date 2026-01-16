@@ -100,7 +100,7 @@ function spawnZombie() {
             frame: 0,
             animTimer: 0
         };
-        
+
         // Attach AI
         newZombie.ai = new ZombieAI(newZombie);
 
@@ -146,16 +146,16 @@ function updateZombies(dt) {
 
     const currentDay = dayCount || 0;
     const deadZombies = [];
-    
+
     // Performance: Only check neighbors within range
     // A simple grid hash or quadtree would be better, but loop is fine for < 100 entities
-    
+
     zombies = zombies.filter(z => {
         if (z.health <= 0) {
             deadZombies.push(z);
             return false;
         }
-        
+
         if (z.ai) {
             // Find neighbors for separation (simple O(N^2) for now)
             const neighbors = [];
@@ -166,11 +166,11 @@ function updateZombies(dt) {
             }
             z.ai.update(dt, neighbors);
         }
-        
+
         // Check despawn range
-        const distToPlayer = Math.sqrt((z.x - player.x)**2 + (z.y - player.y)**2);
+        const distToPlayer = Math.sqrt((z.x - player.x) ** 2 + (z.y - player.y) ** 2);
         if (distToPlayer > ZOMBIE_CONFIG.DESPAWN_RANGE) return false;
-        
+
         return true;
     });
 
@@ -205,8 +205,6 @@ function updateSurvivors(dt) {
 
     if (!Array.isArray(survivors)) return;
 
-    const survivorCount = survivors.filter(s => !s.isPlayer).length;
-
     for (let i = 0; i < survivors.length; i++) {
         const s = survivors[i];
 
@@ -220,50 +218,124 @@ function updateSurvivors(dt) {
 
         // Initialize survivor properties if missing
         initializeSurvivorProperties(s);
+        s.isMoving = false; // Reset movement flag for this frame
 
-        // Movement Logic using Steering (Integrated here or extracted to SurvivorAI)
-        // For now, keeping logic here but improved
-        
-        let targetX = s.x;
-        let targetY = s.y;
-        let shouldMove = false;
-        
-        if (followMode) {
-            // Calculate formation position
-            const formationAngle = (i / Math.max(survivorCount, 1)) * Math.PI * 2;
-            targetX = player.x + Math.cos(formationAngle) * SURVIVOR_CONFIG.FOLLOW_DISTANCE;
-            targetY = player.y + Math.sin(formationAngle) * SURVIVOR_CONFIG.FOLLOW_DISTANCE;
-            shouldMove = true;
+        // --- AI LOGIC ---
+        // 1. Check Follow Mode (Individual or Global override if we kept it, but user wants specific)
+        // We prioritize individual setting, but maybe 'F' key toggles all for convenience? 
+        // For now, let's assume 'isFollowing' is the source of truth.
+        const isFollowing = s.isFollowing || false;
+
+        if (isFollowing) {
+            s.state = 'FOLLOWING';
+            // Formation offset
+            const offsetDist = 1.5;
+            const angle = (i * (Math.PI * 2 / 6)) + (pixelTime || 0) * 0.1; // Rotate slowly
+            const targetX = player.x + Math.cos(angle) * offsetDist;
+            const targetY = player.y + Math.sin(angle) * offsetDist;
+
+            const distToTarget = Math.sqrt((targetX - s.x) ** 2 + (targetY - s.y) ** 2);
+
+            if (distToTarget > 5) {
+                // Too far, use pathfinding
+                if (!s.path || s.pathIndex >= s.path.length || s.repathTimer <= 0) {
+                    s.path = pathfinder.findPath(s.x, s.y, targetX, targetY);
+                    s.pathIndex = 0;
+                    s.repathTimer = 2.0;
+                }
+                if (followPath(s, dt)) {
+                    s.isMoving = true;
+                }
+                s.repathTimer -= dt;
+            } else if (distToTarget > 0.5) {
+                // Close enough for direct steering
+                const speed = SURVIVOR_CONFIG.FOLLOW_SPEED * dt;
+                const dx = targetX - s.x;
+                const dy = targetY - s.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                // Separation from other survivors to avoid stacking
+                let sepX = 0, sepY = 0;
+                survivors.forEach(other => {
+                    if (other === s) return;
+                    const odx = s.x - other.x;
+                    const ody = s.y - other.y;
+                    const odistSq = odx * odx + ody * ody;
+                    if (odistSq < 1.0 && odistSq > 0) { // Slightly larger separation
+                        const odist = Math.sqrt(odistSq);
+                        sepX += (odx / odist) / odist;
+                        sepY += (ody / odist) / odist;
+                    }
+                });
+
+                const moveX = (dx / dist) + sepX * 1.5;
+                const moveY = (dy / dist) + sepY * 1.5;
+
+                // Normalize
+                const moveMag = Math.sqrt(moveX * moveX + moveY * moveY);
+                if (moveMag > 0) {
+                    if (tryMoveEntity(s, (moveX / moveMag) * speed, (moveY / moveMag) * speed)) {
+                        s.isMoving = true;
+                    }
+                }
+            }
         } else {
-             // Idle Logic
-             updateSurvivorIdleMode(s, dt);
-             return; // Idle mode handles its own movement inside
+            // Standard worker AI
+            updateSurvivorIdleMode(s, dt);
         }
-        
-        if (shouldMove) {
-             const dx = targetX - s.x;
-             const dy = targetY - s.y;
-             const dist = Math.sqrt(dx*dx + dy*dy);
-             
-             if (dist > SURVIVOR_CONFIG.FOLLOW_THRESHOLD) {
-                 // Use seek behavior
-                 const moveSpeed = SURVIVOR_CONFIG.FOLLOW_SPEED * dt;
-                 
-                 // Apply separation from other survivors
-                 const separation = SteeringBehavior.separate(s, survivors);
-                 
-                 const mx = (dx/dist) * moveSpeed + separation.x * dt;
-                 const my = (dy/dist) * moveSpeed + separation.y * dt;
-                 
-                 tryMoveEntity(s, mx, my);
-             }
+
+        // Stuck detection
+        if (s.state === 'MOVING' || s.state === 'FOLLOWING') {
+            const lastX = s.lastPosX || s.x;
+            const lastY = s.lastPosY || s.y;
+            const distMoved = Math.sqrt((s.x - lastX) ** 2 + (s.y - lastY) ** 2);
+
+            if (distMoved < 0.01) {
+                s.stuckTimer = (s.stuckTimer || 0) + dt;
+            } else {
+                s.stuckTimer = 0;
+            }
+            s.lastPosX = s.x;
+            s.lastPosY = s.y;
+
+            if (s.stuckTimer > 3) {
+                // Reset if stuck
+                s.state = 'IDLE';
+                s.taskTarget = null;
+                s.path = null;
+                s.stuckTimer = 0;
+            }
+        } else {
+            s.stuckTimer = 0;
         }
-        
-        // Combat
-        if (isCombatRole(s.role)) {
+
+        // Update animation timer
+        s.animTimer = (s.animTimer || 0) + dt;
+
+        // Combat (Always active if in range)
+        if (isCombatRole(s.role) || isFollowing) { // Followers also fight self-defense
             updateSurvivorCombat(s, dt);
         }
     }
+}
+
+function followPath(entity, dt) {
+    if (!entity.path || entity.pathIndex >= entity.path.length) return false;
+
+    const target = entity.path[entity.pathIndex];
+    if (!target) return false;
+
+    const dx = target.x - entity.x;
+    const dy = target.y - entity.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < 0.2) {
+        entity.pathIndex++;
+        return false;
+    }
+
+    const speed = SURVIVOR_CONFIG.WANDER_SPEED * 1.5 * dt; // Faster when pathing
+    return tryMoveEntity(entity, (dx / dist) * speed, (dy / dist) * speed);
 }
 
 function initializeSurvivorProperties(s) {
@@ -276,23 +348,33 @@ function updateSurvivorIdleMode(s, dt) {
     // State Machine
     switch (s.state) {
         case 'IDLE':
-            const target = findTaskTarget(s);
-            if (target) {
-                s.taskTarget = target;
-                s.state = 'MOVING';
-                s.path = pathfinder.findPath(s.x, s.y, target.x, target.y);
-                s.pathIndex = 0;
+            // Optimization: Don't search for tasks every frame
+            if ((s.searchTimer || 0) > 0) {
+                s.searchTimer -= dt;
             } else {
+                s.searchTimer = 2.0; // Check every 2 seconds
+                const target = findTaskTarget(s);
+                if (target) {
+                    s.taskTarget = target;
+                    s.state = 'MOVING';
+                    s.path = pathfinder.findPath(s.x, s.y, target.x, target.y);
+                    s.pathIndex = 0;
+                    break; // Stop processing IDLE
+                }
+            }
+
+            // Wander if idle
+            if (s.state === 'IDLE' && s.role !== 'None') {
                 // Wander
                 if (Math.random() < 0.02) {
-                     const wx = s.x + (Math.random() - 0.5) * 5;
-                     const wy = s.y + (Math.random() - 0.5) * 5;
-                     if (!isSolidAt(wx, wy, 0.3)) {
-                         s.taskTarget = { x: wx, y: wy };
-                         s.state = 'MOVING';
-                         s.path = pathfinder.findPath(s.x, s.y, wx, wy);
-                         s.pathIndex = 0;
-                     }
+                    const wx = s.x + (Math.random() - 0.5) * 5;
+                    const wy = s.y + (Math.random() - 0.5) * 5;
+                    if (!isSolidAt(wx, wy, 0.3)) {
+                        s.taskTarget = { x: wx, y: wy };
+                        s.state = 'MOVING';
+                        s.path = pathfinder.findPath(s.x, s.y, wx, wy);
+                        s.pathIndex = 0;
+                    }
                 }
             }
             break;
@@ -302,96 +384,200 @@ function updateSurvivorIdleMode(s, dt) {
                 s.state = 'IDLE';
                 return;
             }
-            
+
             // Move along path
             let moveTarget = s.taskTarget;
+
+            // Strict Validation: If we are a worker, check if our target is still what we want
+            const targetTile = getTile(Math.floor(s.taskTarget.x), Math.floor(s.taskTarget.y));
+            let isTargetStillValid = true;
+            if (s.role === 'Woodcutter') isTargetStillValid = (targetTile === TILES.TREE);
+            else if (s.role === 'Miner') isTargetStillValid = (targetTile === TILES.STONE || targetTile === TILES.IRON);
+            else if (s.role === 'Farmer') isTargetStillValid = (targetTile === TILES.FARM);
+
+            if (!isTargetStillValid) {
+                s.state = 'IDLE';
+                s.taskTarget = null;
+                s.path = null;
+                return;
+            }
+
             if (s.path && s.pathIndex < s.path.length) {
-                 const node = s.path[s.pathIndex];
-                 const dNode = (node.x - s.x)**2 + (node.y - s.y)**2;
-                 if (dNode < 0.1) {
-                     s.pathIndex++;
-                     if (s.pathIndex < s.path.length) moveTarget = s.path[s.pathIndex];
-                 } else {
-                     moveTarget = node;
-                 }
+                const node = s.path[s.pathIndex];
+                const dNode = (node.x - s.x) ** 2 + (node.y - s.y) ** 2;
+                if (dNode < 0.1) {
+                    s.pathIndex++;
+                    if (s.pathIndex < s.path.length) moveTarget = s.path[s.pathIndex];
+                } else {
+                    moveTarget = node;
+                }
             }
 
             const dx = moveTarget.x - s.x;
             const dy = moveTarget.y - s.y;
-            const distSq = (s.taskTarget.x - s.x)**2 + (s.taskTarget.y - s.y)**2;
+            const distSq = (s.taskTarget.x - s.x) ** 2 + (s.taskTarget.y - s.y) ** 2;
 
             if (distSq < 1.0) { // Reached target
                 s.state = 'WORKING';
                 s.taskTimer = 0;
             } else {
-                const dist = Math.sqrt((moveTarget.x - s.x)**2 + (moveTarget.y - s.y)**2);
+                const dist = Math.sqrt((moveTarget.x - s.x) ** 2 + (moveTarget.y - s.y) ** 2);
                 if (dist > 0.1) {
                     const speed = SURVIVOR_CONFIG.WANDER_SPEED * dt;
-                    tryMoveEntity(s, (dx/dist)*speed, (dy/dist)*speed);
+                    if (tryMoveEntity(s, (dx / dist) * speed, (dy / dist) * speed)) {
+                        s.isMoving = true;
+                    }
                 }
             }
             break;
 
         case 'WORKING':
             s.taskTimer += dt;
-            if (Math.random() < 0.1) {
-                const type = s.role === 'Woodcutter' ? '#8B4513' :
-                    s.role === 'Miner' ? '#707070' : '#ffff00';
-                spawnParticles(s.x, s.y, type, 1);
+
+            // Check if target is still valid while working
+            if (s.taskTarget) {
+                const currentTile = getTile(Math.floor(s.taskTarget.x), Math.floor(s.taskTarget.y));
+                let expectedType = null;
+                if (s.role === 'Woodcutter') expectedType = TILES.TREE;
+                else if (s.role === 'Miner') expectedType = (currentTile === TILES.STONE || currentTile === TILES.IRON) ? currentTile : TILES.STONE;
+                else if (s.role === 'Farmer') expectedType = TILES.FARM;
+
+                if (expectedType !== null && currentTile !== expectedType) {
+                    s.state = 'IDLE';
+                    s.taskTarget = null;
+                    s.path = null;
+                    break;
+                }
+            }
+
+            // Particles only when hitting (simulated swing)
+            if (s.taskTimer % 0.8 < 0.1) {
+                const type = s.role === 'Woodcutter' ? '#deb887' :
+                    s.role === 'Miner' ? '#a9a9a9' : '#ffff00';
+                spawnParticles(s.x, s.y, type, 2);
             }
             if (s.taskTimer > 3) {
                 performTaskWork(s);
                 s.taskTimer = 0;
-                if (Math.random() > 0.7) {
-                    s.state = 'IDLE';
-                    s.taskTarget = null;
-                    s.path = null;
-                }
+                s.state = 'IDLE';
+                s.taskTarget = null;
+                s.path = null;
             }
             break;
     }
 }
 
+// Resource scanning helper
 function findTaskTarget(s) {
     let targetType = null;
+    let target = null;
+
     switch (s.role) {
         case 'Woodcutter': targetType = TILES.TREE; break;
-        case 'Miner': targetType = Math.random() > 0.5 ? TILES.STONE : TILES.IRON; break;
+        case 'Miner': targetType = TILES.STONE; break; // Scan stone primarily
         case 'Farmer': targetType = TILES.FARM; break;
-        case 'Medic': return player.health < player.maxHealth ? { x: player.x, y: player.y } : null;
+        case 'Medic':
+            // Heal player if needed
+            if (player.health < player.maxHealth * 0.8) return { x: player.x, y: player.y };
+            // Or heal other survivors
+            for (const other of survivors) {
+                if (other !== s && other.health < other.maxHealth * 0.8) return { x: other.x, y: other.y };
+            }
+            return null;
         case 'Guard':
-            if (isNight) return null;
-            return {
-                x: s.x + (Math.random() - 0.5) * 6,
-                y: s.y + (Math.random() - 0.5) * 6
-            };
+            // Guards patrol near buildings or player
+            if (isNight) {
+                // Stay close to base/buildings
+                if (buildings.length > 0) {
+                    const b = buildings[Math.floor(Math.random() * buildings.length)];
+                    return { x: b.x + (Math.random() - 0.5) * 4, y: b.y + (Math.random() - 0.5) * 4 };
+                }
+                return { x: s.x + (Math.random() - 0.5) * 2, y: s.y + (Math.random() - 0.5) * 2 };
+            }
+            // Patrol random
+            return { x: s.x + (Math.random() - 0.5) * 10, y: s.y + (Math.random() - 0.5) * 10 };
     }
 
     if (targetType !== null) {
-        return findNearestTile(s.x, s.y, targetType, 30);
+        // Spiral search for nearest resource
+        target = findNearestTile(s.x, s.y, targetType, 40); // 40 radius
+        // Special case for miners - check iron too if stone not found
+        if (!target && s.role === 'Miner') {
+            target = findNearestTile(s.x, s.y, TILES.IRON, 40);
+        }
     }
-    return null;
+    return target;
+}
+
+// Simple breadth-first or spiral search for tiles
+function findNearestTile(cx, cy, tileType, radius) {
+    const startX = Math.floor(cx);
+    const startY = Math.floor(cy);
+
+    // Check known chunks first (optimization)
+    let bestDist = Infinity;
+    let best = null;
+
+    // Scan a box area
+    for (let y = startY - radius; y <= startY + radius; y++) {
+        for (let x = startX - radius; x <= startX + radius; x++) {
+            if (getTile(x, y) === tileType) {
+                const dx = x - cx;
+                const dy = y - cy;
+                const d = dx * dx + dy * dy;
+                if (d < bestDist) {
+                    bestDist = d;
+                    best = { x: x + 0.5, y: y + 0.5 }; // Center of tile
+                }
+            }
+        }
+    }
+    return best;
 }
 
 function performTaskWork(s) {
+    if (!s.taskTarget) return;
+
+    const tx = Math.floor(s.taskTarget.x);
+    const ty = Math.floor(s.taskTarget.y);
+
     switch (s.role) {
         case 'Woodcutter':
-            resources.wood++;
+            resources.wood += 2;
+            setTile(tx, ty, TILES.GRASS); // Harvest the tree
             spawnParticles(s.x, s.y - 0.5, '#deb887', 5);
-            addDamageNumber(s.x, s.y - 0.5, '+1', '#deb887');
+            addDamageNumber(s.x, s.y - 0.5, '+2', '#deb887');
             break;
         case 'Miner':
-            resources.stone++;
-            if (Math.random() < 0.3) resources.iron++;
-            spawnParticles(s.x, s.y - 0.5, '#a9a9a9', 5);
-            addDamageNumber(s.x, s.y - 0.5, '+1', '#a9a9a9');
+            const currentTile = getTile(tx, ty);
+            if (currentTile === TILES.STONE || currentTile === TILES.IRON) {
+                resources.stone += 2;
+                if (currentTile === TILES.IRON || Math.random() < 0.4) resources.iron++;
+                setTile(tx, ty, TILES.GRASS); // Harvest the stone/ore
+                spawnParticles(s.x, s.y - 0.5, '#a9a9a9', 5);
+                addDamageNumber(s.x, s.y - 0.5, '+2', '#a9a9a9');
+            }
             break;
         case 'Farmer':
-            resources.food++;
+            resources.food += 1;
+            // Farms stay but give food
             spawnParticles(s.x, s.y - 0.5, '#90ee90', 5);
             addDamageNumber(s.x, s.y - 0.5, '+1', '#90ee90');
             break;
+        case 'Medic':
+            // Heal nearby target
+            if (s.taskTarget.health !== undefined) {
+                s.taskTarget.health = Math.min(s.taskTarget.maxHealth, s.taskTarget.health + 10);
+                showNotification(`Medic ${s.name} healed someone!`);
+            } else if (distSq(s, player) < 4) {
+                player.health = Math.min(player.maxHealth, player.health + 10);
+            }
+            break;
     }
+}
+
+function distSq(a, b) {
+    return (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
 }
 
 function isCombatRole(role) {
@@ -418,6 +604,13 @@ function updateSurvivorCombat(s, dt) {
 function tryMoveEntity(entity, moveX, moveY, radius = 0.3) {
     const newX = entity.x + moveX;
     const newY = entity.y + moveY;
+
+    // Update direction based on major vector
+    if (Math.abs(moveX) > Math.abs(moveY)) {
+        entity.direction = moveX > 0 ? 0 : 2; // Right or Left
+    } else if (Math.abs(moveY) > 0.001) {
+        entity.direction = moveY > 0 ? 1 : 3; // Down or Up
+    }
 
     // Try full movement
     if (!isSolidAt(newX, newY, radius)) {

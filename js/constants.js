@@ -2,7 +2,7 @@
 const TILE_SIZE = 16;
 const CHUNK_SIZE = 16;
 const SCALE = 3;
-const DAY_LENGTH = 180000; // 3 minutes per day
+const DAY_LENGTH = 300000; // 5 minutes per day
 const FIXED_DT = 1 / 60; // Fixed timestep for physics
 const MAX_DT = 0.1; // Max delta time to prevent spiral
 

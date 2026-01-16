@@ -240,7 +240,7 @@ function updatePlayerMovement(dt) {
             if (distToNode < PATHFINDING_CONFIG.NODE_REACH_THRESHOLD) {
                 // Reached this node, advance to next
                 player.pathIndex++;
-                
+
                 // Check if we've completed the path
                 if (player.pathIndex >= player.path.length) {
                     cancelPlayerPath();
@@ -310,7 +310,7 @@ function updatePlayerMovement(dt) {
         // CRITICAL: If completely blocked while following path, try to repath
         if (!movedX && !movedY && player.path && player.pathIndex < player.path.length) {
             player.stuckTime = (player.stuckTime || 0) + dt;
-            
+
             if (player.stuckTime > 0.5) {
                 // Stuck for too long, try to repath
                 console.debug('Player stuck, attempting repath');
@@ -400,6 +400,7 @@ function updatePeriodicEvents(dt) {
 
 function processHungerDecay() {
     if (!player) return;
+    if (window.godMode) return; // God mode check
 
     player.hunger = Math.max(0, (player.hunger || 100) - 1);
 

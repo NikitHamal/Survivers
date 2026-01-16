@@ -36,6 +36,10 @@ function handleKeyPress(e) {
             window.debugCollision = !window.debugCollision;
             showNotification(window.debugCollision ? 'Debug: Collision ON' : 'Debug: Collision OFF');
             break;
+        case 'F2':
+            e.preventDefault();
+            toggleDebugMenu();
+            break;
     }
 }
 
@@ -92,7 +96,7 @@ function handleRightClick(e) {
 function setPlayerMoveTarget(worldX, worldY) {
     // Clear any existing path first
     cancelPlayerPath();
-    
+
     // Store the intended destination
     player.moveTarget = { x: worldX, y: worldY };
 
@@ -110,7 +114,7 @@ function setPlayerMoveTarget(worldX, worldY) {
     } else {
         // No path found - try direct movement for short distances
         const dist = Math.sqrt((worldX - player.x) ** 2 + (worldY - player.y) ** 2);
-        
+
         if (dist < 2) {
             // Short distance, try direct path
             player.path = [{ x: worldX, y: worldY }];
@@ -119,18 +123,18 @@ function setPlayerMoveTarget(worldX, worldY) {
         } else {
             // Long distance with no path - try to find nearest walkable
             const nearest = pathfinder.findNearestWalkable(
-                Math.floor(worldX), 
-                Math.floor(worldY), 
-                Math.floor(player.x), 
+                Math.floor(worldX),
+                Math.floor(worldY),
+                Math.floor(player.x),
                 Math.floor(player.y)
             );
-            
+
             if (nearest) {
                 const newPath = pathfinder.findPath(
-                    player.x, player.y, 
+                    player.x, player.y,
                     nearest.x + 0.5, nearest.y + 0.5
                 );
-                
+
                 if (newPath && newPath.length > 0) {
                     player.path = newPath;
                     player.pathIndex = 0;

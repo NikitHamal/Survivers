@@ -712,30 +712,29 @@ function renderDarkness(ctx, camX, camY, alpha = 1) {
     let darkness = 0;
     let nightTint = { r: 10, g: 10, b: 30 }; // Blueish night
 
-    if (timeOfDay > 0.70) {
-        // Evening to Night (0.70 - 0.85 starts darkening, 0.85+ is full night)
-        const transition = Math.max(0, (timeOfDay - 0.70) / 0.15);
-        darkness = Math.min(0.88, transition * 0.88);
+    if (timeOfDay > 0.65) {
+        // Evening to Night (0.65 - 0.85 starts darkening, 0.85+ is full night)
+        const transition = Math.max(0, (timeOfDay - 0.65) / 0.20);
+        darkness = Math.min(0.70, transition * 0.70); // Max 0.70 for visibility
 
-        const t = Math.min(1, (timeOfDay - 0.70) / 0.30);
+        const t = Math.min(1, (timeOfDay - 0.65) / 0.35);
         nightTint = {
-            r: Math.floor(lerp(40, 5, t)),
-            g: Math.floor(lerp(20, 5, t)),
-            b: Math.floor(lerp(10, 25, t))
+            r: Math.floor(lerp(60, 5, t)),
+            g: Math.floor(lerp(40, 5, t)),
+            b: Math.floor(lerp(20, 20, t))
         };
-    } else if (timeOfDay < 0.20) {
-        // Late Night to Dawn (0.0 - 0.20)
-        // At 0.20 (Dawn), darkness should be 0
-        darkness = Math.max(0, 0.88 * (1 - timeOfDay / 0.20));
+    } else if (timeOfDay < 0.25) {
+        // Late Night to Dawn (0.0 - 0.25)
+        darkness = Math.max(0, 0.70 * (1 - timeOfDay / 0.25));
 
-        const t = timeOfDay / 0.20;
+        const t = timeOfDay / 0.25;
         nightTint = {
-            r: Math.floor(lerp(5, 50, t)),
-            g: Math.floor(lerp(5, 30, t)),
-            b: Math.floor(lerp(25, 10, t))
+            r: Math.floor(lerp(5, 70, t)),
+            g: Math.floor(lerp(5, 50, t)),
+            b: Math.floor(lerp(20, 15, t))
         };
     } else {
-        // Broad Daylight (0.20 - 0.70)
+        // Broad Daylight (0.25 - 0.65)
         darkness = 0;
     }
 
@@ -754,24 +753,34 @@ function renderDarkness(ctx, camX, camY, alpha = 1) {
     // Collect all light sources
     const lights = [];
 
-    // Player light
+    // Player light (Smaller "sight" area, plus larger "soft" area)
     const pX = lerp(player.prevX ?? player.x, player.x, alpha) * TILE_SIZE * SCALE - camX;
     const pY = lerp(player.prevY ?? player.y, player.y, alpha) * TILE_SIZE * SCALE - camY;
     const playerLightY = pY - (TILE_SIZE * SCALE * 0.5);
 
-    // Player light radius varies slightly with time (breathing effect)
-    const breathe = Math.sin(gameTime * 2) * 5;
+    const flicker = Math.sin(gameTime * 4) * 2;
+
+    // 1. Inner "Sight" Circle (Opaque in destination-out)
     lights.push({
         x: pX,
         y: playerLightY,
-        radius: (100 + breathe) * SCALE,
-        intensity: 1.0,
-        color: { r: 255, g: 240, b: 220 } // Warm white
+        radius: (50 + flicker) * SCALE, // ~3 blocks
+        intensity: 0.9,
+        color: { r: 255, g: 255, b: 240 }
+    });
+
+    // 2. Soft "Ambient" Circle Around Player
+    lights.push({
+        x: pX,
+        y: playerLightY,
+        radius: (180 + flicker) * SCALE, // ~10 blocks
+        intensity: 0.25,
+        color: { r: 255, g: 255, b: 240 }
     });
 
     // Campfire lights
-    const flicker = Math.sin(gameTime * 8) * 5 + Math.sin(gameTime * 13) * 3;
-    const fireRadius = (140 + flicker) * SCALE;
+    const fireFlicker = Math.sin(gameTime * 8) * 5 + Math.sin(gameTime * 13) * 3;
+    const fireRadius = (140 + fireFlicker) * SCALE;
 
     buildings.forEach(b => {
         const fX = (b.x + 0.5) * TILE_SIZE * SCALE - camX;
@@ -785,9 +794,9 @@ function renderDarkness(ctx, camX, camY, alpha = 1) {
                 lights.push({
                     x: fX,
                     y: fY,
-                    radius: fireRadius,
-                    intensity: 1.0 + Math.sin(gameTime * 12) * 0.1,
-                    color: { r: 255, g: 160, b: 60 } // Warmer Orange
+                    radius: fireRadius * 1.2,
+                    intensity: 1.0 + Math.sin(gameTime * 12) * 0.15,
+                    color: { r: 255, g: 120, b: 30 } // Very Warm Orange
                 });
             }
 
@@ -875,13 +884,14 @@ function updateAmbientEffects(dt, playerX, playerY) {
         ambientParticleTimer = 0;
 
         // Random fireflies at night
-        if (timeOfDay > 0.7 || timeOfDay < 0.25) {
-            if (Math.random() < 0.3) {
-                const fx = playerX + (Math.random() - 0.5) * 10;
-                const fy = playerY + (Math.random() - 0.5) * 8;
+        if (timeOfDay > 0.65 || timeOfDay < 0.3) {
+            if (Math.random() < 0.45) { // More fireflies
+                const fx = playerX + (Math.random() - 0.5) * 14;
+                const fy = playerY + (Math.random() - 0.5) * 12;
                 spawnParticles(fx, fy, null, 1, 'magic', {
-                    speed: 0.3,
-                    size: 2
+                    speed: 0.4,
+                    size: 1.5,
+                    sizeVariance: 1
                 });
                 const lastParticle = particles[particles.length - 1];
                 if (lastParticle) {
@@ -908,6 +918,40 @@ function updateAmbientEffects(dt, playerX, playerY) {
                     lastParticle.maxLife = 3;
                 }
             }
+        }
+
+        // Active Campfire Particles
+        if (buildings) {
+            buildings.forEach(b => {
+                if (getTile(b.x, b.y) === TILES.CAMPFIRE) {
+                    // Constant subtle smoke
+                    if (Math.random() < 0.4) {
+                        spawnParticles(b.x + 0.5, b.y + 0.3, 'smoke', 1, 'smoke', {
+                            speed: 0.6,
+                            size: 2,
+                            sizeVariance: 1,
+                            upward: true
+                        });
+                    }
+                    // Fire sparks
+                    if (Math.random() < 0.2) {
+                        spawnParticles(b.x + 0.5, b.y + 0.4, 'fire', 1, 'fire', {
+                            speed: 1.2,
+                            size: 1.5,
+                            upward: true,
+                            spreadX: 0.2
+                        });
+                    }
+                    // Occasional brighter embers
+                    if (Math.random() < 0.05) {
+                        spawnParticles(b.x + 0.5, b.y + 0.4, 'spark', 1, 'spark', {
+                            speed: 2,
+                            size: 1,
+                            upward: true
+                        });
+                    }
+                }
+            });
         }
     }
 

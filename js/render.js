@@ -178,7 +178,7 @@ function render(alpha = 1) {
         const s = TILE_SIZE * SCALE;
         const sx = (e.x - 0.5) * s - camX;
         const sy = (e.y - 0.5) * s - camY;
-        renderEntityShadow(sx + s / 2, sy + s * 0.9, s * 0.35, s * 0.12);
+        renderEntityShadow(ctx, sx + s / 2, sy + s * 0.9, s * 0.35);
     });
 
     // Render entities
@@ -649,85 +649,94 @@ function renderWall(x, y, s, wx, wy) {
 
 
 function renderCampfire(x, y, s) {
-    // Stone ring
-    ctx.fillStyle = PALETTE.stoneDark;
-    for (let i = 0; i < 8; i++) {
-        const angle = (i / 8) * Math.PI * 2;
+    // 1. Base Shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.beginPath();
+    ctx.ellipse(x + s / 2, y + s / 2 + s * 0.1, s * 0.45, s * 0.25, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Stone ring (More detailed dark edges)
+    ctx.fillStyle = '#1a1a1a';
+    for (let i = 0; i < 10; i++) {
+        const angle = (i / 10) * Math.PI * 2;
+        const dist = s * 0.35;
+        const stoneX = x + s / 2 + Math.cos(angle) * dist - 5;
+        const stoneY = y + s / 2 + Math.sin(angle) * dist - 4;
+        ctx.fillRect(stoneX, stoneY, 10, 8);
+    }
+
+    ctx.fillStyle = '#4a4a4a';
+    for (let i = 0; i < 10; i++) {
+        const angle = (i / 10) * Math.PI * 2;
         const dist = s * 0.32;
         const stoneX = x + s / 2 + Math.cos(angle) * dist - 4;
         const stoneY = y + s / 2 + Math.sin(angle) * dist - 3;
         ctx.fillRect(stoneX, stoneY, 8, 6);
     }
 
-    ctx.fillStyle = PALETTE.stone1;
-    for (let i = 0; i < 8; i++) {
-        const angle = (i / 8) * Math.PI * 2;
-        const dist = s * 0.3;
-        const stoneX = x + s / 2 + Math.cos(angle) * dist - 3;
-        const stoneY = y + s / 2 + Math.sin(angle) * dist - 2;
-        ctx.fillRect(stoneX, stoneY, 6, 4);
-    }
-
-    // Fire glow
-    const glowPulse = Math.sin(pixelTime * 6) * 0.15 + 0.85;
-    const glowSize = s * 0.45 * glowPulse;
-    const gradient = ctx.createRadialGradient(
-        x + s / 2, y + s / 2, 0,
-        x + s / 2, y + s / 2, glowSize
-    );
-    gradient.addColorStop(0, 'rgba(255, 180, 50, 0.5)');
-    gradient.addColorStop(0.5, 'rgba(255, 100, 0, 0.25)');
-    gradient.addColorStop(1, 'rgba(255, 50, 0, 0)');
-    ctx.fillStyle = gradient;
+    // 3. Fire glow (Atmospheric)
+    const flickerPulse = Math.sin(pixelTime * 8) * 0.1 + 0.9;
+    const glowSize = s * 0.6 * flickerPulse;
+    const g = ctx.createRadialGradient(x + s / 2, y + s / 2, 0, x + s / 2, y + s / 2, glowSize);
+    g.addColorStop(0, 'rgba(255, 120, 0, 0.5)');
+    g.addColorStop(0.4, 'rgba(255, 60, 0, 0.2)');
+    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(x + s / 2, y + s / 2, glowSize, 0, Math.PI * 2);
     ctx.fill();
 
-    // Fire animation
-    const flicker1 = Math.sin(pixelTime * 12) * 2;
-    const flicker2 = Math.sin(pixelTime * 17 + 1) * 1.5;
+    // 4. Animated Logs (Ccrossed)
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillRect(x + s * 0.3, y + s * 0.5, s * 0.4, s * 0.15); // Horiz log
+    ctx.save();
+    ctx.translate(x + s / 2, y + s / 2);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillRect(-s * 0.2, -s * 0.05, s * 0.4, s * 0.1);
+    ctx.restore();
 
-    // Outer flame (red-orange)
-    ctx.fillStyle = '#ff4400';
-    ctx.beginPath();
-    ctx.moveTo(x + s * 0.28, y + s * 0.72);
-    ctx.quadraticCurveTo(x + s * 0.35, y + s * 0.35 + flicker1, x + s * 0.5, y + s * 0.15 + flicker1);
-    ctx.quadraticCurveTo(x + s * 0.65, y + s * 0.35 + flicker2, x + s * 0.72, y + s * 0.72);
-    ctx.closePath();
-    ctx.fill();
+    // 5. Triple-Layer Flame Animation
+    const f1 = Math.sin(pixelTime * 15) * 3;
+    const f2 = Math.cos(pixelTime * 11 + 1) * 2;
 
-    // Middle flame (orange)
-    ctx.fillStyle = '#ff8800';
-    ctx.beginPath();
-    ctx.moveTo(x + s * 0.35, y + s * 0.68);
-    ctx.quadraticCurveTo(x + s * 0.42, y + s * 0.4 + flicker1 * 0.8, x + s * 0.5, y + s * 0.25 + flicker1 * 0.8);
-    ctx.quadraticCurveTo(x + s * 0.58, y + s * 0.4 + flicker2 * 0.8, x + s * 0.65, y + s * 0.68);
-    ctx.closePath();
-    ctx.fill();
+    // Outer Hot Flame (Red/Orange)
+    ctx.fillStyle = '#ff3300';
+    drawFlame(ctx, x + s / 2, y + s * 0.7, s * 0.25, s * 0.5 + f1, f2);
 
-    // Inner flame (yellow)
-    ctx.fillStyle = '#ffcc00';
-    ctx.beginPath();
-    ctx.moveTo(x + s * 0.42, y + s * 0.65);
-    ctx.quadraticCurveTo(x + s * 0.46, y + s * 0.45 + flicker1 * 0.5, x + s * 0.5, y + s * 0.35 + flicker1 * 0.5);
-    ctx.quadraticCurveTo(x + s * 0.54, y + s * 0.45 + flicker2 * 0.5, x + s * 0.58, y + s * 0.65);
-    ctx.closePath();
-    ctx.fill();
+    // Core Flame (Orange/Yellow)
+    ctx.fillStyle = '#ff9900';
+    drawFlame(ctx, x + s / 2, y + s * 0.65, s * 0.18, s * 0.4 + f2, f1 * 0.5);
 
-    // Core (white-yellow)
-    ctx.fillStyle = '#ffffaa';
-    ctx.fillRect(x + s * 0.45, y + s * 0.52 + flicker1 * 0.3, s * 0.1, s * 0.12);
+    // Bright Heart (Yellow/White)
+    ctx.fillStyle = '#ffff66';
+    drawFlame(ctx, x + s / 2, y + s * 0.6, s * 0.12, s * 0.25 + f1 * 0.3, 0);
 
-    // Sparks
-    for (let i = 0; i < 3; i++) {
-        const sparkPhase = (pixelTime * 2 + i * 2.1) % 3;
-        if (sparkPhase < 1.5) {
-            const sparkX = x + s * 0.4 + Math.sin(pixelTime * 3 + i * 1.5) * s * 0.15;
-            const sparkY = y + s * 0.5 - sparkPhase * s * 0.25;
-            ctx.fillStyle = i % 2 === 0 ? '#ffaa00' : '#ff6600';
-            ctx.fillRect(sparkX, sparkY, 2, 2);
+    // 6. High-intensity core
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = 0.6 + Math.sin(pixelTime * 20) * 0.2;
+    ctx.fillRect(x + s * 0.45, y + s * 0.52, s * 0.1, s * 0.1);
+    ctx.globalAlpha = 1;
+
+    // Sparks (Moving upwards with curves)
+    for (let i = 0; i < 4; i++) {
+        const p = (pixelTime * 2.5 + i * 1.3) % 4;
+        const sx = x + s * 0.5 + Math.sin(pixelTime * 4 + i) * s * 0.12;
+        const sy = y + s * 0.4 - p * s * 0.2;
+        if (p < 2) {
+            ctx.fillStyle = i % 2 === 0 ? '#ffaa00' : '#ffdd00';
+            ctx.fillRect(sx, sy, 2, 2);
         }
     }
+}
+
+// Flame Helper
+function drawFlame(ctx, cx, bottomY, width, height, offset) {
+    ctx.beginPath();
+    ctx.moveTo(cx - width, bottomY);
+    ctx.bezierCurveTo(cx - width, bottomY - height * 0.4, cx - width * 0.5 + offset, bottomY - height * 0.7, cx, bottomY - height);
+    ctx.bezierCurveTo(cx + width * 0.5 + offset, bottomY - height * 0.7, cx + width, bottomY - height * 0.4, cx + width, bottomY);
+    ctx.closePath();
+    ctx.fill();
 }
 
 function renderHouse(x, y, s) {
@@ -1072,6 +1081,11 @@ function renderPlayerEnhanced(renderX, renderY, camX, camY) {
         ctx.globalAlpha = 0.5 + Math.sin(player.hitTimer * 30) * 0.3;
     }
 
+    // 2. Dust Puff (if moving)
+    if (player.isMoving && Math.random() < 0.1) {
+        spawnParticles(player.x, player.y + 0.3, 'dust', 1, 'dust', { speed: 0.5, size: 1.5 });
+    }
+
     const bobY = player.isMoving ? Math.sin(player.animTimer * 2) * 2 : 0;
     const armSwing = player.isMoving ? Math.sin(player.animTimer * 2) * s * 0.08 : 0;
     const legSwing = player.isMoving ? Math.sin(player.animTimer * 2) * s * 0.06 : 0;
@@ -1170,7 +1184,7 @@ function renderSurvivorEnhanced(survivor, renderX, renderY, camX, camY) {
 
     if (sx < -s || sx > canvas.width + s || sy < -s || sy > canvas.height + s) return;
 
-    // Role colors
+    // Role badge colors
     const colors = {
         'Soldier': { main: '#aa4444', light: '#cc5555' },
         'Guard': { main: '#6666aa', light: '#8888cc' },
@@ -1180,49 +1194,166 @@ function renderSurvivorEnhanced(survivor, renderX, renderY, camX, camY) {
         'Miner': { main: '#666666', light: '#888888' },
         'Hunter': { main: '#668844', light: '#88aa66' },
         'Medic': { main: '#aa88cc', light: '#ccaaee' },
-        'None': { main: '#888888', light: '#aaaaaa' }
+        'None': { main: '#888888', light: '#aaaaaa' },
+        'Leader': { main: '#aaaaaa', light: '#ffffff' }
     };
 
-    const roleColor = colors[survivor.role] || colors['None'];
-    const bobY = Math.sin(pixelTime * 3 + survivor.x) * 1;
+    const skinColor = survivor.skinColor || '#ddb088';
+    const hairColor = survivor.hairColor || '#5a4030';
+    const clColors = colors[survivor.role] || colors['None'];
+    const clothingColor = survivor.clothingColor || clColors.main;
+    const isFemale = survivor.gender === 'female';
 
-    // Body outline
-    ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(sx + s * 0.28, sy + s * 0.40 + bobY, s * 0.44, s * 0.42);
+    // Animation states
+    const isMoving = !!survivor.isMoving; // Use explicit movement flag
+    const isWorking = survivor.state === 'WORKING';
+    const animTimer = survivor.animTimer || 0;
 
-    // Body
-    ctx.fillStyle = roleColor.main;
-    ctx.fillRect(sx + s * 0.30, sy + s * 0.42 + bobY, s * 0.40, s * 0.38);
+    let bobY = 0;
+    let armSwing = 0;
+    let legSwing = 0;
+    let toolAngle = 0;
 
-    // Head outline
-    ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(sx + s * 0.33, sy + s * 0.18 + bobY, s * 0.34, s * 0.28);
+    if (isMoving) {
+        bobY = Math.sin(animTimer * 12) * 1.5;
+        armSwing = Math.sin(animTimer * 12) * s * 0.1;
+        legSwing = Math.sin(animTimer * 12) * s * 0.12;
+    } else if (isWorking) {
+        bobY = Math.sin(animTimer * 15) * 1;
+        armSwing = Math.sin(animTimer * 15) * s * 0.15;
+        toolAngle = Math.sin(animTimer * 15) * 0.5;
+    }
 
-    // Head
-    ctx.fillStyle = '#ddb088';
-    ctx.fillRect(sx + s * 0.35, sy + s * 0.2 + bobY, s * 0.30, s * 0.24);
-
-    // Eyes
-    ctx.fillStyle = '#222';
-    ctx.fillRect(sx + s * 0.40, sy + s * 0.28 + bobY, s * 0.06, s * 0.05);
-    ctx.fillRect(sx + s * 0.54, sy + s * 0.28 + bobY, s * 0.06, s * 0.05);
-
-    // Role indicator badge
-    ctx.fillStyle = PALETTE.outline;
+    // ======= SHADOW =======
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
     ctx.beginPath();
-    ctx.arc(sx + s / 2, sy + s * 0.08, s * 0.12, 0, Math.PI * 2);
+    ctx.ellipse(sx + s * 0.5, sy + s * 0.9, s * 0.3, s * 0.1, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = roleColor.main;
-    ctx.beginPath();
-    ctx.arc(sx + s / 2, sy + s * 0.08, s * 0.1, 0, Math.PI * 2);
-    ctx.fill();
+    // ======= LEGS & SHOES =======
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(sx + s * 0.30, sy + s * 0.88 + legSwing, s * 0.16, s * 0.08);
+    ctx.fillRect(sx + s * 0.54, sy + s * 0.88 - legSwing, s * 0.16, s * 0.08);
 
+    ctx.fillStyle = '#3355aa';
+    ctx.fillRect(sx + s * 0.30, sy + s * 0.76 + legSwing, s * 0.16, s * 0.14);
+    ctx.fillRect(sx + s * 0.54, sy + s * 0.76 - legSwing, s * 0.16, s * 0.14);
+
+    // ======= BODY =======
+    ctx.fillStyle = PALETTE.outline;
+    ctx.fillRect(sx + s * 0.26, sy + s * 0.38 + bobY, s * 0.48, s * 0.42);
+
+    ctx.fillStyle = clothingColor;
+    ctx.fillRect(sx + s * 0.28, sy + s * 0.40 + bobY, s * 0.44, s * 0.38);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(sx + s * 0.28, sy + s * 0.40 + bobY, s * 0.1, s * 0.38);
+    ctx.fillRect(sx + s * 0.62, sy + s * 0.40 + bobY, s * 0.1, s * 0.38);
+    ctx.fillRect(sx + s * 0.38, sy + s * 0.65 + bobY, s * 0.24, s * 0.13);
+
+    // ======= ARMS =======
+    const leftArmX = sx + s * 0.14;
+    const rightArmX = sx + s * 0.72;
+    const armY = sy + s * 0.42 + bobY;
+
+    ctx.fillStyle = PALETTE.outline;
+    ctx.fillRect(leftArmX - 1, armY + armSwing - 1, s * 0.14, s * 0.24);
+    ctx.fillStyle = skinColor;
+    ctx.fillRect(leftArmX, armY + armSwing, s * 0.12, s * 0.22);
+
+    ctx.fillStyle = PALETTE.outline;
+    ctx.fillRect(rightArmX - 1, armY - armSwing - 1, s * 0.14, s * 0.24);
+    ctx.fillStyle = skinColor;
+    ctx.fillRect(rightArmX, armY - armSwing, s * 0.12, s * 0.22);
+
+    if (isWorking) {
+        ctx.save();
+        ctx.translate(rightArmX + s * 0.06, armY - armSwing + s * 0.15);
+        ctx.rotate(toolAngle);
+        if (survivor.role === 'Woodcutter') {
+            ctx.fillStyle = '#835c39'; ctx.fillRect(0, -s * 0.2, 2, s * 0.45);
+            ctx.fillStyle = '#aaa'; ctx.fillRect(-2, -s * 0.3, 8, 8);
+        } else if (survivor.role === 'Miner') {
+            ctx.fillStyle = '#555'; ctx.fillRect(0, -s * 0.2, 2, s * 0.45);
+            ctx.fillStyle = '#888'; ctx.fillRect(-6, -s * 0.25, 14, 4);
+        } else if (survivor.role === 'Farmer') {
+            ctx.fillStyle = '#835c39'; ctx.fillRect(0, -s * 0.25, 2, s * 0.5);
+            ctx.fillStyle = '#90ee90'; ctx.fillRect(-4, -s * 0.25, 10, 2);
+        }
+        ctx.restore();
+    }
+
+    // ======= HEAD & HAIR =======
+    const headX = sx + s * 0.31;
+    const headY = sy + s * 0.16 + bobY;
+
+    // Directional face offset
+    let faceOffX = 0;
+    if (survivor.direction === 0) faceOffX = s * 0.08; // Right
+    if (survivor.direction === 2) faceOffX = -s * 0.08; // Left
+
+    ctx.fillStyle = PALETTE.outline;
+    ctx.fillRect(headX - 1, headY - 1, s * 0.38 + 2, s * 0.28 + 2);
+    ctx.fillStyle = skinColor;
+    ctx.fillRect(headX, headY, s * 0.38, s * 0.28);
+
+    ctx.fillStyle = hairColor;
+    if (isFemale) {
+        ctx.fillRect(sx + s * 0.28, sy + s * 0.08 + bobY, s * 0.44, s * 0.12);
+        ctx.fillRect(sx + s * 0.26, sy + s * 0.18 + bobY, s * 0.08, s * 0.3);
+        ctx.fillRect(sx + s * 0.66, sy + s * 0.18 + bobY, s * 0.08, s * 0.3);
+    } else {
+        ctx.fillRect(sx + s * 0.28, sy + s * 0.08 + bobY, s * 0.44, s * 0.1);
+    }
+
+    // ======= EYES =======
+    if (survivor.direction !== 3) { // Not Up
+        ctx.fillStyle = '#fff';
+        if (survivor.direction === 0 || survivor.direction === 2) {
+            // Side eye
+            const eyeX = survivor.direction === 0 ? sx + s * 0.54 : sx + s * 0.38;
+            ctx.fillRect(eyeX, sy + s * 0.26 + bobY, s * 0.08, s * 0.06);
+            ctx.fillStyle = '#222';
+            const pupilX = survivor.direction === 0 ? sx + s * 0.57 : sx + s * 0.39;
+            ctx.fillRect(pupilX, sy + s * 0.27 + bobY, s * 0.04, s * 0.04);
+        } else {
+            // Facing Down (Frontal)
+            ctx.fillRect(sx + s * 0.38, sy + s * 0.26 + bobY, s * 0.08, s * 0.06);
+            ctx.fillRect(sx + s * 0.54, sy + s * 0.26 + bobY, s * 0.08, s * 0.06);
+            ctx.fillStyle = '#222';
+            ctx.fillRect(sx + s * 0.40, sy + s * 0.27 + bobY, s * 0.04, s * 0.04);
+            ctx.fillRect(sx + s * 0.56, sy + s * 0.27 + bobY, s * 0.04, s * 0.04);
+
+            // Cheek blush
+            ctx.fillStyle = 'rgba(255, 100, 100, 0.2)';
+            ctx.fillRect(sx + s * 0.34, sy + s * 0.32 + bobY, s * 0.08, s * 0.04);
+            ctx.fillRect(sx + s * 0.58, sy + s * 0.32 + bobY, s * 0.08, s * 0.04);
+        }
+    }
+
+    // ======= STATS =======
+    const barWidth = s * 0.7;
+    const healthPercent = Math.max(0, (survivor.health || 0) / (survivor.maxHealth || 100));
+    const hpColor = healthPercent > 0.5 ? '#4ade4a' : healthPercent > 0.25 ? '#facc15' : '#f87171';
+
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(sx + s * 0.15, sy - 12, barWidth, 5);
+    ctx.fillStyle = hpColor;
+    ctx.fillRect(sx + s * 0.15, sy - 12, barWidth * healthPercent, 5);
+
+    ctx.fillStyle = PALETTE.outline;
+    ctx.beginPath();
+    ctx.arc(sx + s * 0.85, sy + s * 0.82, s * 0.11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = clColors.main;
+    ctx.beginPath();
+    ctx.arc(sx + s * 0.85, sy + s * 0.82, s * 0.09, 0, Math.PI * 2);
+    ctx.fill();
     ctx.fillStyle = '#fff';
-    ctx.font = `bold ${Math.floor(s * 0.15)}px Arial`;
+    ctx.font = `bold ${Math.floor(s * 0.11)}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(survivor.role ? survivor.role[0] : '?', sx + s / 2, sy + s * 0.09);
+    ctx.fillText(survivor.role ? survivor.role[0] : '?', sx + s * 0.85, sy + s * 0.82);
 }
 
 function renderZombieEnhanced(z, renderX, renderY, camX, camY) {
@@ -1235,6 +1366,15 @@ function renderZombieEnhanced(z, renderX, renderY, camX, camY) {
     const bob = Math.sin(z.animTimer * 3) * 1.5;
     const shamble = Math.sin(z.animTimer * 2) * 2;
     const armReach = Math.sin(z.animTimer * 4) * s * 0.08;
+
+    // 2. Glowing Red Eyes Glow (Atmospheric)
+    if (isNight) {
+        const eyeGlow = ctx.createRadialGradient(sx + s * 0.5, sy + s * 0.3, 0, sx + s * 0.5, sy + s * 0.3, s * 0.4);
+        eyeGlow.addColorStop(0, 'rgba(255, 0, 0, 0.3)');
+        eyeGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
+        ctx.fillStyle = eyeGlow;
+        ctx.fillRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.6);
+    }
 
     // ======= BODY =======
     // Body outline
@@ -1482,4 +1622,11 @@ function renderDebugCollision(camX, camY) {
     ctx.stroke();
 
     ctx.globalAlpha = 1;
+}
+
+function renderEntityShadow(ctx, cx, cy, radius) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, radius, radius * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
 }

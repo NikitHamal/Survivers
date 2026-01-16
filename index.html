@@ -140,8 +140,70 @@
         </div>
     </div>
 
+    <div id="debugMenu" class="debug-panel">
+        <span class="close-btn" onclick="toggleDebugMenu()">✕</span>
+        <div class="menu-title">⚡ GOD MODE / DEBUG ⚡</div>
+
+        <div class="debug-section">
+            <h4>Player</h4>
+            <div class="debug-row">
+                <button class="debug-btn" onclick="debugToggleGodMode()">Invincible: <span
+                        id="debugInvincible">OFF</span></button>
+                <button class="debug-btn" onclick="debugHealAll()">Heal All</button>
+                <button class="debug-btn" onclick="debugToggleCollision()">Collision: <span
+                        id="debugCollision">OFF</span></button>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <h4>Resources</h4>
+            <div class="debug-row">
+                <div class="res-debug">
+                    <span>Wood</span>
+                    <div class="btn-group">
+                        <button onclick="debugResource('wood', -100)">-100</button>
+                        <button onclick="debugResource('wood', 100)">+100</button>
+                    </div>
+                </div>
+                <div class="res-debug">
+                    <span>Stone</span>
+                    <div class="btn-group">
+                        <button onclick="debugResource('stone', -100)">-100</button>
+                        <button onclick="debugResource('stone', 100)">+100</button>
+                    </div>
+                </div>
+                <div class="res-debug">
+                    <span>Iron</span>
+                    <div class="btn-group">
+                        <button onclick="debugResource('iron', -100)">-100</button>
+                        <button onclick="debugResource('iron', 100)">+100</button>
+                    </div>
+                </div>
+                <div class="res-debug">
+                    <span>Food</span>
+                    <div class="btn-group">
+                        <button onclick="debugResource('food', -100)">-100</button>
+                        <button onclick="debugResource('food', 100)">+100</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <h4>World</h4>
+            <div class="debug-row">
+                <button class="debug-btn" onclick="debugTime(true)">Set Day</button>
+                <button class="debug-btn" onclick="debugTime(false)">Set Night</button>
+                <button class="debug-btn" onclick="debugSpawnSurvivor()">Spawn Survivor</button>
+                <button class="debug-btn" onclick="debugSpawnZombie()">Spawn Zombie</button>
+            </div>
+        </div>
+    </div>
+    </div>
+
     <!-- Game Scripts -->
     <script src="js/constants.js"></script>
+    <script src="js/debug.js"></script>
     <script src="js/state.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/world.js"></script>

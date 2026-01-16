@@ -23,7 +23,13 @@ setInterval(() => {
                         y: Math.random() * 4 - 2,
                         health: 80 + Math.floor(Math.random() * 40),
                         maxHealth: 100,
-                        isPlayer: false
+                        isPlayer: false,
+                        // Visual Traits
+                        gender: Math.random() > 0.5 ? 'male' : 'female',
+                        skinColor: ['#ffd4a8', '#e8b888', '#c89868', '#8d5524', '#523418'][Math.floor(Math.random() * 5)],
+                        hairColor: ['#222', '#5a4030', '#e6cea8', '#882222', '#555'][Math.floor(Math.random() * 5)],
+                        clothingColor: ['#5599ff', '#ff5555', '#55ff55', '#ffff55', '#ff55ff', '#55ffff'][Math.floor(Math.random() * 6)],
+                        isFollowing: false
                     });
                     updateSurvivorList();
                 }
