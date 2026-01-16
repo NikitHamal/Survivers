@@ -9,6 +9,21 @@ function handleKeyPress(e) {
         case 'KeyT':
             toggleSurvivorMenu();
             break;
+        case 'KeyQ':
+            toggleQuestMenu();
+            break;
+        case 'KeyK':
+            toggleSkillMenu();
+            break;
+        case 'KeyJ':
+            toggleAchievementMenu();
+            break;
+        case 'KeyC':
+            toggleCraftingMenu();
+            break;
+        case 'KeyI':
+            toggleEquipmentMenu();
+            break;
         case 'KeyF':
             toggleFollow();
             break;
@@ -17,15 +32,15 @@ function handleKeyPress(e) {
             break;
         case 'Space':
             e.preventDefault();
-            attackAction();
+            inputState.space = true;
             break;
         case 'KeyM':
             toggleMinimap();
             break;
         case 'Escape':
-            closeBuildMenu();
-            document.getElementById('survivorMenu').style.display = 'none';
-            document.getElementById('minimap').classList.remove('expanded');
+            closeAllMenus();
+            if (document.getElementById('minimap')) document.getElementById('minimap').classList.remove('expanded');
+            gameState.paused = false;
             buildMode = false;
             break;
         case 'Digit1': case 'Digit2': case 'Digit3': case 'Digit4': case 'Digit5':
@@ -76,9 +91,20 @@ function handleClick(e) {
     const dist = Math.sqrt((clickX - player.x) ** 2 + (clickY - player.y) ** 2);
 
     // If close enough and harvestable, harvest
-    if (dist < 2.5 && isHarvestable(tile)) {
-        harvestTile(tileX, tileY, tile);
-        return;
+    if (dist < 2.5) {
+        if (isHarvestable(tile)) {
+            harvestTile(tileX, tileY, tile);
+            return;
+        }
+
+        // Check if building interaction
+        if (typeof BuildingUpgradeSystem !== 'undefined') {
+            const buildingType = BuildingUpgradeSystem.getBuildingType(tile);
+            if (buildingType) {
+                BuildingUpgradeSystem.showUpgradeUI(tileX, tileY);
+                return;
+            }
+        }
     }
 
     // Otherwise, click-to-move

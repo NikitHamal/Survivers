@@ -4,7 +4,7 @@
 // Complete boss system with unique zombie types,
 // special abilities, mechanics, and loot drops
 
-const BossSystem = (function() {
+const BossSystem = (function () {
     'use strict';
 
     // ============= CONFIGURATION =============
@@ -368,7 +368,7 @@ const BossSystem = (function() {
         if (typeof showNotification === 'function') {
             showNotification(
                 `<i class="material-icons">warning</i> <strong style="color: ${type.color}">${type.name}</strong> has appeared!`,
-                [{ text: 'Prepare!', action: () => {}, class: 'reject' }]
+                [{ text: 'Prepare!', action: () => { }, class: 'reject' }]
             );
         }
 
@@ -935,7 +935,7 @@ const BossSystem = (function() {
         if (typeof showNotification === 'function') {
             showNotification(
                 `<i class="material-icons">emoji_events</i> <strong>${type.name}</strong> defeated! Glory to the survivors!`,
-                [{ text: 'Victory!', action: () => {}, class: 'accept' }]
+                [{ text: 'Victory!', action: () => { }, class: 'accept' }]
             );
         }
 
@@ -1182,7 +1182,55 @@ const BossSystem = (function() {
 
         // Helpers
         calculateDamageToPlayer,
-        applyPoisonToPlayer
+        applyPoisonToPlayer,
+
+        // UI
+        drawBossUI: (ctx) => {
+            if (activeBosses.length === 0) return;
+
+            const barWidth = 400;
+            const barHeight = 25;
+            const x = (ctx.canvas.width - barWidth) / 2;
+            let y = 30;
+
+            for (const boss of activeBosses) {
+                const type = boss.zombieType;
+
+                // Draw background
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(x - 5, y - 25, barWidth + 10, 45);
+
+                // Draw name
+                ctx.fillStyle = type.color || '#ff0000';
+                ctx.font = 'bold 18px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(type.name.toUpperCase(), x + barWidth / 2, y - 5);
+
+                // Draw health bar
+                const healthPercent = boss.health / boss.maxHealth;
+                ctx.fillStyle = '#333';
+                ctx.fillRect(x, y, barWidth, barHeight);
+
+                const gradient = ctx.createLinearGradient(x, 0, x + barWidth, 0);
+                gradient.addColorStop(0, '#8e0000');
+                gradient.addColorStop(1, '#ff0000');
+
+                ctx.fillStyle = gradient;
+                ctx.fillRect(x, y, barWidth * healthPercent, barHeight);
+
+                // Border
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, barWidth, barHeight);
+
+                // HP Text
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px Arial';
+                ctx.fillText(`${Math.ceil(boss.health)} / ${Math.ceil(boss.maxHealth)}`, x + barWidth / 2, y + 17);
+
+                y += 60;
+            }
+        }
     };
 })();
 
