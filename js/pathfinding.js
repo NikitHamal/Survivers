@@ -126,7 +126,7 @@ class Pathfinder {
                 closestKey = currentKey;
             }
 
-            const currentG = gScore.get(currentKey) || Infinity;
+            const currentG = gScore.has(currentKey) ? gScore.get(currentKey) : Infinity;
 
             for (const dir of this.directions) {
                 const nx = cx + dir.x;
@@ -149,8 +149,9 @@ class Pathfinder {
                 }
 
                 const tentativeG = currentG + cost * dir.cost;
+                const neighborG = gScore.has(neighborKey) ? gScore.get(neighborKey) : Infinity;
 
-                if (tentativeG < (gScore.get(neighborKey) || Infinity)) {
+                if (tentativeG < neighborG) {
                     cameFrom.set(neighborKey, currentKey);
                     gScore.set(neighborKey, tentativeG);
                     const f = tentativeG + this.heuristic(nx, ny, targetX, targetY);
