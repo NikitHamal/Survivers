@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="css/systems.css">
     <link rel="stylesheet" href="css/overlays.css">
     <link rel="stylesheet" href="css/debug.css">
+    <link rel="stylesheet" href="css/systems-extended.css">
 </head>
 
 <body>
@@ -129,6 +130,9 @@
             <button class="action-btn" onclick="toggleFollow()"><span class="key">[F]</span> Follow</button>
             <button class="action-btn" onclick="interact()"><span class="key">[E]</span> Use</button>
             <button class="action-btn" onclick="attackAction()"><span class="key">[SPACE]</span> Attack</button>
+            <button class="action-btn primary" onclick="togglePetMenu()"><span class="key">[P]</span> Pets</button>
+            <button class="action-btn primary" onclick="toggleFarmMenu()"><span class="key">[G]</span> Farm</button>
+            <button class="action-btn warning" onclick="toggleCookingMenu()"><span class="key">[O]</span> Cook</button>
         </div>
 
         <div id="buildMenu">
@@ -202,6 +206,80 @@
                     id="achievedPercent">0</span>%)
             </div>
             <div id="achievementList" class="achievement-grid"></div>
+        </div>
+
+        <!-- NEW PHASE 1 SYSTEM PANELS -->
+        <div id="petMenu" class="ui-panel menu-dialog">
+            <span class="close-btn" onclick="togglePetMenu()">✕</span>
+            <div class="menu-title">🐾 Pet Management</div>
+            <div id="petList" class="pet-list"></div>
+            <div id="petDetails" class="pet-details" style="display:none;"></div>
+            <div id="petTaming" class="pet-taming" style="display:none;">
+                <h4>Taming Progress</h4>
+                <div class="taming-progress">
+                    <div id="tamingPatience" class="taming-bar"></div>
+                </div>
+                <p>Tame wild animals by feeding them and approaching slowly!</p>
+            </div>
+        </div>
+
+        <div id="farmMenu" class="ui-panel menu-dialog">
+            <span class="close-btn" onclick="toggleFarmMenu()">✕</span>
+            <div class="menu-title">🌾 Farming & Agriculture</div>
+            <div class="farm-tabs">
+                <button class="tab-btn active" onclick="showFarmTab('crops')">Crops</button>
+                <button class="tab-btn" onclick="showFarmTab('livestock')">Livestock</button>
+                <button class="tab-btn" onclick="showFarmTab('processors')">Processors</button>
+            </div>
+            <div id="farmCrops" class="farm-crops"></div>
+            <div id="farmLivestock" class="farm-livestock" style="display:none;"></div>
+            <div id="farmProcessors" class="farm-processors" style="display:none;"></div>
+        </div>
+
+        <div id="shelterMenu" class="ui-panel menu-dialog">
+            <span class="close-btn" onclick="toggleShelterMenu()">✕</span>
+            <div class="menu-title">🏠 Shelter & Comfort</div>
+            <div id="shelterList" class="shelter-list"></div>
+            <div id="temperatureInfo" class="temperature-info"></div>
+            <div id="comfortInfo" class="comfort-info"></div>
+            <div id="fireManagement" class="fire-management"></div>
+        </div>
+
+        <div id="cookingMenu" class="ui-panel menu-dialog">
+            <span class="close-btn" onclick="toggleCookingMenu()">✕</span>
+            <div class="menu-title">🍳 Cooking & Nutrition</div>
+            <div class="nutrition-panel">
+                <div class="nutrition-header">
+                    <span class="nutrition-title">Daily Nutrition</span>
+                    <span id="nutritionBalance" class="balance-indicator">Optimal</span>
+                </div>
+                <div class="nutrition-grid">
+                    <div class="nutrition-item">
+                        <div class="nutrition-label">Calories</div>
+                        <div class="nutrition-value" id="nutritionCalories">0 / 2000</div>
+                        <div class="nutrition-bar"><div id="caloriesFill" class="nutrition-fill"></div></div>
+                    </div>
+                    <div class="nutrition-item">
+                        <div class="nutrition-label">Protein</div>
+                        <div class="nutrition-value" id="nutritionProtein">0 / 50g</div>
+                        <div class="nutrition-bar"><div id="proteinFill" class="nutrition-fill"></div></div>
+                    </div>
+                    <div class="nutrition-item">
+                        <div class="nutrition-label">Carbs</div>
+                        <div class="nutrition-value" id="nutritionCarbs">0 / 250g</div>
+                        <div class="nutrition-bar"><div id="carbsFill" class="nutrition-fill"></div></div>
+                    </div>
+                    <div class="nutrition-item">
+                        <div class="nutrition-label">Vitamins</div>
+                        <div class="nutrition-value" id="nutritionVitamins">0 / 100</div>
+                        <div class="nutrition-bar"><div id="vitaminsFill" class="nutrition-fill"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div id="cookingQueue" class="cooking-queue"></div>
+            <div id="foodInventory" class="food-inventory"></div>
+            <div id="buffPanel" class="buff-panel"></div>
+            <div id="recipeBook" class="recipe-book"></div>
         </div>
 
         <div id="startScreen">
@@ -308,6 +386,15 @@
     <script src="js/horde-system.js"></script>
     <script src="js/morale-system.js"></script>
     <script src="js/boss-system.js"></script>
+
+    <!-- Phase 1 New Systems -->
+    <script src="js/event-bus.js"></script>
+    <script src="js/pet-system.js"></script>
+    <script src="js/shelter-system.js"></script>
+    <script src="js/farming-system.js"></script>
+    <script src="js/cooking-system.js"></script>
+
+    <script src="js/phase1-ui.js"></script>
 
     <script src="js/world.js"></script>
     <script src="js/ui.js"></script>

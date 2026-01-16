@@ -120,7 +120,21 @@ const SaveSystem = (function() {
                 timePlayed: window.gameStats?.timePlayed || 0,
                 bossesDefeated: window.gameStats?.bossesDefeated || 0,
                 questsCompleted: window.gameStats?.questsCompleted || 0
-            }
+            },
+
+            // Phase 1 New Systems State
+            petSystem: typeof PetSystem !== 'undefined'
+                ? PetSystem.getState()
+                : null,
+            shelterSystem: typeof ShelterSystem !== 'undefined'
+                ? ShelterSystem.getState()
+                : null,
+            farmingSystem: typeof FarmingSystem !== 'undefined'
+                ? FarmingSystem.getState()
+                : null,
+            cookingSystem: typeof CookingSystem !== 'undefined'
+                ? CookingSystem.getState()
+                : null
         };
     }
 
@@ -524,9 +538,21 @@ const SaveSystem = (function() {
             window.gameStats = { ...saveData.stats };
         }
 
-        // Update game time
-        if (timing) {
-            timing.gameTime = saveData.gameTime;
+        // Phase 1 New Systems State
+        if (saveData.petSystem && typeof PetSystem !== 'undefined') {
+            PetSystem.setState(saveData.petSystem);
+        }
+        if (saveData.shelterSystem && typeof ShelterSystem !== 'undefined') {
+            ShelterSystem.setState(saveData.shelterSystem);
+        }
+        if (saveData.farmingSystem && typeof FarmingSystem !== 'undefined') {
+            FarmingSystem.setState(saveData.farmingSystem);
+        }
+        if (saveData.cookingSystem && typeof CookingSystem !== 'undefined') {
+            CookingSystem.setState(saveData.cookingSystem);
+        }
+
+        timing.gameTime = saveData.gameTime;
         }
 
         // Update UI

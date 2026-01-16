@@ -239,6 +239,20 @@ function render(alpha = 1) {
         HordeSystem.drawHordeUI(ctx);
     }
 
+    // Phase 1 New Systems Rendering
+    if (typeof PetSystem !== 'undefined') {
+        PetSystem.renderPets(ctx);
+    }
+    if (typeof ShelterSystem !== 'undefined') {
+        ShelterSystem.renderShelters(ctx);
+    }
+    if (typeof FarmingSystem !== 'undefined') {
+        FarmingSystem.renderFarming(ctx);
+    }
+    if (typeof CookingSystem !== 'undefined') {
+        CookingSystem.renderCooking(ctx);
+    }
+
     // Post-processing effects
     renderPostProcessing();
 

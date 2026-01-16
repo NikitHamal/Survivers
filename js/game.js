@@ -185,6 +185,12 @@ function fixedUpdate(dt) {
     if (typeof CraftingSystem !== 'undefined') CraftingSystem.updateCrafting(dt);
     if (typeof EquipmentSystem !== 'undefined') EquipmentSystem.updateBuffs(dt);
 
+    // Phase 1 New Systems Update
+    if (typeof PetSystem !== 'undefined') PetSystem.update(dt);
+    if (typeof ShelterSystem !== 'undefined') ShelterSystem.update(dt);
+    if (typeof FarmingSystem !== 'undefined') FarmingSystem.update(dt);
+    if (typeof CookingSystem !== 'undefined') CookingSystem.update(dt);
+
     // Tower updates (always check, let tower system decide based on night)
     updateTowers(dt);
 
