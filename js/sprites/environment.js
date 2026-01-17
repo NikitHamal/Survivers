@@ -5,29 +5,41 @@ function renderGroundLayer(tile, sx, sy, wx, wy) {
     const px = Math.floor(sx);
     const py = Math.floor(sy);
 
-    // Determine if we need a floor background (for buildings)
-    const structures = [
+    // List of building/structure tiles that should have a transparent background
+    const buildingTiles = [
         TILES.HOUSE, TILES.CHEST, TILES.WORKBENCH, TILES.BED,
         TILES.TOWER, TILES.CANNON, TILES.SPIKES, TILES.WALL,
-        TILES.WALL_BROKEN, TILES.CAMPFIRE
+        TILES.WALL_BROKEN, TILES.CAMPFIRE, TILES.FARM, TILES.HOUSE_BASE
     ];
 
-    let useFloorBackground = structures.includes(tile) || tile === TILES.FLOOR;
+    // Check if there's a building here and get its stored background tile
+    let effectiveTile = tile;
+    if (buildingTiles.includes(tile)) {
+        if (typeof getBuilding === 'function') {
+            const b = getBuilding(wx, wy);
+            if (b && b.bgTile !== undefined) {
+                effectiveTile = b.bgTile;
+            } else {
+                effectiveTile = TILES.GRASS; // Fallback
+            }
+        } else {
+            effectiveTile = TILES.GRASS; // Fallback
+        }
+    }
 
-    if (useFloorBackground) {
-        renderWoodenFloor(px, py, s, wx, wy);
-    } else if (tile === TILES.WATER) {
-        renderWater(px, py, s, wx, wy);
+    if (effectiveTile === TILES.FLOOR) {
+        renderWoodenFloor(px, py, s + 1, wx, wy);
+    } else if (effectiveTile === TILES.WATER) {
+        renderWater(px, py, s + 1, wx, wy);
     } else {
-        // Biome Support Preservation
+        // Render as grass (default for most ground)
         if (typeof BiomeSystem !== 'undefined') {
-            const biomeColor = BiomeSystem.getTileColor(tile, wx, wy);
+            const biomeColor = BiomeSystem.getTileColor(effectiveTile, wx, wy);
             ctx.fillStyle = biomeColor;
-            ctx.fillRect(px, py, s, s);
-            // Add texture over biome color
+            ctx.fillRect(px, py, s + 1, s + 1);
             renderGrassTexture(px, py, s, wx, wy, 0.1);
         } else {
-            renderGrass(px, py, s, wx, wy, tile);
+            renderGrass(px, py, s + 1, wx, wy, effectiveTile);
         }
     }
 }

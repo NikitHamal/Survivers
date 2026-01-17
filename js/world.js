@@ -387,14 +387,19 @@ function updateBuildingTracking(wx, wy, oldTile, newTile) {
         TILES.FARM,
         TILES.CAMPFIRE,
         TILES.HOUSE,
-        TILES.SPIKES
+        TILES.HOUSE_BASE,
+        TILES.SPIKES,
+        TILES.WORKBENCH,
+        TILES.CHEST,
+        TILES.BED,
+        TILES.WALL
     ];
 
     const posKey = `${wx},${wy}`;
-    const wasBuilding = functionalTiles.includes(oldTile);
+    const wasBuilding = functionalTiles.includes(oldTile) || buildingMap.has(posKey);
     const isBuilding = functionalTiles.includes(newTile);
 
-    // Remove old building
+    // Remove old building if it exists in our tracking
     if (wasBuilding) {
         // Remove from buildings array
         const buildingIndex = buildings.findIndex(b => b.x === wx && b.y === wy);
@@ -415,26 +420,25 @@ function updateBuildingTracking(wx, wy, oldTile, newTile) {
 
     // Add new building
     if (isBuilding) {
-        // Check if not already tracked
-        if (!buildingMap.has(posKey)) {
-            const building = {
-                x: wx,
-                y: wy,
-                tile: newTile,
-                level: 1,
-                lastUpdate: typeof gameTime !== 'undefined' ? gameTime : Date.now(),
-                health: getBuildingMaxHealth(newTile),
-                maxHealth: getBuildingMaxHealth(newTile)
-            };
+        // Store the building
+        const building = {
+            x: wx,
+            y: wy,
+            tile: newTile,
+            bgTile: oldTile, // Store what was here before (Grass, Floor, etc.)
+            level: 1,
+            lastUpdate: typeof gameTime !== 'undefined' ? gameTime : Date.now(),
+            health: getBuildingMaxHealth(newTile),
+            maxHealth: getBuildingMaxHealth(newTile)
+        };
 
-            buildings.push(building);
-            buildingMap.set(posKey, building);
+        buildings.push(building);
+        buildingMap.set(posKey, building);
 
-            // Notify tower system if applicable
-            if (newTile === TILES.TOWER || newTile === TILES.CANNON) {
-                if (typeof registerTower === 'function') {
-                    registerTower(wx, wy, newTile);
-                }
+        // Notify tower system if applicable
+        if (newTile === TILES.TOWER || newTile === TILES.CANNON) {
+            if (typeof registerTower === 'function') {
+                registerTower(wx, wy, newTile);
             }
         }
     }
