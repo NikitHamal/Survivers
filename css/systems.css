@@ -323,3 +323,92 @@
     background: var(--primary-gold);
     box-shadow: 0 0 12px rgba(248, 231, 28, 0.5);
 }
+
+/* Crafting & Research UI */
+.craft-category-header {
+    grid-column: 1 / -1;
+    color: var(--primary-gold);
+    border-bottom: 1px solid rgba(248, 231, 28, 0.3);
+    padding-bottom: 5px;
+    margin: 15px 0 10px 0;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.craft-slot, .research-slot {
+    background: var(--bg-card);
+    border: 1px solid var(--border-main);
+    padding: 15px;
+    border-radius: var(--border-radius-md);
+    position: relative;
+    transition: all 0.2s;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    text-align: center;
+}
+
+.craft-slot:hover, .research-slot:hover {
+    border-color: var(--primary-gold);
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-3px);
+}
+
+.craft-slot.unavailable, .research-slot.unavailable {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(0.8);
+}
+
+.craft-icon, .research-icon {
+    font-size: 32px;
+}
+
+.craft-name, .research-name {
+    font-weight: bold;
+    color: var(--text-main);
+    font-size: 14px;
+}
+
+.craft-materials, .research-cost {
+    font-size: 11px;
+    color: var(--text-sub);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px;
+}
+
+.sufficient {
+    color: var(--success);
+}
+
+.insufficient {
+    color: var(--danger);
+}
+
+.locked-overlay, .unlocked-overlay {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    font-size: 14px;
+}
+
+.research-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.3;
+}
+
+.research-slot.unlocked {
+    border-color: var(--success);
+    background: rgba(46, 213, 115, 0.05);
+    cursor: default;
+}
+
+.research-slot.unlocked:hover {
+    transform: none;
+}

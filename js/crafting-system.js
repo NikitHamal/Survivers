@@ -841,7 +841,7 @@ const CraftingSystem = (function() {
 
             // Show locked recipes if prerequisites are partially met
             return research.prerequisites.every(p => unlockedResearch.has(p)) ||
-                   research.prerequisites.length === 0;
+                research.prerequisites.length === 0;
         });
     }
 
@@ -880,12 +880,12 @@ const CraftingSystem = (function() {
 
     function openCraftingUI(stationId = STATIONS.NONE.id) {
         setActiveStation(stationId);
-        // This would trigger the UI to open - implementation depends on UI system
-        updateCraftingUI();
+        updateRecipeUI();
+        updateResearchUI();
     }
 
-    function updateCraftingUI() {
-        const container = document.getElementById('craftingGrid');
+    function updateRecipeUI() {
+        const container = document.getElementById('recipeList');
         if (!container) return;
 
         container.innerHTML = '';
@@ -901,18 +901,24 @@ const CraftingSystem = (function() {
             categoryHeader.className = 'craft-category-header';
             container.appendChild(categoryHeader);
 
+            const categoryGrid = document.createElement('div');
+            categoryGrid.className = 'category-grid';
+
             for (const recipe of categoryRecipes) {
                 const details = getRecipeDetails(recipe.id);
                 const slot = document.createElement('div');
                 slot.className = `craft-slot ${details.canCraft ? 'available' : 'unavailable'}`;
 
+                const itemData = (typeof EquipmentSystem !== 'undefined') ? EquipmentSystem.ITEMS[recipe.output.itemId] : null;
+                const icon = recipe.output?.icon || itemData?.icon || '🔨';
+
                 slot.innerHTML = `
-                    <div class="craft-icon">${recipe.output?.icon || '?'}</div>
+                    <div class="craft-icon">${icon}</div>
                     <div class="craft-name">${recipe.name}</div>
                     <div class="craft-materials">
                         ${Object.entries(recipe.materials).map(([res, amt]) =>
-                            `<span class="${(resources[res] || 0) >= amt ? 'sufficient' : 'insufficient'}">${res}: ${amt}</span>`
-                        ).join(' ')}
+                    `<span class="${(resources[res] || 0) >= amt ? 'sufficient' : 'insufficient'}">${res}: ${amt}</span>`
+                ).join(' ')}
                     </div>
                     ${!recipe.unlocked ? '<div class="locked-overlay">🔒</div>' : ''}
                 `;
@@ -920,12 +926,59 @@ const CraftingSystem = (function() {
                 slot.title = recipe.description;
 
                 if (details.canCraft) {
-                    slot.onclick = () => startCraft(recipe.id);
+                    slot.onclick = () => {
+                        startCraft(recipe.id);
+                        updateRecipeUI();
+                    };
                 }
 
                 container.appendChild(slot);
             }
         }
+    }
+
+    function updateResearchUI() {
+        const container = document.getElementById('researchList');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        const researches = Object.values(RESEARCH);
+
+        for (const research of researches) {
+            const isUnlocked = unlockedResearch.has(research.id);
+            const check = canResearch(research.id);
+
+            const slot = document.createElement('div');
+            slot.className = `research-slot ${isUnlocked ? 'unlocked' : (check.canResearch ? 'available' : 'unavailable')}`;
+
+            slot.innerHTML = `
+                <div class="research-icon">🔬</div>
+                <div class="research-name">${research.name}</div>
+                <div class="research-desc">${research.description}</div>
+                <div class="research-cost">
+                    ${Object.entries(research.cost).map(([res, amt]) =>
+                `<span class="${(resources[res] || 0) >= amt ? 'sufficient' : 'insufficient'}">${res}: ${amt}</span>`
+            ).join(' ')}
+                </div>
+                ${isUnlocked ? '<div class="unlocked-overlay">✅</div>' : ''}
+            `;
+
+            if (!isUnlocked && check.canResearch) {
+                slot.onclick = () => {
+                    startResearch(research.id);
+                    updateResearchUI();
+                    updateRecipeUI();
+                };
+            }
+
+            container.appendChild(slot);
+        }
+    }
+
+    function updateCraftingUI() {
+        updateRecipeUI();
+        updateResearchUI();
     }
 
     // ============= SERIALIZATION =============
@@ -1003,6 +1056,8 @@ const CraftingSystem = (function() {
         getAvailableRecipes,
         getRecipeDetails,
         openCraftingUI,
+        updateRecipeUI,
+        updateResearchUI,
         updateCraftingUI,
 
         // State
