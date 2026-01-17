@@ -277,6 +277,14 @@ function generateTileAt(wx, wy) {
         return TILES.GRASS;
     }
 
+    if (typeof BiomeSystem !== 'undefined' && typeof BiomeSystem.generateBiomeTile === 'function') {
+        const baseNoise = noise2D(wx * 0.02, wy * 0.02);
+        const biomeTile = BiomeSystem.generateBiomeTile(wx, wy, baseNoise);
+        if (biomeTile !== undefined && biomeTile !== null) {
+            return biomeTile;
+        }
+    }
+
     const r = seededRandom(wx, wy);
 
     // Rivers using noise
@@ -471,7 +479,16 @@ function isSolid(tile) {
     if (tile === TILES.STONE) return true;
     if (tile === TILES.IRON) return true;
     if (tile === TILES.BUSH) return true;
+    if (tile === TILES.CACTUS) return true;
+    if (tile === TILES.DEAD_TREE) return true;
+    if (tile === TILES.MUSHROOM) return true;
+    if (tile === TILES.ICE_BLOCK) return true;
+    if (tile === TILES.OBSIDIAN) return true;
     if (tile === TILES.WATER) return true;
+    if (tile === TILES.MURKY_WATER) return true;
+    if (tile === TILES.LAVA) return true;
+    if (tile === TILES.MURKY_WATER) return true;
+    if (tile === TILES.LAVA) return true;
 
     // Buildings that block
     if (tile === TILES.WALL) return true;
@@ -492,8 +509,16 @@ function isPassable(tile) {
         TILES.TREE,
         TILES.STONE,
         TILES.IRON,
+        TILES.BUSH,
+        TILES.CACTUS,
+        TILES.DEAD_TREE,
+        TILES.MUSHROOM,
+        TILES.ICE_BLOCK,
+        TILES.OBSIDIAN,
         TILES.WALL,
         TILES.WATER,
+        TILES.MURKY_WATER,
+        TILES.LAVA,
         TILES.HOUSE,
         TILES.HOUSE_BASE,
         TILES.TOWER,
@@ -504,7 +529,7 @@ function isPassable(tile) {
 }
 
 function isDamaging(tile) {
-    return tile === TILES.SPIKES || tile === TILES.WATER;
+    return tile === TILES.SPIKES || tile === TILES.WATER || tile === TILES.MURKY_WATER || tile === TILES.LAVA;
 }
 
 function isHarvestable(tile) {
@@ -512,7 +537,12 @@ function isHarvestable(tile) {
         TILES.TREE,
         TILES.STONE,
         TILES.IRON,
-        TILES.BUSH
+        TILES.BUSH,
+        TILES.CACTUS,
+        TILES.DEAD_TREE,
+        TILES.MUSHROOM,
+        TILES.ICE_BLOCK,
+        TILES.OBSIDIAN
     ];
 
     return harvestableTiles.includes(tile);

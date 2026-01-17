@@ -286,6 +286,31 @@ function renderSurvivorEnhanced(survivor, renderX, renderY, camX, camY) {
     ctx.fillText(survivor.role ? survivor.role[0] : '?', sx + s * 0.85, sy + s * 0.82);
 }
 
+function getZombiePalette(typeId) {
+    switch (typeId) {
+        case 'RUNNER':
+            return { body1: '#6aa86a', body2: '#4f8a4f', eye: '#ff5555' };
+        case 'SPITTER':
+            return { body1: '#7a8f6a', body2: '#5c6f4f', eye: '#88ff88' };
+        case 'TANK':
+        case 'BRUTE':
+            return { body1: '#6f6f6f', body2: '#4f4f4f', eye: '#ffcc00' };
+        case 'EXPLODER':
+            return { body1: '#7a5a5a', body2: '#5a3a3a', eye: '#ff8844' };
+        case 'SCREAMER':
+            return { body1: '#8a7ab0', body2: '#6a5a8f', eye: '#ffee88' };
+        case 'NECROMANCER':
+            return { body1: '#5a7a7a', body2: '#3a5a5a', eye: '#88ddff' };
+        case 'SHADOW':
+            return { body1: '#3a3a3a', body2: '#222222', eye: '#aa88ff' };
+        case 'TITAN':
+        case 'QUEEN':
+            return { body1: '#7a6a3a', body2: '#5a4a2a', eye: '#ffdd66' };
+        default:
+            return { body1: PALETTE.zombie1, body2: PALETTE.zombie2, eye: PALETTE.zombieEye };
+    }
+}
+
 function renderZombieEnhanced(z, renderX, renderY, camX, camY) {
     const s = TILE_SIZE * SCALE;
     const sx = (renderX - 0.5) * s - camX;
@@ -296,6 +321,7 @@ function renderZombieEnhanced(z, renderX, renderY, camX, camY) {
     const bob = Math.sin(z.animTimer * 3) * 1.5;
     const shamble = Math.sin(z.animTimer * 2) * 2;
     const armReach = Math.sin(z.animTimer * 4) * s * 0.08;
+    const palette = getZombiePalette(z.typeId);
 
     // 2. Glowing Red Eyes Glow (Atmospheric)
     if (isNight) {
@@ -312,20 +338,20 @@ function renderZombieEnhanced(z, renderX, renderY, camX, camY) {
     ctx.fillRect(sx + s * 0.20, sy + s * 0.33 + bob, s * 0.60, s * 0.50);
 
     // Body
-    ctx.fillStyle = PALETTE.zombie2;
+    ctx.fillStyle = palette.body2;
     ctx.fillRect(sx + s * 0.22, sy + s * 0.35 + bob, s * 0.56, s * 0.46);
 
     // ======= ARMS (reaching forward) =======
     // Left arm
     ctx.fillStyle = PALETTE.outline;
     ctx.fillRect(sx + s * 0.02 + armReach, sy + s * 0.36 + bob, s * 0.22, s * 0.14);
-    ctx.fillStyle = PALETTE.zombie1;
+    ctx.fillStyle = palette.body1;
     ctx.fillRect(sx + s * 0.04 + armReach, sy + s * 0.38 + bob, s * 0.18, s * 0.10);
 
     // Right arm
     ctx.fillStyle = PALETTE.outline;
     ctx.fillRect(sx + s * 0.76 - armReach, sy + s * 0.40 + bob, s * 0.22, s * 0.14);
-    ctx.fillStyle = PALETTE.zombie1;
+    ctx.fillStyle = palette.body1;
     ctx.fillRect(sx + s * 0.78 - armReach, sy + s * 0.42 + bob, s * 0.18, s * 0.10);
 
     // ======= HEAD =======
@@ -334,11 +360,11 @@ function renderZombieEnhanced(z, renderX, renderY, camX, camY) {
     ctx.fillRect(sx + s * 0.26, sy + s * 0.10 + bob, s * 0.48, s * 0.32);
 
     // Head
-    ctx.fillStyle = PALETTE.zombie1;
+    ctx.fillStyle = palette.body1;
     ctx.fillRect(sx + s * 0.28, sy + s * 0.12 + bob, s * 0.44, s * 0.28);
 
     // ======= EYES (glowing red) =======
-    ctx.fillStyle = PALETTE.zombieEye;
+    ctx.fillStyle = palette.eye;
     ctx.fillRect(sx + s * 0.33, sy + s * 0.20 + bob, s * 0.12, s * 0.08);
     ctx.fillRect(sx + s * 0.55, sy + s * 0.20 + bob, s * 0.12, s * 0.08);
 
@@ -346,13 +372,13 @@ function renderZombieEnhanced(z, renderX, renderY, camX, camY) {
     // Left leg
     ctx.fillStyle = PALETTE.outline;
     ctx.fillRect(sx + s * 0.28 + shamble * 0.5, sy + s * 0.78, s * 0.18, s * 0.22);
-    ctx.fillStyle = PALETTE.zombie2;
+    ctx.fillStyle = palette.body2;
     ctx.fillRect(sx + s * 0.30 + shamble * 0.5, sy + s * 0.80, s * 0.14, s * 0.18);
 
     // Right leg
     ctx.fillStyle = PALETTE.outline;
     ctx.fillRect(sx + s * 0.54 - shamble * 0.5, sy + s * 0.78, s * 0.18, s * 0.22);
-    ctx.fillStyle = PALETTE.zombie2;
+    ctx.fillStyle = palette.body2;
     ctx.fillRect(sx + s * 0.56 - shamble * 0.5, sy + s * 0.80, s * 0.14, s * 0.18);
 
     // ======= HEALTH BAR =======

@@ -29,18 +29,50 @@ function renderGroundLayer(tile, sx, sy, wx, wy) {
 
     if (effectiveTile === TILES.FLOOR) {
         renderWoodenFloor(px, py, s + 1, wx, wy);
-    } else if (effectiveTile === TILES.WATER) {
+        return;
+    }
+
+    if (effectiveTile === TILES.WATER) {
         renderWater(px, py, s + 1, wx, wy);
+        return;
+    }
+
+    if (effectiveTile === TILES.MURKY_WATER) {
+        renderMurkyWater(px, py, s + 1, wx, wy);
+        return;
+    }
+
+    if (effectiveTile === TILES.FROZEN_WATER) {
+        renderFrozenWater(px, py, s + 1, wx, wy);
+        return;
+    }
+
+    if (effectiveTile === TILES.LAVA) {
+        renderLava(px, py, s + 1, wx, wy);
+        return;
+    }
+
+    switch (effectiveTile) {
+        case TILES.SAND: renderSand(px, py, s + 1, wx, wy); return;
+        case TILES.SANDSTONE: renderSandstone(px, py, s + 1, wx, wy); return;
+        case TILES.MUD: renderMud(px, py, s + 1, wx, wy); return;
+        case TILES.MARSH: renderMarsh(px, py, s + 1, wx, wy); return;
+        case TILES.SNOW: renderSnow(px, py, s + 1, wx, wy); return;
+        case TILES.ICE: renderIceGround(px, py, s + 1, wx, wy); return;
+        case TILES.JUNGLE: renderJungleGround(px, py, s + 1, wx, wy); return;
+        case TILES.VOLCANIC_ROCK: renderVolcanicRock(px, py, s + 1, wx, wy); return;
+        case TILES.ASH: renderAsh(px, py, s + 1, wx, wy); return;
+        default: break;
+    }
+
+    // Render as grass (default for most ground)
+    if (typeof BiomeSystem !== 'undefined') {
+        const biomeColor = BiomeSystem.getTileColor(effectiveTile, wx, wy);
+        ctx.fillStyle = biomeColor;
+        ctx.fillRect(px, py, s + 1, s + 1);
+        renderGrassTexture(px, py, s, wx, wy, 0.1);
     } else {
-        // Render as grass (default for most ground)
-        if (typeof BiomeSystem !== 'undefined') {
-            const biomeColor = BiomeSystem.getTileColor(effectiveTile, wx, wy);
-            ctx.fillStyle = biomeColor;
-            ctx.fillRect(px, py, s + 1, s + 1);
-            renderGrassTexture(px, py, s, wx, wy, 0.1);
-        } else {
-            renderGrass(px, py, s + 1, wx, wy, effectiveTile);
-        }
+        renderGrass(px, py, s + 1, wx, wy, effectiveTile);
     }
 }
 
@@ -162,12 +194,22 @@ function renderObjectLayer(tile, sx, sy, wx, wy) {
     const px = Math.floor(sx);
     const py = Math.floor(sy);
 
+    if (typeof renderBuildingTile === 'function') {
+        const handled = renderBuildingTile(tile, px, py, s, wx, wy);
+        if (handled) return;
+    }
+
     // Pass specific context to helpers
     switch (tile) {
         case TILES.TREE: renderTree(px, py, s, wx, wy); break;
         case TILES.BUSH: renderBush(px, py, s, wx, wy); break;
         case TILES.STONE: renderStone(px, py, s, wx, wy); break;
         case TILES.IRON: renderIronOre(px, py, s, wx, wy); break;
+        case TILES.CACTUS: renderCactus(px, py, s, wx, wy); break;
+        case TILES.DEAD_TREE: renderDeadTree(px, py, s, wx, wy); break;
+        case TILES.MUSHROOM: renderMushroom(px, py, s, wx, wy); break;
+        case TILES.ICE_BLOCK: renderIceBlock(px, py, s, wx, wy); break;
+        case TILES.OBSIDIAN: renderObsidian(px, py, s, wx, wy); break;
         // ... (Other buildings use your previous building code) ...
         case TILES.WALL: renderWall(px, py, s, wx, wy); break;
         case TILES.CAMPFIRE: renderCampfire(px, py, s); break;
@@ -354,4 +396,181 @@ function renderIronOre(x, y, s, wx, wy) {
         ctx.fillStyle = `rgba(255, 255, 255, ${0.4 + shine * 0.4})`;
         ctx.fillRect(px + 2, py + 2, s * c.w - 4, s * c.h - 4);
     });
+}
+
+function renderSand(x, y, s, wx, wy) {
+    const noise = seededRandom(wx, wy);
+    ctx.fillStyle = noise > 0.5 ? '#d8c27a' : '#cbb16c';
+    ctx.fillRect(x, y, s, s);
+    ctx.fillStyle = 'rgba(120, 95, 50, 0.2)';
+    for (let i = 0; i < 3; i++) {
+        const ox = (seededRandom(wx + i, wy) * 0.8 + 0.1) * s;
+        const oy = (seededRandom(wx, wy + i) * 0.8 + 0.1) * s;
+        ctx.fillRect(x + ox, y + oy, 2, 1);
+    }
+}
+
+function renderSandstone(x, y, s, wx, wy) {
+    ctx.fillStyle = '#b48a54';
+    ctx.fillRect(x, y, s, s);
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(x + 2, y + 2, s - 4, 1);
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.fillRect(x + 2, y + s * 0.6, s - 4, 1);
+    if (seededRandom(wx, wy) > 0.6) {
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(x + s * 0.2, y + s * 0.2, 2, s * 0.4);
+    }
+}
+
+function renderMud(x, y, s, wx, wy) {
+    const tone = seededRandom(wx, wy) > 0.5 ? '#5a4a3b' : '#4d3d2f';
+    ctx.fillStyle = tone;
+    ctx.fillRect(x, y, s, s);
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(x + s * 0.65, y + s * 0.7, s * 0.18, s * 0.12, 0, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+function renderMarsh(x, y, s, wx, wy) {
+    ctx.fillStyle = '#3e4b34';
+    ctx.fillRect(x, y, s, s);
+    ctx.fillStyle = 'rgba(30,60,40,0.5)';
+    for (let i = 0; i < 4; i++) {
+        const ox = (seededRandom(wx + i, wy) * 0.9 + 0.05) * s;
+        const oy = (seededRandom(wx, wy + i) * 0.9 + 0.05) * s;
+        ctx.fillRect(x + ox, y + oy, 1, 3);
+    }
+}
+
+function renderSnow(x, y, s, wx, wy) {
+    ctx.fillStyle = '#e8f2fb';
+    ctx.fillRect(x, y, s, s);
+    ctx.fillStyle = 'rgba(200,220,235,0.35)';
+    for (let i = 0; i < 4; i++) {
+        const ox = (seededRandom(wx + i, wy) * 0.9 + 0.05) * s;
+        const oy = (seededRandom(wx, wy + i) * 0.9 + 0.05) * s;
+        ctx.fillRect(x + ox, y + oy, 2, 1);
+    }
+}
+
+function renderIceGround(x, y, s, wx, wy) {
+    ctx.fillStyle = '#b7d7ef';
+    ctx.fillRect(x, y, s, s);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath();
+    ctx.moveTo(x + 2, y + s * 0.2);
+    ctx.lineTo(x + s * 0.7, y + s * 0.4);
+    ctx.lineTo(x + s * 0.4, y + s * 0.8);
+    ctx.stroke();
+}
+
+function renderJungleGround(x, y, s, wx, wy) {
+    ctx.fillStyle = '#2f5a2b';
+    ctx.fillRect(x, y, s, s);
+    renderGrassTexture(x, y, s, wx, wy, 1.4);
+    if (seededRandom(wx * 3, wy * 3) > 0.7) {
+        ctx.fillStyle = '#1f3f1f';
+        ctx.fillRect(x + s * 0.2, y + s * 0.2, 2, s * 0.5);
+    }
+}
+
+function renderVolcanicRock(x, y, s, wx, wy) {
+    ctx.fillStyle = '#3b2f2f';
+    ctx.fillRect(x, y, s, s);
+    ctx.fillStyle = 'rgba(255,120,50,0.12)';
+    for (let i = 0; i < 3; i++) {
+        const ox = (seededRandom(wx + i, wy) * 0.8 + 0.1) * s;
+        const oy = (seededRandom(wx, wy + i) * 0.8 + 0.1) * s;
+        ctx.fillRect(x + ox, y + oy, 2, 2);
+    }
+}
+
+function renderAsh(x, y, s, wx, wy) {
+    ctx.fillStyle = '#4b4b4b';
+    ctx.fillRect(x, y, s, s);
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillRect(x + s * 0.2, y + s * 0.6, s * 0.5, 1);
+}
+
+function renderMurkyWater(x, y, s, wx, wy) {
+    const time = pixelTime;
+    ctx.fillStyle = '#2c3b33';
+    ctx.fillRect(x, y, s, s);
+    ctx.fillStyle = 'rgba(80, 110, 90, 0.35)';
+    const offset = Math.sin(time * 1.2 + wx * 0.3) * (s * 0.2);
+    ctx.fillRect(x, y + s * 0.35 + offset, s, s * 0.2);
+}
+
+function renderFrozenWater(x, y, s, wx, wy) {
+    ctx.fillStyle = '#9cc3e6';
+    ctx.fillRect(x, y, s, s);
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.beginPath();
+    ctx.moveTo(x + s * 0.2, y + s * 0.3);
+    ctx.lineTo(x + s * 0.8, y + s * 0.5);
+    ctx.lineTo(x + s * 0.4, y + s * 0.8);
+    ctx.stroke();
+}
+
+function renderLava(x, y, s, wx, wy) {
+    const time = pixelTime;
+    ctx.fillStyle = '#7a1a0f';
+    ctx.fillRect(x, y, s, s);
+    ctx.fillStyle = '#ff5a1f';
+    const flow = Math.sin(time * 2 + wx * 0.6) * s * 0.15;
+    ctx.fillRect(x, y + s * 0.3 + flow, s, s * 0.2);
+    ctx.fillStyle = 'rgba(255,200,100,0.4)';
+    ctx.fillRect(x + s * 0.2, y + s * 0.6, s * 0.25, s * 0.12);
+}
+
+function renderCactus(x, y, s, wx, wy) {
+    const baseX = x + s * 0.45;
+    ctx.fillStyle = '#2f7d32';
+    ctx.fillRect(baseX, y + s * 0.2, s * 0.12, s * 0.6);
+    ctx.fillRect(baseX - s * 0.12, y + s * 0.35, s * 0.12, s * 0.18);
+    ctx.fillRect(baseX + s * 0.12, y + s * 0.4, s * 0.12, s * 0.2);
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.fillRect(baseX + 1, y + s * 0.22, 1, s * 0.5);
+}
+
+function renderDeadTree(x, y, s, wx, wy) {
+    ctx.fillStyle = '#4d3b2d';
+    ctx.fillRect(x + s * 0.46, y + s * 0.25, s * 0.12, s * 0.6);
+    ctx.fillRect(x + s * 0.35, y + s * 0.35, s * 0.15, s * 0.08);
+    ctx.fillRect(x + s * 0.55, y + s * 0.45, s * 0.16, s * 0.08);
+    ctx.fillStyle = '#3b2c20';
+    ctx.fillRect(x + s * 0.5, y + s * 0.2, s * 0.05, s * 0.1);
+}
+
+function renderMushroom(x, y, s, wx, wy) {
+    ctx.fillStyle = '#d9c3a6';
+    ctx.fillRect(x + s * 0.47, y + s * 0.55, s * 0.08, s * 0.2);
+    ctx.fillStyle = '#b065ff';
+    ctx.beginPath();
+    ctx.arc(x + s * 0.5, y + s * 0.5, s * 0.18, Math.PI, 0);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillRect(x + s * 0.46, y + s * 0.44, s * 0.08, 2);
+}
+
+function renderIceBlock(x, y, s, wx, wy) {
+    ctx.fillStyle = '#c8e7ff';
+    ctx.fillRect(x + s * 0.2, y + s * 0.35, s * 0.6, s * 0.45);
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.strokeRect(x + s * 0.2, y + s * 0.35, s * 0.6, s * 0.45);
+}
+
+function renderObsidian(x, y, s, wx, wy) {
+    ctx.fillStyle = '#2b1e33';
+    ctx.beginPath();
+    ctx.moveTo(x + s * 0.35, y + s * 0.2);
+    ctx.lineTo(x + s * 0.7, y + s * 0.35);
+    ctx.lineTo(x + s * 0.6, y + s * 0.75);
+    ctx.lineTo(x + s * 0.25, y + s * 0.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(180,140,255,0.3)';
+    ctx.fillRect(x + s * 0.4, y + s * 0.4, s * 0.1, s * 0.18);
 }

@@ -58,6 +58,20 @@ const TOWER_CONFIG = {
     SPLASH_DAMAGE_MULT: 0.3
 };
 
+const ZOMBIE_TYPE_STATS = {
+    NORMAL: { health: 1.0, speed: 1.0, damage: 1.0 },
+    RUNNER: { health: 0.75, speed: 1.45, damage: 0.9 },
+    SPITTER: { health: 0.9, speed: 0.9, damage: 1.1 },
+    TANK: { health: 1.8, speed: 0.6, damage: 1.4 },
+    EXPLODER: { health: 0.85, speed: 1.0, damage: 1.6 },
+    SCREAMER: { health: 0.95, speed: 1.2, damage: 0.8 },
+    NECROMANCER: { health: 1.3, speed: 0.8, damage: 1.1 },
+    SHADOW: { health: 0.9, speed: 1.3, damage: 1.0 },
+    BRUTE: { health: 2.1, speed: 0.55, damage: 1.6 },
+    TITAN: { health: 2.8, speed: 0.45, damage: 2.0 },
+    QUEEN: { health: 2.4, speed: 0.7, damage: 1.8 }
+};
+
 // Tower position tracking for efficient updates
 const activeTowers = new Map(); // key: "x,y", value: { type, cooldown }
 
@@ -87,18 +101,28 @@ function spawnZombie() {
         // Validate spawn position
         if (!isValidZombieSpawn(zx, zy)) continue;
 
-        const health = ZOMBIE_CONFIG.BASE_HEALTH + currentDay * ZOMBIE_CONFIG.HEALTH_PER_DAY;
+        let typeId = 'NORMAL';
+        if (typeof BiomeSystem !== 'undefined') {
+            const types = BiomeSystem.getZombieTypesForBiome(zx, zy);
+            if (BiomeSystem.shouldSpawnSpecialZombie(zx, zy) && Array.isArray(types) && types.length > 0) {
+                typeId = types[Math.floor(Math.random() * types.length)];
+            }
+        }
+
+        const typeStats = ZOMBIE_TYPE_STATS[typeId] || ZOMBIE_TYPE_STATS.NORMAL;
+        const health = Math.floor((ZOMBIE_CONFIG.BASE_HEALTH + currentDay * ZOMBIE_CONFIG.HEALTH_PER_DAY) * typeStats.health);
 
         const newZombie = {
             x: zx,
             y: zy,
             health: health,
             maxHealth: health,
-            speed: ZOMBIE_CONFIG.BASE_SPEED + currentDay * ZOMBIE_CONFIG.SPEED_PER_DAY,
-            damage: ZOMBIE_CONFIG.BASE_DAMAGE + currentDay * ZOMBIE_CONFIG.DAMAGE_PER_DAY,
+            speed: (ZOMBIE_CONFIG.BASE_SPEED + currentDay * ZOMBIE_CONFIG.SPEED_PER_DAY) * typeStats.speed,
+            damage: (ZOMBIE_CONFIG.BASE_DAMAGE + currentDay * ZOMBIE_CONFIG.DAMAGE_PER_DAY) * typeStats.damage,
             attackCooldown: 0,
             frame: 0,
-            animTimer: 0
+            animTimer: 0,
+            typeId: typeId
         };
 
         // Attach AI
@@ -642,7 +666,16 @@ function updateTowers(dt) {
         }
 
         const [tx, ty] = key.split(',').map(Number);
-        const range = tower.type === TILES.CANNON ? 10 : 7;
+        const baseStats = tower.type === TILES.CANNON
+            ? { damage: TOWER_CONFIG.CANNON_DAMAGE, range: TOWER_CONFIG.CANNON_RANGE, fireRate: 1 / TOWER_CONFIG.CANNON_COOLDOWN, splash: TOWER_CONFIG.SPLASH_RADIUS }
+            : { damage: TOWER_CONFIG.ARROW_DAMAGE, range: TOWER_CONFIG.ARROW_RANGE, fireRate: 1 / TOWER_CONFIG.ARROW_COOLDOWN };
+        const upgradeStats = (typeof BuildingUpgradeSystem !== 'undefined')
+            ? (tower.type === TILES.CANNON
+                ? BuildingUpgradeSystem.getCannonStats(tx, ty)
+                : BuildingUpgradeSystem.getTowerStats(tx, ty))
+            : null;
+        const stats = upgradeStats || baseStats;
+        const range = stats.range || baseStats.range;
         let nearest = null;
         let nearestDist = range;
 
@@ -656,17 +689,21 @@ function updateTowers(dt) {
 
         if (nearest) {
             const angle = Math.atan2(nearest.y - ty - 0.5, nearest.x - tx - 0.5);
+            const projectileDamage = stats.damage || baseStats.damage;
             projectiles.push({
                 x: tx + 0.5, y: ty + 0.5,
                 vx: Math.cos(angle) * 12,
                 vy: Math.sin(angle) * 12,
-                damage: tower.type === TILES.CANNON ? 35 : 18,
+                damage: projectileDamage,
                 size: tower.type === TILES.CANNON ? 4 : 2,
                 color: tower.type === TILES.CANNON ? '#ff6600' : '#ffff00',
                 life: 1.5,
-                isCannon: tower.type === TILES.CANNON
+                isCannon: tower.type === TILES.CANNON,
+                splashRadius: stats.splash || (tower.type === TILES.CANNON ? TOWER_CONFIG.SPLASH_RADIUS : 0),
+                chainLightning: stats.chainLightning || 0
             });
-            tower.cooldown = tower.type === TILES.CANNON ? 1.5 : 0.6;
+            const fireRate = stats.fireRate || baseStats.fireRate;
+            tower.cooldown = 1 / Math.max(0.1, fireRate);
         }
     }
 }
@@ -725,7 +762,10 @@ function checkProjectileZombieCollision(p) {
             addDamageNumber(z.x, z.y - 0.5, p.damage, '#ffff00');
 
             if (p.isCannon) {
-                applySplashDamage(p.x, p.y, z, p.damage);
+                applySplashDamage(p.x, p.y, z, p.damage, p.splashRadius);
+            }
+            if (p.chainLightning && p.chainLightning > 0) {
+                applyChainLightning(p.x, p.y, z, p.damage, p.chainLightning);
             }
             return true;
         }
@@ -733,8 +773,8 @@ function checkProjectileZombieCollision(p) {
     return false;
 }
 
-function applySplashDamage(x, y, hitZombie, baseDamage) {
-    const splashRadiusSq = TOWER_CONFIG.SPLASH_RADIUS ** 2;
+function applySplashDamage(x, y, hitZombie, baseDamage, splashRadius = TOWER_CONFIG.SPLASH_RADIUS) {
+    const splashRadiusSq = splashRadius ** 2;
     const splashDamage = Math.floor(baseDamage * TOWER_CONFIG.SPLASH_DAMAGE_MULT);
 
     for (const z of zombies) {
@@ -745,6 +785,38 @@ function applySplashDamage(x, y, hitZombie, baseDamage) {
             z.health -= splashDamage;
             addDamageNumber(z.x, z.y - 0.3, splashDamage, '#ffaa00');
         }
+    }
+}
+
+function applyChainLightning(x, y, hitZombie, baseDamage, chains) {
+    const chained = new Set([hitZombie]);
+    let currentX = x;
+    let currentY = y;
+    let remaining = chains;
+    let damage = Math.floor(baseDamage * 0.6);
+
+    while (remaining > 0) {
+        let next = null;
+        let nextDistSq = 4;
+        for (const z of zombies) {
+            if (chained.has(z)) continue;
+            const dx = z.x - currentX;
+            const dy = z.y - currentY;
+            const distSq = dx * dx + dy * dy;
+            if (distSq < nextDistSq) {
+                nextDistSq = distSq;
+                next = z;
+            }
+        }
+        if (!next) break;
+        next.health -= damage;
+        spawnParticles(next.x, next.y, '#88ccff', 4);
+        addDamageNumber(next.x, next.y - 0.3, damage, '#88ccff');
+        chained.add(next);
+        currentX = next.x;
+        currentY = next.y;
+        damage = Math.floor(damage * 0.75);
+        remaining--;
     }
 }
 

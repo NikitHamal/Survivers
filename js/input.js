@@ -353,7 +353,9 @@ function cancelPlayerPath() {
 
 function isHarvestable(tile) {
     return tile === TILES.TREE || tile === TILES.BUSH ||
-        tile === TILES.STONE || tile === TILES.IRON || tile === TILES.FARM;
+        tile === TILES.STONE || tile === TILES.IRON || tile === TILES.FARM ||
+        tile === TILES.CACTUS || tile === TILES.DEAD_TREE || tile === TILES.MUSHROOM ||
+        tile === TILES.ICE_BLOCK || tile === TILES.OBSIDIAN;
 }
 
 // Helper to determine if a harvested tile should become floor or grass
@@ -420,6 +422,43 @@ function harvestTile(x, y, tile) {
                 spawnParticles(x + 0.5, y + 0.5, '#6a8a3a', 6);
                 harvested = true;
             }
+            break;
+        case TILES.CACTUS:
+            if (Math.random() < 0.7) resources.food += 1;
+            resources.wood += 1;
+            setTile(x, y, groundTile);
+            player.exp += 4;
+            spawnParticles(x + 0.5, y + 0.5, '#6aa84f', 6);
+            harvested = true;
+            break;
+        case TILES.DEAD_TREE:
+            resources.wood += 3 + Math.floor(Math.random() * 2);
+            setTile(x, y, groundTile);
+            player.exp += 6;
+            spawnParticles(x + 0.5, y + 0.5, '#5a4734', 8);
+            harvested = true;
+            break;
+        case TILES.MUSHROOM:
+            resources.food += 1 + Math.floor(Math.random() * 2);
+            setTile(x, y, groundTile);
+            player.exp += 5;
+            spawnParticles(x + 0.5, y + 0.5, '#b080ff', 6);
+            harvested = true;
+            break;
+        case TILES.ICE_BLOCK:
+            resources.food += 1;
+            setTile(x, y, groundTile);
+            player.exp += 4;
+            spawnParticles(x + 0.5, y + 0.5, '#aee6ff', 8);
+            harvested = true;
+            break;
+        case TILES.OBSIDIAN:
+            resources.stone += 3 + Math.floor(Math.random() * 2);
+            resources.iron += 1;
+            setTile(x, y, groundTile);
+            player.exp += 12;
+            spawnParticles(x + 0.5, y + 0.5, '#3b2d4a', 10);
+            harvested = true;
             break;
     }
 
