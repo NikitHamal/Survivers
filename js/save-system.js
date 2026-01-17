@@ -134,6 +134,12 @@ const SaveSystem = (function () {
                 : null,
             cookingSystem: typeof CookingSystem !== 'undefined'
                 ? CookingSystem.getState()
+                : null,
+            biomeSystem: typeof BiomeSystem !== 'undefined'
+                ? BiomeSystem.getState()
+                : null,
+            buildingUpgradeSystem: typeof BuildingUpgradeSystem !== 'undefined'
+                ? BuildingUpgradeSystem.getState()
                 : null
         };
     }
@@ -550,6 +556,16 @@ const SaveSystem = (function () {
         }
         if (saveData.cookingSystem && typeof CookingSystem !== 'undefined') {
             CookingSystem.setState(saveData.cookingSystem);
+        }
+        if (saveData.biomeSystem && typeof BiomeSystem !== 'undefined') {
+            BiomeSystem.setState(saveData.biomeSystem);
+        }
+        if (saveData.buildingUpgradeSystem && typeof BuildingUpgradeSystem !== 'undefined') {
+            BuildingUpgradeSystem.setState(saveData.buildingUpgradeSystem);
+        } else if (typeof BuildingUpgradeSystem !== 'undefined') {
+            for (const b of buildings) {
+                BuildingUpgradeSystem.setBuildingLevel(b.x, b.y, b.level || 1);
+            }
         }
 
         timing.gameTime = saveData.gameTime;

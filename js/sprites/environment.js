@@ -16,19 +16,56 @@ function renderGroundLayer(tile, sx, sy, wx, wy) {
 
     if (useFloorBackground) {
         renderWoodenFloor(px, py, s, wx, wy);
-    } else if (tile === TILES.WATER) {
-        renderWater(px, py, s, wx, wy);
+    } else if (isBiomeWaterTile(tile)) {
+        renderBiomeWater(px, py, s, wx, wy, tile);
+    } else if (tile === TILES.LAVA) {
+        renderLava(px, py, s, wx, wy);
     } else {
-        // Biome Support Preservation
         if (typeof BiomeSystem !== 'undefined') {
-            const biomeColor = BiomeSystem.getTileColor(tile, wx, wy);
-            ctx.fillStyle = biomeColor;
-            ctx.fillRect(px, py, s, s);
-            // Add texture over biome color
-            renderGrassTexture(px, py, s, wx, wy, 0.1);
+            renderBiomeGround(tile, px, py, s, wx, wy);
         } else {
             renderGrass(px, py, s, wx, wy, tile);
         }
+    }
+}
+
+function isBiomeWaterTile(tile) {
+    if (tile === TILES.WATER || tile === TILES.MURKY_WATER || tile === TILES.FROZEN_WATER) return true;
+    if (typeof BiomeSystem !== 'undefined' && BiomeSystem.isWaterTile) {
+        return BiomeSystem.isWaterTile(tile);
+    }
+    return false;
+}
+
+function renderBiomeGround(tile, x, y, s, wx, wy) {
+    const biome = BiomeSystem.getBiomeAt(wx, wy);
+    const baseColor = BiomeSystem.getTileColor(tile, wx, wy);
+
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(x, y, s, s);
+
+    const isSecondary = biome?.tiles?.secondary === tile;
+    const textureDensity = isSecondary ? 0.35 : 0.2;
+
+    switch (biome?.id) {
+        case 'desert':
+            renderSandTexture(x, y, s, wx, wy, textureDensity);
+            break;
+        case 'snow':
+            renderSnowTexture(x, y, s, wx, wy, textureDensity);
+            break;
+        case 'swamp':
+            renderMudTexture(x, y, s, wx, wy, textureDensity);
+            break;
+        case 'volcanic':
+            renderAshTexture(x, y, s, wx, wy, textureDensity);
+            break;
+        case 'ruins':
+            renderCobbleTexture(x, y, s, wx, wy, textureDensity);
+            break;
+        default:
+            renderGrassTexture(x, y, s, wx, wy, textureDensity);
+            break;
     }
 }
 
@@ -81,15 +118,15 @@ function renderGrassTexture(x, y, s, wx, wy, density) {
     }
 }
 
-function renderWater(x, y, s, wx, wy) {
+function renderWater(x, y, s, wx, wy, baseColor, highlightColor) {
     const time = pixelTime;
 
     // 1. Deep Water Base
-    ctx.fillStyle = PALETTE.water1 || '#29b6f6';
+    ctx.fillStyle = baseColor || PALETTE.water1 || '#29b6f6';
     ctx.fillRect(x, y, s, s);
 
     // 2. Moving Waves (Sine wave patterns)
-    ctx.fillStyle = PALETTE.water2 || '#4fc3f7'; // Lighter
+    ctx.fillStyle = highlightColor || PALETTE.water2 || '#4fc3f7'; // Lighter
 
     // Create varying wave offsets based on world position
     const offset1 = Math.sin(time * 2 + wx * 0.5) * (s * 0.2);
@@ -113,6 +150,108 @@ function renderWater(x, y, s, wx, wy) {
     // 4. Foam edge (Simple border logic)
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
     if (wx % 2 === 0) ctx.fillRect(x, y, 2, s); // Just visual variety
+}
+
+function renderBiomeWater(x, y, s, wx, wy, tile) {
+    if (typeof BiomeSystem === 'undefined') {
+        renderWater(x, y, s, wx, wy);
+        return;
+    }
+
+    const biomeColor = BiomeSystem.getTileColor(TILES.WATER, wx, wy);
+    const highlight = 'rgba(255,255,255,0.2)';
+
+    renderWater(x, y, s, wx, wy, biomeColor, highlight);
+
+    if (tile === TILES.MURKY_WATER) {
+        ctx.fillStyle = 'rgba(10,20,15,0.25)';
+        ctx.fillRect(x, y, s, s);
+    }
+
+    if (tile === TILES.FROZEN_WATER) {
+        renderIceCrackle(x, y, s, wx, wy);
+    }
+}
+
+function renderLava(x, y, s, wx, wy) {
+    const time = pixelTime;
+    const base = '#ff4a1f';
+    const hot = '#ffb02e';
+    const deep = '#cc2a10';
+
+    ctx.fillStyle = base;
+    ctx.fillRect(x, y, s, s);
+
+    const wave = Math.sin(time * 3 + wx * 0.8 + wy * 0.6) * s * 0.1;
+    ctx.fillStyle = deep;
+    ctx.fillRect(x, y + s * 0.2 + wave, s, s * 0.2);
+    ctx.fillRect(x, y + s * 0.6 - wave, s, s * 0.2);
+
+    ctx.fillStyle = hot;
+    for (let i = 0; i < 3; i++) {
+        const ox = seededRandom(wx + i * 13, wy + i * 7) * s;
+        const oy = seededRandom(wx + i * 3, wy + i * 11) * s;
+        ctx.fillRect(x + ox, y + oy, 2, 2);
+    }
+}
+
+function renderIceCrackle(x, y, s, wx, wy) {
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    for (let i = 0; i < 3; i++) {
+        const ox = seededRandom(wx + i * 17, wy + i * 19) * s;
+        const oy = seededRandom(wx + i * 23, wy + i * 29) * s;
+        ctx.fillRect(x + ox, y + oy, 2, 1);
+    }
+}
+
+function renderSandTexture(x, y, s, wx, wy, density) {
+    const count = Math.max(2, Math.floor(6 * density));
+    ctx.fillStyle = 'rgba(90, 70, 35, 0.25)';
+    for (let i = 0; i < count; i++) {
+        const ox = seededRandom(wx + i * 7, wy + i * 3) * s;
+        const oy = seededRandom(wx + i * 11, wy + i * 5) * s;
+        ctx.fillRect(x + ox, y + oy, 2, 1);
+    }
+}
+
+function renderSnowTexture(x, y, s, wx, wy, density) {
+    const count = Math.max(3, Math.floor(8 * density));
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    for (let i = 0; i < count; i++) {
+        const ox = seededRandom(wx + i * 5, wy + i * 9) * s;
+        const oy = seededRandom(wx + i * 13, wy + i * 4) * s;
+        ctx.fillRect(x + ox, y + oy, 1, 1);
+    }
+}
+
+function renderMudTexture(x, y, s, wx, wy, density) {
+    const count = Math.max(2, Math.floor(6 * density));
+    ctx.fillStyle = 'rgba(20, 30, 20, 0.35)';
+    for (let i = 0; i < count; i++) {
+        const ox = seededRandom(wx + i * 9, wy + i * 6) * s;
+        const oy = seededRandom(wx + i * 4, wy + i * 8) * s;
+        ctx.fillRect(x + ox, y + oy, 2, 2);
+    }
+}
+
+function renderAshTexture(x, y, s, wx, wy, density) {
+    const count = Math.max(2, Math.floor(6 * density));
+    ctx.fillStyle = 'rgba(80, 60, 60, 0.4)';
+    for (let i = 0; i < count; i++) {
+        const ox = seededRandom(wx + i * 14, wy + i * 2) * s;
+        const oy = seededRandom(wx + i * 3, wy + i * 12) * s;
+        ctx.fillRect(x + ox, y + oy, 1, 2);
+    }
+}
+
+function renderCobbleTexture(x, y, s, wx, wy, density) {
+    const count = Math.max(2, Math.floor(5 * density));
+    for (let i = 0; i < count; i++) {
+        const ox = seededRandom(wx + i * 6, wy + i * 9) * s;
+        const oy = seededRandom(wx + i * 5, wy + i * 7) * s;
+        ctx.fillStyle = 'rgba(40,40,40,0.25)';
+        ctx.fillRect(x + ox, y + oy, 2, 2);
+    }
 }
 
 function renderWoodenFloor(x, y, s, wx, wy) {
@@ -149,6 +288,7 @@ function renderObjectLayer(tile, sx, sy, wx, wy) {
     const s = TILE_SIZE * SCALE;
     const px = Math.floor(sx);
     const py = Math.floor(sy);
+    const buildingLevel = getRenderBuildingLevel(wx, wy);
 
     // Pass specific context to helpers
     switch (tile) {
@@ -157,17 +297,30 @@ function renderObjectLayer(tile, sx, sy, wx, wy) {
         case TILES.STONE: renderStone(px, py, s, wx, wy); break;
         case TILES.IRON: renderIronOre(px, py, s, wx, wy); break;
         // ... (Other buildings use your previous building code) ...
-        case TILES.WALL: renderWall(px, py, s, wx, wy); break;
-        case TILES.CAMPFIRE: renderCampfire(px, py, s); break;
-        case TILES.HOUSE: renderHouse(px, py, s); break;
-        case TILES.FARM: renderFarm(px, py, s); break;
-        case TILES.TOWER: renderTower(px, py, s); break;
-        case TILES.CANNON: renderCannon(px, py, s); break;
+        case TILES.WALL: renderWall(px, py, s, wx, wy, buildingLevel); break;
+        case TILES.CAMPFIRE: renderCampfire(px, py, s, buildingLevel); break;
+        case TILES.HOUSE: renderHouse(px, py, s, buildingLevel); break;
+        case TILES.FARM: renderFarm(px, py, s, buildingLevel); break;
+        case TILES.TOWER: renderTower(px, py, s, buildingLevel); break;
+        case TILES.CANNON: renderCannon(px, py, s, buildingLevel); break;
         case TILES.WORKBENCH: renderWorkbench(px, py, s); break;
         case TILES.CHEST: renderChest(px, py, s); break;
         case TILES.BED: renderBed(px, py, s); break;
         case TILES.SPIKES: renderSpikes(px, py, s); break;
     }
+}
+
+function getRenderBuildingLevel(wx, wy) {
+    if (typeof BuildingUpgradeSystem !== 'undefined') {
+        return BuildingUpgradeSystem.getBuildingLevel(wx, wy) || 1;
+    }
+
+    if (typeof getBuilding === 'function') {
+        const building = getBuilding(wx, wy);
+        return building?.level || 1;
+    }
+
+    return 1;
 }
 
 function renderTree(x, y, s, wx, wy) {

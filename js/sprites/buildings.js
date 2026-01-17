@@ -7,9 +7,13 @@ function seededRandom(x, y) {
 }
 
 // Enhanced Wall with weathering and depth
-function renderWall(x, y, s, wx, wy) {
+function renderWall(x, y, s, wx, wy, level = 1) {
     const pattern = seededRandom(wx, wy);
     const pattern2 = seededRandom(wx + 100, wy + 100);
+    const tier = Math.min(Math.max(level, 1), 5);
+    const isWood = tier === 1;
+    const isHybrid = tier === 2;
+    const isFortified = tier >= 4;
 
     // Deep shadow for 3D effect
     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
@@ -20,27 +24,44 @@ function renderWall(x, y, s, wx, wy) {
     ctx.fillRect(x - 1, y - 1, s + 2, s + 2);
 
     // Main wall base with variation
-    const wallColors = ['#6a6a6a', '#707070', '#656565', '#727272'];
-    ctx.fillStyle = wallColors[Math.floor(pattern * 4)];
+    const stoneColors = ['#6a6a6a', '#707070', '#656565', '#727272'];
+    const woodColors = ['#7a5a3a', '#6a4a2a', '#8a6a4a', '#5a3a1a'];
+    const hybridColors = ['#6a5a4a', '#707070', '#655a55', '#727272'];
+
+    const baseColors = isWood ? woodColors : (isHybrid ? hybridColors : stoneColors);
+    ctx.fillStyle = baseColors[Math.floor(pattern * 4)];
     ctx.fillRect(x, y, s, s);
 
-    // Stone brick pattern
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
-    // Horizontal mortar lines
-    ctx.fillRect(x, y + s * 0.33, s, 2);
-    ctx.fillRect(x, y + s * 0.66, s, 2);
+    if (isWood) {
+        // Wood plank pattern
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.fillRect(x, y + s * 0.33, s, 1);
+        ctx.fillRect(x, y + s * 0.66, s, 1);
+        ctx.fillRect(x + s * 0.5, y, 1, s);
 
-    // Vertical mortar lines (offset per row)
-    ctx.fillRect(x + s * 0.5, y, 2, s * 0.33);
-    ctx.fillRect(x + s * 0.25, y + s * 0.33, 2, s * 0.33);
-    ctx.fillRect(x + s * 0.75, y + s * 0.33, 2, s * 0.33);
-    ctx.fillRect(x + s * 0.5, y + s * 0.66, 2, s * 0.34);
+        // Nail heads
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.fillRect(x + 3, y + 3, 1, 1);
+        ctx.fillRect(x + s - 4, y + s - 4, 1, 1);
+    } else {
+        // Stone brick pattern
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+        // Horizontal mortar lines
+        ctx.fillRect(x, y + s * 0.33, s, 2);
+        ctx.fillRect(x, y + s * 0.66, s, 2);
 
-    // Stone texture highlights
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-    ctx.fillRect(x + 3, y + 3, s * 0.4, 2);
-    ctx.fillRect(x + s * 0.55, y + s * 0.36, s * 0.35, 2);
-    ctx.fillRect(x + 3, y + s * 0.69, s * 0.2, 2);
+        // Vertical mortar lines (offset per row)
+        ctx.fillRect(x + s * 0.5, y, 2, s * 0.33);
+        ctx.fillRect(x + s * 0.25, y + s * 0.33, 2, s * 0.33);
+        ctx.fillRect(x + s * 0.75, y + s * 0.33, 2, s * 0.33);
+        ctx.fillRect(x + s * 0.5, y + s * 0.66, 2, s * 0.34);
+
+        // Stone texture highlights
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.fillRect(x + 3, y + 3, s * 0.4, 2);
+        ctx.fillRect(x + s * 0.55, y + s * 0.36, s * 0.35, 2);
+        ctx.fillRect(x + 3, y + s * 0.69, s * 0.2, 2);
+    }
 
     // Weathering and cracks
     if (pattern > 0.6) {
@@ -56,6 +77,15 @@ function renderWall(x, y, s, wx, wy) {
         ctx.fillRect(x + s * 0.75, y + s * 0.75, 3, 3);
     }
 
+    if (isFortified) {
+        ctx.fillStyle = '#2a2a2a';
+        ctx.fillRect(x + s * 0.15, y + s * 0.2, s * 0.7, 3);
+        ctx.fillRect(x + s * 0.15, y + s * 0.6, s * 0.7, 3);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.fillRect(x + s * 0.18, y + s * 0.22, s * 0.64, 1);
+        ctx.fillRect(x + s * 0.18, y + s * 0.62, s * 0.64, 1);
+    }
+
     // Top edge highlight
     ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
     ctx.fillRect(x, y, s, 1);
@@ -66,8 +96,11 @@ function renderWall(x, y, s, wx, wy) {
 }
 
 // Enhanced Campfire with smoke and better flames
-function renderCampfire(x, y, s) {
+function renderCampfire(x, y, s, level = 1) {
     const time = pixelTime || Date.now() / 1000;
+    const tier = Math.min(Math.max(level, 1), 5);
+    const flameScale = 1 + (tier - 1) * 0.08;
+    const glowScale = 1 + (tier - 1) * 0.12;
 
     // 1. Ground scorch mark
     ctx.fillStyle = 'rgba(30, 20, 15, 0.5)';
@@ -79,7 +112,7 @@ function renderCampfire(x, y, s) {
     const pulseGlow = Math.sin(time * 4) * 0.15 + 0.85;
     const groundGlow = ctx.createRadialGradient(
         x + s / 2, y + s / 2, 0,
-        x + s / 2, y + s / 2, s * 0.7 * pulseGlow
+        x + s / 2, y + s / 2, s * 0.7 * pulseGlow * glowScale
     );
     groundGlow.addColorStop(0, 'rgba(255, 100, 20, 0.35)');
     groundGlow.addColorStop(0.5, 'rgba(255, 50, 0, 0.15)');
@@ -166,30 +199,36 @@ function renderCampfire(x, y, s) {
 
     // Outer flame (dark red)
     ctx.fillStyle = '#cc2200';
-    drawFlame(ctx, x + s / 2 - 3, y + s * 0.62, s * 0.15, s * 0.35 + f3, f1 * 0.5);
-    drawFlame(ctx, x + s / 2 + 4, y + s * 0.62, s * 0.12, s * 0.3 + f2, -f1 * 0.3);
+    drawFlame(ctx, x + s / 2 - 3, y + s * 0.62, s * 0.15 * flameScale, s * 0.35 * flameScale + f3, f1 * 0.5);
+    drawFlame(ctx, x + s / 2 + 4, y + s * 0.62, s * 0.12 * flameScale, s * 0.3 * flameScale + f2, -f1 * 0.3);
 
     // Main flame (red-orange)
     ctx.fillStyle = '#ff4400';
-    drawFlame(ctx, x + s / 2, y + s * 0.6, s * 0.2, s * 0.45 + f1, f2);
+    drawFlame(ctx, x + s / 2, y + s * 0.6, s * 0.2 * flameScale, s * 0.45 * flameScale + f1, f2);
 
     // Inner flame (orange)
     ctx.fillStyle = '#ff7700';
-    drawFlame(ctx, x + s / 2, y + s * 0.58, s * 0.15, s * 0.38 + f2, f1 * 0.6);
+    drawFlame(ctx, x + s / 2, y + s * 0.58, s * 0.15 * flameScale, s * 0.38 * flameScale + f2, f1 * 0.6);
 
     // Core flame (yellow-orange)
     ctx.fillStyle = '#ffaa00';
-    drawFlame(ctx, x + s / 2, y + s * 0.56, s * 0.1, s * 0.3 + f1 * 0.5, f3);
+    drawFlame(ctx, x + s / 2, y + s * 0.56, s * 0.1 * flameScale, s * 0.3 * flameScale + f1 * 0.5, f3);
 
     // Hot core (yellow)
     ctx.fillStyle = '#ffdd44';
-    drawFlame(ctx, x + s / 2, y + s * 0.54, s * 0.06, s * 0.2 + f2 * 0.4, 0);
+    drawFlame(ctx, x + s / 2, y + s * 0.54, s * 0.06 * flameScale, s * 0.2 * flameScale + f2 * 0.4, 0);
 
     // White hot center
     ctx.fillStyle = '#ffffaa';
     ctx.globalAlpha = 0.7 + Math.sin(time * 18) * 0.3;
-    ctx.fillRect(x + s * 0.46, y + s * 0.48, s * 0.08, s * 0.08);
+    ctx.fillRect(x + s * 0.46, y + s * 0.48, s * 0.08 * flameScale, s * 0.08 * flameScale);
     ctx.globalAlpha = 1;
+
+    if (tier >= 3) {
+        ctx.fillStyle = '#2a2a2a';
+        ctx.fillRect(x + s * 0.28, y + s * 0.68, s * 0.44, 3);
+        ctx.fillRect(x + s * 0.3, y + s * 0.66, s * 0.4, 1);
+    }
 
     // 7. Sparks
     for (let i = 0; i < 6; i++) {
@@ -245,9 +284,10 @@ function drawFlame(ctx, cx, bottomY, width, height, offset) {
 }
 
 // Enhanced House with chimney, better details
-function renderHouse(x, y, s) {
+function renderHouse(x, y, s, level = 1) {
     const s2 = s * 2;
     const time = pixelTime || Date.now() / 1000;
+    const tier = Math.min(Math.max(level, 1), 5);
 
     // Ground shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
@@ -309,7 +349,8 @@ function renderHouse(x, y, s) {
     ctx.fill();
 
     // Roof main
-    ctx.fillStyle = '#7a4030';
+    const roofColor = tier >= 4 ? '#6a2f24' : '#7a4030';
+    ctx.fillStyle = roofColor;
     ctx.beginPath();
     ctx.moveTo(x - 8, y + s2 * 0.3);
     ctx.lineTo(x + s2 / 2, y - 4);
@@ -345,17 +386,19 @@ function renderHouse(x, y, s) {
     ctx.fillStyle = '#6a5a5a';
     ctx.fillRect(x + s2 * 0.7, y, s2 * 0.16, s2 * 0.04);
 
-    // Chimney smoke
-    ctx.globalAlpha = 0.2;
-    for (let i = 0; i < 3; i++) {
-        const smokeY = y - 8 - (time * 15 + i * 12) % 30;
-        const smokeX = x + s2 * 0.78 + Math.sin(time * 2 + i) * 3;
-        ctx.fillStyle = '#aaaaaa';
-        ctx.beginPath();
-        ctx.arc(smokeX, smokeY, 4 + i * 2, 0, Math.PI * 2);
-        ctx.fill();
+    if (tier >= 3) {
+        // Chimney smoke
+        ctx.globalAlpha = 0.2;
+        for (let i = 0; i < 3; i++) {
+            const smokeY = y - 8 - (time * 15 + i * 12) % 30;
+            const smokeX = x + s2 * 0.78 + Math.sin(time * 2 + i) * 3;
+            ctx.fillStyle = '#aaaaaa';
+            ctx.beginPath();
+            ctx.arc(smokeX, smokeY, 4 + i * 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
     }
-    ctx.globalAlpha = 1;
 
     // Door outline
     ctx.fillStyle = PALETTE.outline;
@@ -418,6 +461,23 @@ function renderHouse(x, y, s) {
         }
     });
 
+    if (tier >= 4) {
+        // Reinforced door bands
+        ctx.fillStyle = '#2a2a2a';
+        ctx.fillRect(x + s2 * 0.4, y + s2 * 0.66, s2 * 0.24, 3);
+        ctx.fillRect(x + s2 * 0.4, y + s2 * 0.84, s2 * 0.24, 3);
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(x + s2 * 0.41, y + s2 * 0.66, s2 * 0.22, 1);
+    }
+
+    if (tier >= 5) {
+        // Banner
+        ctx.fillStyle = '#b94b3a';
+        ctx.fillRect(x + s2 * 0.12, y + s2 * 0.28, 4, s2 * 0.3);
+        ctx.fillStyle = '#e0c46a';
+        ctx.fillRect(x + s2 * 0.12, y + s2 * 0.32, s2 * 0.08, s2 * 0.12);
+    }
+
     // Foundation stones
     ctx.fillStyle = '#5a5a5a';
     ctx.fillRect(x, y + s2 * 0.92, s2, s2 * 0.08);
@@ -428,8 +488,9 @@ function renderHouse(x, y, s) {
 }
 
 // Enhanced Farm with water, more crops, fence
-function renderFarm(x, y, s) {
+function renderFarm(x, y, s, level = 1) {
     const time = pixelTime || Date.now() / 1000;
+    const tier = Math.min(Math.max(level, 1), 5);
 
     // Tilled soil base
     ctx.fillStyle = '#5a4030';
@@ -463,12 +524,14 @@ function renderFarm(x, y, s) {
     }
 
     // Water puddle (corner irrigation)
-    ctx.fillStyle = 'rgba(70, 130, 180, 0.4)';
-    ctx.beginPath();
-    ctx.ellipse(x + s * 0.1, y + s * 0.9, s * 0.08, s * 0.05, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(150, 200, 255, 0.3)';
-    ctx.fillRect(x + s * 0.06, y + s * 0.88, 3, 2);
+    if (tier >= 2) {
+        ctx.fillStyle = 'rgba(70, 130, 180, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(x + s * 0.1, y + s * 0.9, s * 0.08, s * 0.05, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(150, 200, 255, 0.3)';
+        ctx.fillRect(x + s * 0.06, y + s * 0.88, 3, 2);
+    }
 
     // Crops with growth stages
     const cropColors = ['#3a7a30', '#4a8a40', '#5a9a50'];
@@ -478,8 +541,10 @@ function renderFarm(x, y, s) {
         const growthStage = (Math.sin(time * 0.5 + i) + 1) / 2;
         const cropSway = Math.sin(time * 2.5 + i) * 1.5;
 
-        for (let j = 0; j < 5; j++) {
-            const cropX = x + s * 0.12 + j * s * 0.17;
+        const cropCount = tier >= 5 ? 6 : 5;
+        const cropSpacing = tier >= 5 ? 0.145 : 0.17;
+        for (let j = 0; j < cropCount; j++) {
+            const cropX = x + s * 0.12 + j * s * cropSpacing;
             const cropSwayOffset = cropSway * (j % 2 === 0 ? 1 : -1);
             const cropHeight = s * (0.12 + growthStage * 0.08);
 
@@ -501,22 +566,40 @@ function renderFarm(x, y, s) {
         }
     }
 
-    // Corner fence posts
-    ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(x, y, 5, s * 0.2);
-    ctx.fillRect(x + s - 5, y, 5, s * 0.2);
-    ctx.fillStyle = '#7a6a5a';
-    ctx.fillRect(x + 1, y + 1, 3, s * 0.18);
-    ctx.fillRect(x + s - 4, y + 1, 3, s * 0.18);
+    if (tier >= 2) {
+        // Corner fence posts
+        ctx.fillStyle = PALETTE.outline;
+        ctx.fillRect(x, y, 5, s * 0.2);
+        ctx.fillRect(x + s - 5, y, 5, s * 0.2);
+        ctx.fillStyle = '#7a6a5a';
+        ctx.fillRect(x + 1, y + 1, 3, s * 0.18);
+        ctx.fillRect(x + s - 4, y + 1, 3, s * 0.18);
 
-    // Fence rail
-    ctx.fillStyle = '#6a5a4a';
-    ctx.fillRect(x, y + s * 0.08, s, 3);
+        // Fence rail
+        ctx.fillStyle = '#6a5a4a';
+        ctx.fillRect(x, y + s * 0.08, s, 3);
+    }
+
+    if (tier >= 3) {
+        // Irrigation channel
+        ctx.fillStyle = 'rgba(80, 150, 200, 0.35)';
+        ctx.fillRect(x + s * 0.45, y + s * 0.12, 3, s * 0.75);
+    }
+
+    if (tier >= 4) {
+        // Greenhouse glass sheen
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = '#a8d8ff';
+        ctx.fillRect(x + s * 0.1, y + s * 0.1, s * 0.8, s * 0.2);
+        ctx.fillRect(x + s * 0.1, y + s * 0.4, s * 0.8, s * 0.2);
+        ctx.globalAlpha = 1;
+    }
 }
 
 // Enhanced Tower with flag and better stonework
-function renderTower(x, y, s) {
+function renderTower(x, y, s, level = 1) {
     const time = pixelTime || Date.now() / 1000;
+    const tier = Math.min(Math.max(level, 1), 5);
 
     // Ground shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
@@ -601,6 +684,19 @@ function renderTower(x, y, s) {
         ctx.fillRect(bx, by, battleWidth, 2);
     });
 
+    if (tier >= 3) {
+        ctx.fillStyle = '#2a2a3a';
+        ctx.fillRect(x + s * 0.18, y + s * 0.55, s * 0.64, 3);
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.fillRect(x + s * 0.2, y + s * 0.55, s * 0.6, 1);
+    }
+
+    if (tier >= 4) {
+        ctx.fillStyle = '#6aa6ff';
+        ctx.fillRect(x + s * 0.48, y + s * 0.22, 3, 6);
+        ctx.fillRect(x + s * 0.44, y + s * 0.27, 11, 2);
+    }
+
     // Flag pole on center battlement
     ctx.fillStyle = '#4a3a2a';
     ctx.fillRect(x + s * 0.49, y - s * 0.35, 3, s * 0.35);
@@ -620,6 +716,14 @@ function renderTower(x, y, s) {
     ctx.fillStyle = '#ffcc00';
     ctx.fillRect(x + s * 0.58, y - s * 0.27, 4, 4);
 
+    if (tier >= 5) {
+        // Lightning rod
+        ctx.fillStyle = '#cccccc';
+        ctx.fillRect(x + s * 0.48, y - s * 0.45, 2, s * 0.12);
+        ctx.fillStyle = '#ffd04a';
+        ctx.fillRect(x + s * 0.46, y - s * 0.48, 6, 2);
+    }
+
     // Base stones
     ctx.fillStyle = '#5a5a6a';
     ctx.fillRect(x + s * 0.08, y + s * 0.85, s * 0.84, s * 0.15);
@@ -628,8 +732,9 @@ function renderTower(x, y, s) {
 }
 
 // Enhanced Cannon with more detail and smoke
-function renderCannon(x, y, s) {
+function renderCannon(x, y, s, level = 1) {
     const time = pixelTime || Date.now() / 1000;
+    const tier = Math.min(Math.max(level, 1), 5);
 
     // Ground shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
@@ -726,6 +831,20 @@ function renderCannon(x, y, s) {
     ctx.fillStyle = '#6a6a6a';
     ctx.fillRect(x + s * 0.28, y + s * 0.24, s * 0.44, 2);
 
+    if (tier >= 3) {
+        // Reinforced barrel plating
+        ctx.fillStyle = '#2a2a2a';
+        ctx.fillRect(x + s * 0.3, y + s * 0.34, s * 0.4, 3);
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(x + s * 0.32, y + s * 0.34, s * 0.36, 1);
+    }
+
+    if (tier >= 4) {
+        ctx.fillStyle = '#5a1a1a';
+        ctx.fillRect(x + s * 0.22, y + s * 0.42, 4, 6);
+        ctx.fillRect(x + s * 0.74, y + s * 0.42, 4, 6);
+    }
+
     // Muzzle
     ctx.fillStyle = PALETTE.outline;
     ctx.fillRect(x + s * 0.36, y + s * 0.06, s * 0.28, s * 0.2);
@@ -735,6 +854,17 @@ function renderCannon(x, y, s) {
     // Muzzle opening
     ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(x + s * 0.42, y + s * 0.02, s * 0.16, s * 0.1);
+
+    if (tier >= 5) {
+        const glow = ctx.createRadialGradient(
+            x + s * 0.5, y + s * 0.08, 0,
+            x + s * 0.5, y + s * 0.08, s * 0.2
+        );
+        glow.addColorStop(0, 'rgba(255,120,40,0.6)');
+        glow.addColorStop(1, 'rgba(255,120,40,0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(x + s * 0.3, y - s * 0.05, s * 0.4, s * 0.3);
+    }
 
     // Smoke wisps (subtle animation)
     ctx.globalAlpha = 0.15;

@@ -260,6 +260,10 @@ function generateChunk(cx, cy) {
         }
     }
 
+    if (typeof BiomeSystem !== 'undefined') {
+        BiomeSystem.onChunkGenerate(cx, cy, chunk);
+    }
+
     return chunk;
 }
 
@@ -278,6 +282,14 @@ function generateTileAt(wx, wy) {
     }
 
     const r = seededRandom(wx, wy);
+
+    if (typeof BiomeSystem !== 'undefined') {
+        const baseNoise = (noise2D(wx * CHUNK_CONFIG.RIVER_SCALE, wy * CHUNK_CONFIG.RIVER_SCALE) + 1) / 2;
+        const biomeTile = BiomeSystem.generateBiomeTile(wx, wy, baseNoise);
+        if (biomeTile !== undefined && biomeTile !== null) {
+            return biomeTile;
+        }
+    }
 
     // Rivers using noise
     const riverNoise = noise2D(wx * CHUNK_CONFIG.RIVER_SCALE, wy * CHUNK_CONFIG.RIVER_SCALE);
@@ -459,6 +471,22 @@ function getBuilding(wx, wy) {
 }
 
 // ============= COLLISION DETECTION =============
+function isWaterTile(tile) {
+    if (tile === TILES.WATER) return true;
+    if (typeof BiomeSystem !== 'undefined' && BiomeSystem.isWaterTile) {
+        return BiomeSystem.isWaterTile(tile);
+    }
+    return false;
+}
+
+function isLavaTile(tile) {
+    if (tile === TILES.LAVA) return true;
+    if (typeof BiomeSystem !== 'undefined' && BiomeSystem.isLavaTile) {
+        return BiomeSystem.isLavaTile(tile);
+    }
+    return false;
+}
+
 function isSolid(tile) {
     if (tile === undefined || tile === null) return false;
 
@@ -467,7 +495,7 @@ function isSolid(tile) {
     if (tile === TILES.STONE) return true;
     if (tile === TILES.IRON) return true;
     if (tile === TILES.BUSH) return true;
-    if (tile === TILES.WATER) return true;
+    if (isWaterTile(tile) || isLavaTile(tile)) return true;
 
     // Buildings that block
     if (tile === TILES.WALL) return true;
@@ -490,6 +518,9 @@ function isPassable(tile) {
         TILES.IRON,
         TILES.WALL,
         TILES.WATER,
+        TILES.MURKY_WATER,
+        TILES.FROZEN_WATER,
+        TILES.LAVA,
         TILES.HOUSE,
         TILES.HOUSE_BASE,
         TILES.TOWER,
@@ -500,7 +531,7 @@ function isPassable(tile) {
 }
 
 function isDamaging(tile) {
-    return tile === TILES.SPIKES || tile === TILES.WATER;
+    return tile === TILES.SPIKES || isWaterTile(tile) || isLavaTile(tile);
 }
 
 function isHarvestable(tile) {
@@ -582,6 +613,9 @@ function getTileCollision(tile) {
 
         // Water - full tile (can't swim)
         case TILES.WATER:
+        case TILES.MURKY_WATER:
+        case TILES.FROZEN_WATER:
+        case TILES.LAVA:
             return { radius: 0.5 };
 
         // Default for any other solid

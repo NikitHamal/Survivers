@@ -393,7 +393,17 @@ function updateZombieSpawning(dt) {
 
     // Calculate spawn rate based on day
     const currentDay = dayCount || 0;
-    const spawnRate = LOOP_CONFIG.ZOMBIE_SPAWN_BASE_RATE * (1 + currentDay * LOOP_CONFIG.ZOMBIE_SPAWN_DAY_MULT);
+    let spawnModifier = 1;
+    if (typeof BiomeSystem !== 'undefined') {
+        const mods = BiomeSystem.getZombieSpawnModifiers(player.x, player.y);
+        spawnModifier *= mods?.spawnRate || 1;
+    }
+    if (typeof EventSystem !== 'undefined') {
+        spawnModifier *= EventSystem.getZombieSpawnModifier();
+    }
+
+    const spawnRate = LOOP_CONFIG.ZOMBIE_SPAWN_BASE_RATE *
+        (1 + currentDay * LOOP_CONFIG.ZOMBIE_SPAWN_DAY_MULT) * spawnModifier;
 
     // Accumulate spawn time
     eventTimers.zombieSpawn += dt * spawnRate;

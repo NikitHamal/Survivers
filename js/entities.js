@@ -87,6 +87,15 @@ function spawnZombie() {
         // Validate spawn position
         if (!isValidZombieSpawn(zx, zy)) continue;
 
+        if (typeof BiomeSystem !== 'undefined' && typeof BossSystem !== 'undefined') {
+            const biomeTypes = BiomeSystem.getZombieTypesForBiome(zx, zy) || ['NORMAL'];
+            const isSpecial = BiomeSystem.shouldSpawnSpecialZombie(zx, zy);
+            const typePool = isSpecial ? biomeTypes : ['NORMAL'];
+            const selectedType = typePool[Math.floor(Math.random() * typePool.length)] || 'NORMAL';
+            BossSystem.spawnZombieWithType(selectedType, zx, zy);
+            return true;
+        }
+
         const health = ZOMBIE_CONFIG.BASE_HEALTH + currentDay * ZOMBIE_CONFIG.HEALTH_PER_DAY;
 
         const newZombie = {
@@ -115,7 +124,7 @@ function spawnZombie() {
 function isValidZombieSpawn(x, y) {
     // Check tile validity
     const tile = getTile(x, y);
-    if (tile === TILES.WATER || isSolid(tile)) return false;
+    if ((typeof isWaterTile === 'function' && isWaterTile(tile)) || isSolid(tile)) return false;
 
     // Check distance from other zombies
     const minSepSq = ZOMBIE_CONFIG.SPAWN_MIN_SEPARATION ** 2;

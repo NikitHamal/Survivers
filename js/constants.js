@@ -12,7 +12,11 @@ const TILES = {
     WALL: 5, FLOOR: 7, CAMPFIRE: 8,
     HOUSE: 9, FARM: 10, TOWER: 11, CANNON: 12,
     WORKBENCH: 13, CHEST: 14, BED: 15, BUSH: 16,
-    SPIKES: 17, HOUSE_BASE: 18
+    SPIKES: 17, HOUSE_BASE: 18, DIRT: 19,
+    SAND: 20, SANDSTONE: 21, MUD: 22, MARSH: 23,
+    MURKY_WATER: 24, SNOW: 25, ICE: 26, FROZEN_WATER: 27,
+    VOLCANIC_ROCK: 28, ASH: 29, LAVA: 30,
+    COBBLESTONE: 31, CRACKED_STONE: 32
 };
 
 const ROLES = ['None', 'Builder', 'Soldier', 'Guard', 'Farmer', 'Woodcutter', 'Miner', 'Hunter', 'Medic'];

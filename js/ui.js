@@ -351,6 +351,25 @@ function renderDamageNumbers(ctx, camX, camY) {
     ctx.globalAlpha = 1;
 }
 
+function colorToRgb(color) {
+    if (!color) return null;
+    if (color.startsWith('#')) {
+        const hex = color.replace('#', '');
+        const full = hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex;
+        const r = parseInt(full.slice(0, 2), 16);
+        const g = parseInt(full.slice(2, 4), 16);
+        const b = parseInt(full.slice(4, 6), 16);
+        return [r, g, b];
+    }
+
+    const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (match) {
+        return [parseInt(match[1], 10), parseInt(match[2], 10), parseInt(match[3], 10)];
+    }
+
+    return null;
+}
+
 function renderMinimap() {
     if (!minimapCtx || !minimapCanvas) return;
 
@@ -388,7 +407,21 @@ function renderMinimap() {
         [TILES.CAMPFIRE]: [170, 68, 0],
         [TILES.TOWER]: [74, 74, 106],
         [TILES.CANNON]: [74, 74, 106],
-        [TILES.BUSH]: [34, 139, 34]
+        [TILES.BUSH]: [34, 139, 34],
+        [TILES.SAND]: [196, 163, 90],
+        [TILES.SANDSTONE]: [164, 131, 58],
+        [TILES.MUD]: [90, 74, 42],
+        [TILES.MARSH]: [74, 90, 58],
+        [TILES.MURKY_WATER]: [38, 70, 62],
+        [TILES.SNOW]: [216, 232, 248],
+        [TILES.ICE]: [160, 200, 220],
+        [TILES.FROZEN_WATER]: [104, 152, 184],
+        [TILES.VOLCANIC_ROCK]: [58, 42, 42],
+        [TILES.ASH]: [90, 74, 74],
+        [TILES.LAVA]: [255, 106, 42],
+        [TILES.COBBLESTONE]: [90, 90, 90],
+        [TILES.CRACKED_STONE]: [80, 80, 80],
+        [TILES.DIRT]: [90, 70, 50]
     };
 
     for (let dy = -range; dy < range; dy++) {
@@ -397,7 +430,11 @@ function renderMinimap() {
             const wy = Math.floor(player.y + dy);
             const tile = getTile(wx, wy);
 
-            const color = colors[tile] || [42, 74, 26];
+            let color = colors[tile];
+            if (!color && typeof BiomeSystem !== 'undefined') {
+                color = colorToRgb(BiomeSystem.getTileColor(tile, wx, wy));
+            }
+            if (!color) color = [42, 74, 26];
 
             // Draw mapScale x mapScale block
             for (let py = 0; py < mapScale; py++) {

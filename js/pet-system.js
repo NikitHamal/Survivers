@@ -278,6 +278,15 @@ const PetSystem = (function () {
         }
     };
 
+    const BIOME_PET_POOLS = {
+        jungle: ['TIGER', 'BOAR', 'BEAR', 'HAWK', 'FOX'],
+        desert: ['CAMEL', 'FOX', 'HAWK', 'BOAR'],
+        swamp: ['BOAR', 'BEAVER', 'FOX'],
+        snow: ['WOLF', 'BEAR', 'HAWK', 'HORSE'],
+        volcanic: ['BEAR', 'WOLF', 'BOAR'],
+        ruins: ['FOX', 'WOLF', 'BOAR']
+    };
+
     // ============= PET EQUIPMENT =============
     const PET_EQUIPMENT = {
         COLLAR: {
@@ -1274,18 +1283,47 @@ const PetSystem = (function () {
         return animal;
     }
 
-    function spawnNearbyWildAnimals(centerX, centerY, count = 3) {
-        const types = Object.keys(PET_TYPES).filter(t => PET_TYPES[t].rarity !== 'legendary');
-        const spawnedAnimals = [];
+    function getBiomePetPool(x, y) {
+        const fallbackPool = Object.keys(PET_TYPES).filter(t => PET_TYPES[t].rarity !== 'legendary');
+        if (typeof BiomeSystem === 'undefined') return fallbackPool;
 
-        for (let i = 0; i < count; i++) {
-            const typeId = types[Math.floor(Math.random() * types.length)];
+        const biome = BiomeSystem.getBiomeAt(x, y);
+        const pool = BIOME_PET_POOLS[biome?.id];
+        return pool?.length ? pool : fallbackPool;
+    }
+
+    function findWildSpawnLocation(centerX, centerY, minDist = 8, maxDist = 14) {
+        for (let i = 0; i < 12; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const dist = 10 + Math.random() * 10;
+            const dist = minDist + Math.random() * (maxDist - minDist);
             const x = centerX + Math.cos(angle) * dist;
             const y = centerY + Math.sin(angle) * dist;
 
-            const animal = spawnWildAnimal(typeId, x, y);
+            if (typeof isInBaseArea === 'function' && isInBaseArea(x, y)) continue;
+            if (typeof isPassableAt === 'function' && !isPassableAt(x, y, 0.35)) continue;
+            if (typeof getTile === 'function') {
+                const tile = getTile(x, y);
+                if ((typeof isWaterTile === 'function' && isWaterTile(tile)) || (typeof isLavaTile === 'function' && isLavaTile(tile))) {
+                    continue;
+                }
+            }
+
+            return { x, y };
+        }
+
+        return null;
+    }
+
+    function spawnNearbyWildAnimals(centerX, centerY, count = 3) {
+        const spawnedAnimals = [];
+        const types = getBiomePetPool(centerX, centerY);
+
+        for (let i = 0; i < count; i++) {
+            const typeId = types[Math.floor(Math.random() * types.length)];
+            const spawnPos = findWildSpawnLocation(centerX, centerY, 9, 18);
+            if (!spawnPos) continue;
+
+            const animal = spawnWildAnimal(typeId, spawnPos.x, spawnPos.y);
             if (animal) {
                 spawnedAnimals.push(animal);
             }
