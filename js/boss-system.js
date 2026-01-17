@@ -264,16 +264,22 @@ const BossSystem = (function () {
         const baseSpeed = ZOMBIE_CONFIG.BASE_SPEED + (dayCount || 0) * ZOMBIE_CONFIG.SPEED_PER_DAY;
         const baseDamage = ZOMBIE_CONFIG.BASE_DAMAGE + (dayCount || 0) * ZOMBIE_CONFIG.DAMAGE_PER_DAY;
 
+        const speedValue = baseSpeed * zombieType.speedMultiplier;
         const zombie = {
             x: x,
             y: y,
             health: baseHealth * zombieType.healthMultiplier * dayMultiplier,
             maxHealth: baseHealth * zombieType.healthMultiplier * dayMultiplier,
-            speed: baseSpeed * zombieType.speedMultiplier,
+            baseSpeed: speedValue,
+            speed: speedValue,
             damage: baseDamage * zombieType.damageMultiplier,
             attackCooldown: 0,
             frame: 0,
             animTimer: 0,
+            burnTimer: 0,
+            burnDps: 0,
+            slowTimer: 0,
+            slowAmount: 0,
             // Type info
             zombieType: zombieType,
             typeId: type,

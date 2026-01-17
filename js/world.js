@@ -445,6 +445,13 @@ function updateBuildingTracking(wx, wy, oldTile, newTile) {
 }
 
 function getBuildingMaxHealth(tileType) {
+    if (typeof BuildingUpgradeSystem !== 'undefined' && BuildingUpgradeSystem.getBuildingType) {
+        const type = BuildingUpgradeSystem.getBuildingType(tileType);
+        if (type?.upgrades?.length) {
+            return type.upgrades[0].health;
+        }
+    }
+
     const healthMap = {
         [TILES.WALL]: 150, // Buffed health since broken walls are gone
         [TILES.TOWER]: 200,

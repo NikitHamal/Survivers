@@ -53,6 +53,10 @@ window.renderAnimalSprite = function (ctx, animal, cam) {
             renderSheepSprite(ctx, animal, screenX, screenY, s);
     }
 
+    if (animal.isTamed) {
+        renderTamedCollar(ctx, animal, screenX, screenY, s);
+    }
+
     // Health bar if damaged
     if (animal.health < animal.maxHealth) {
         renderAnimalHealthBar(ctx, animal, screenX, screenY, s);
@@ -60,6 +64,18 @@ window.renderAnimalSprite = function (ctx, animal, cam) {
 
     ctx.restore();
 };
+
+function renderTamedCollar(ctx, animal, sx, sy, s) {
+    const size = animal.size || 0.6;
+    const w = s * size;
+    const cx = sx + s * 0.5;
+    const cy = sy + s * 0.55;
+
+    ctx.fillStyle = '#ffcc55';
+    ctx.fillRect(cx - w * 0.12, cy - w * 0.05, w * 0.24, w * 0.05);
+    ctx.fillStyle = '#d4942f';
+    ctx.fillRect(cx - w * 0.02, cy - w * 0.02, w * 0.04, w * 0.04);
+}
 
 // ============= SHEEP SPRITE =============
 function renderSheepSprite(ctx, animal, sx, sy, s) {

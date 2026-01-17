@@ -161,6 +161,9 @@ function renderObjectLayer(tile, sx, sy, wx, wy) {
     const s = TILE_SIZE * SCALE;
     const px = Math.floor(sx);
     const py = Math.floor(sy);
+    const level = (typeof BuildingUpgradeSystem !== 'undefined' && BuildingUpgradeSystem.getBuildingLevel)
+        ? BuildingUpgradeSystem.getBuildingLevel(wx, wy)
+        : 1;
 
     // Pass specific context to helpers
     switch (tile) {
@@ -169,16 +172,16 @@ function renderObjectLayer(tile, sx, sy, wx, wy) {
         case TILES.STONE: renderStone(px, py, s, wx, wy); break;
         case TILES.IRON: renderIronOre(px, py, s, wx, wy); break;
         // ... (Other buildings use your previous building code) ...
-        case TILES.WALL: renderWall(px, py, s, wx, wy); break;
-        case TILES.CAMPFIRE: renderCampfire(px, py, s); break;
-        case TILES.HOUSE: renderHouse(px, py, s); break;
-        case TILES.FARM: renderFarm(px, py, s); break;
-        case TILES.TOWER: renderTower(px, py, s); break;
-        case TILES.CANNON: renderCannon(px, py, s); break;
-        case TILES.WORKBENCH: renderWorkbench(px, py, s); break;
-        case TILES.CHEST: renderChest(px, py, s); break;
-        case TILES.BED: renderBed(px, py, s); break;
-        case TILES.SPIKES: renderSpikes(px, py, s); break;
+        case TILES.WALL: renderWall(px, py, s, wx, wy, level); break;
+        case TILES.CAMPFIRE: renderCampfire(px, py, s, level); break;
+        case TILES.HOUSE: renderHouse(px, py, s, level); break;
+        case TILES.FARM: renderFarm(px, py, s, level); break;
+        case TILES.TOWER: renderTower(px, py, s, level); break;
+        case TILES.CANNON: renderCannon(px, py, s, level); break;
+        case TILES.WORKBENCH: renderWorkbench(px, py, s, level); break;
+        case TILES.CHEST: renderChest(px, py, s, level); break;
+        case TILES.BED: renderBed(px, py, s, level); break;
+        case TILES.SPIKES: renderSpikes(px, py, s, level); break;
     }
 }
 

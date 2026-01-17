@@ -355,7 +355,13 @@ function updateZombieSpawning(dt) {
 
     // Calculate spawn rate based on day
     const currentDay = dayCount || 0;
-    const spawnRate = LOOP_CONFIG.ZOMBIE_SPAWN_BASE_RATE * (1 + currentDay * LOOP_CONFIG.ZOMBIE_SPAWN_DAY_MULT);
+    let spawnRate = LOOP_CONFIG.ZOMBIE_SPAWN_BASE_RATE * (1 + currentDay * LOOP_CONFIG.ZOMBIE_SPAWN_DAY_MULT);
+    const biome = (typeof BiomeSystem !== 'undefined' && BiomeSystem.getBiomeAt)
+        ? BiomeSystem.getBiomeAt(player.x, player.y)
+        : null;
+    if (biome?.zombieModifiers?.spawnRate) {
+        spawnRate *= biome.zombieModifiers.spawnRate;
+    }
 
     // Accumulate spawn time
     eventTimers.zombieSpawn += dt * spawnRate;
@@ -363,8 +369,21 @@ function updateZombieSpawning(dt) {
     // Spawn zombies based on accumulated time
     while (eventTimers.zombieSpawn >= 1) {
         eventTimers.zombieSpawn -= 1;
-        spawnZombie();
+        const typeId = selectBiomeZombieType(biome);
+        spawnZombie(typeId);
     }
+}
+
+function selectBiomeZombieType(biome) {
+    const types = biome?.zombieModifiers?.types;
+    if (!types || types.length === 0) return null;
+
+    const specialChance = biome?.zombieModifiers?.specialChance || 0;
+    if (Math.random() < specialChance) {
+        return types[Math.floor(Math.random() * types.length)];
+    }
+
+    return 'NORMAL';
 }
 
 function updatePeriodicEvents(dt) {

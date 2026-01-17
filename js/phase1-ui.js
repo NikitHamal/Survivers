@@ -37,9 +37,10 @@ function updatePetMenuUI() {
     for (const animal of animals) {
         const typeId = animal.type?.id || 'unknown';
         if (!grouped[typeId]) {
-            grouped[typeId] = { type: animal.type, count: 0, animals: [] };
+            grouped[typeId] = { type: animal.type, count: 0, tamedCount: 0, animals: [] };
         }
         grouped[typeId].count++;
+        if (animal.isTamed) grouped[typeId].tamedCount++;
         grouped[typeId].animals.push(animal);
     }
 
@@ -47,6 +48,7 @@ function updatePetMenuUI() {
     for (const [typeId, data] of Object.entries(grouped)) {
         const type = data.type;
         const dropsText = type.drops ? type.drops.map(d => d.item).join(', ') : 'none';
+        const tamedText = data.tamedCount > 0 ? ` | 🐾 Tamed: ${data.tamedCount}` : '';
 
         html += `
             <div class="pet-card" style="cursor:default;">
@@ -56,6 +58,7 @@ function updatePetMenuUI() {
                     <div class="pet-stats" style="color:#888;font-size:11px;">
                         <span>HP: ${type.baseStats?.health || '?'}</span>
                         <span>Drops: ${dropsText}</span>
+                        <span>${tamedText}</span>
                     </div>
                 </div>
             </div>
@@ -63,7 +66,7 @@ function updatePetMenuUI() {
     }
 
     html += '<div style="margin-top:15px;padding:10px;background:rgba(0,0,0,0.3);border-radius:6px;font-size:11px;color:#888;">';
-    html += '<b>Tip:</b> Click or press Space near animals to attack them and collect resources!';
+    html += '<b>Tip:</b> Press [E] near an animal to feed and tame it. Tamed animals follow you.';
     html += '</div>';
 
     list.innerHTML = html;

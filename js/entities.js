@@ -64,7 +64,7 @@ const activeTowers = new Map(); // key: "x,y", value: { type, cooldown }
 // ============================================
 // ZOMBIE SPAWNING
 // ============================================
-function spawnZombie() {
+function spawnZombie(typeId = null) {
     const currentDay = dayCount || 0;
     const maxZombies = ZOMBIE_CONFIG.MAX_BASE + currentDay * ZOMBIE_CONFIG.MAX_PER_DAY;
 
@@ -89,24 +89,35 @@ function spawnZombie() {
 
         const health = ZOMBIE_CONFIG.BASE_HEALTH + currentDay * ZOMBIE_CONFIG.HEALTH_PER_DAY;
 
-        const newZombie = {
-            x: zx,
-            y: zy,
-            health: health,
-            maxHealth: health,
-            speed: ZOMBIE_CONFIG.BASE_SPEED + currentDay * ZOMBIE_CONFIG.SPEED_PER_DAY,
-            damage: ZOMBIE_CONFIG.BASE_DAMAGE + currentDay * ZOMBIE_CONFIG.DAMAGE_PER_DAY,
-            attackCooldown: 0,
-            frame: 0,
-            animTimer: 0
-        };
+        if (typeId && typeof BossSystem !== 'undefined' && BossSystem.spawnZombieWithType) {
+            BossSystem.spawnZombieWithType(typeId, zx, zy);
+            return true;
+        } else {
+            const baseSpeed = ZOMBIE_CONFIG.BASE_SPEED + currentDay * ZOMBIE_CONFIG.SPEED_PER_DAY;
+            const newZombie = {
+                x: zx,
+                y: zy,
+                health: health,
+                maxHealth: health,
+                baseSpeed: baseSpeed,
+                speed: baseSpeed,
+                damage: ZOMBIE_CONFIG.BASE_DAMAGE + currentDay * ZOMBIE_CONFIG.DAMAGE_PER_DAY,
+                attackCooldown: 0,
+                frame: 0,
+                animTimer: 0,
+                burnTimer: 0,
+                burnDps: 0,
+                slowTimer: 0,
+                slowAmount: 0
+            };
 
-        // Attach AI
-        newZombie.ai = new ZombieAI(newZombie);
+            // Attach AI
+            newZombie.ai = new ZombieAI(newZombie);
 
-        zombies.push(newZombie);
+            zombies.push(newZombie);
 
-        return true;
+            return true;
+        }
     }
 
     return false;
@@ -156,6 +167,8 @@ function updateZombies(dt) {
             return false;
         }
 
+        applyZombieStatusEffects(z, dt);
+
         if (z.ai) {
             // Find neighbors for separation (simple O(N^2) for now)
             const neighbors = [];
@@ -194,6 +207,36 @@ function processDeadZombies(deadZombies, currentDay) {
     }
 
     checkLevelUp();
+}
+
+function applyZombieStatusEffects(zombie, dt) {
+    if (!zombie) return;
+
+    if (!zombie.baseSpeed) {
+        zombie.baseSpeed = zombie.speed || ZOMBIE_CONFIG.BASE_SPEED;
+    }
+
+    if (zombie.burnTimer > 0) {
+        zombie.burnTimer = Math.max(0, zombie.burnTimer - dt);
+        const burnDamage = (zombie.burnDps || 0) * dt;
+        if (burnDamage > 0) {
+            zombie.health -= burnDamage;
+            if (Math.random() < dt * 2) {
+                spawnParticles(zombie.x, zombie.y, '#ff8844', 1);
+            }
+        }
+    } else {
+        zombie.burnDps = 0;
+    }
+
+    if (zombie.slowTimer > 0) {
+        zombie.slowTimer = Math.max(0, zombie.slowTimer - dt);
+    } else {
+        zombie.slowAmount = 0;
+    }
+
+    const slowMultiplier = zombie.slowAmount ? Math.max(0.2, 1 - zombie.slowAmount) : 1;
+    zombie.speed = zombie.baseSpeed * slowMultiplier;
 }
 
 
@@ -642,7 +685,15 @@ function updateTowers(dt) {
         }
 
         const [tx, ty] = key.split(',').map(Number);
-        const range = tower.type === TILES.CANNON ? 10 : 7;
+        const isCannon = tower.type === TILES.CANNON;
+        const baseStats = isCannon
+            ? { damage: TOWER_CONFIG.CANNON_DAMAGE, range: TOWER_CONFIG.CANNON_RANGE, fireRate: 1 / TOWER_CONFIG.CANNON_COOLDOWN, splash: TOWER_CONFIG.SPLASH_RADIUS }
+            : { damage: TOWER_CONFIG.ARROW_DAMAGE, range: TOWER_CONFIG.ARROW_RANGE, fireRate: 1 / TOWER_CONFIG.ARROW_COOLDOWN };
+        const upgradeStats = (typeof BuildingUpgradeSystem !== 'undefined' && BuildingUpgradeSystem.getBuildingStats)
+            ? BuildingUpgradeSystem.getBuildingStats(tx, ty)
+            : null;
+        const stats = upgradeStats ? { ...baseStats, ...upgradeStats } : baseStats;
+        const range = stats.range || baseStats.range;
         let nearest = null;
         let nearestDist = range;
 
@@ -656,17 +707,29 @@ function updateTowers(dt) {
 
         if (nearest) {
             const angle = Math.atan2(nearest.y - ty - 0.5, nearest.x - tx - 0.5);
+            const fireRate = stats.fireRate || baseStats.fireRate || 1;
+            const cooldown = fireRate > 0 ? (1 / fireRate) : (isCannon ? TOWER_CONFIG.CANNON_COOLDOWN : TOWER_CONFIG.ARROW_COOLDOWN);
             projectiles.push({
                 x: tx + 0.5, y: ty + 0.5,
                 vx: Math.cos(angle) * 12,
                 vy: Math.sin(angle) * 12,
-                damage: tower.type === TILES.CANNON ? 35 : 18,
-                size: tower.type === TILES.CANNON ? 4 : 2,
-                color: tower.type === TILES.CANNON ? '#ff6600' : '#ffff00',
+                damage: stats.damage || baseStats.damage,
+                size: isCannon ? 4 : 2,
+                color: isCannon ? '#ff6600' : '#ffff00',
                 life: 1.5,
-                isCannon: tower.type === TILES.CANNON
+                isCannon: isCannon,
+                splashRadius: isCannon ? (stats.splash || TOWER_CONFIG.SPLASH_RADIUS) : 0,
+                burnDps: isCannon ? (stats.burn || 0) : 0,
+                burnDuration: isCannon && stats.burn ? 4 : 0,
+                slowAmount: stats.slowEnemies || 0,
+                slowDuration: stats.slowEnemies ? 2.5 : 0,
+                chainCount: stats.chainLightning || 0,
+                chainRange: stats.chainLightning ? 4 : 0,
+                piercing: !!stats.piercing,
+                pierceRemaining: stats.piercing ? 2 : 0,
+                hitTargets: new Set()
             });
-            tower.cooldown = tower.type === TILES.CANNON ? 1.5 : 0.6;
+            tower.cooldown = cooldown;
         }
     }
 }
@@ -713,8 +776,10 @@ function updateProjectiles(dt) {
 function checkProjectileZombieCollision(p) {
     const hitRadius = 0.4 + (p.size || 2) * 0.02;
     const hitRadiusSq = hitRadius * hitRadius;
+    const hitTargets = p.hitTargets || new Set();
 
     for (const z of zombies) {
+        if (hitTargets.has(z)) continue;
         const dx = z.x - p.x;
         const dy = z.y - p.y;
         const distSq = dx * dx + dy * dy;
@@ -725,7 +790,24 @@ function checkProjectileZombieCollision(p) {
             addDamageNumber(z.x, z.y - 0.5, p.damage, '#ffff00');
 
             if (p.isCannon) {
-                applySplashDamage(p.x, p.y, z, p.damage);
+                applySplashDamage(p.x, p.y, z, p.damage, p.splashRadius || TOWER_CONFIG.SPLASH_RADIUS);
+                if (p.burnDps) {
+                    applyBurn(z, p.burnDps, p.burnDuration || 0);
+                }
+            }
+            if (p.slowAmount) {
+                applySlow(z, p.slowAmount, p.slowDuration || 0);
+            }
+            if (p.chainCount) {
+                applyChainLightning(z, p.chainCount, p.chainRange || 4, p.damage);
+            }
+
+            hitTargets.add(z);
+            p.hitTargets = hitTargets;
+
+            if (p.piercing && p.pierceRemaining > 0) {
+                p.pierceRemaining -= 1;
+                return false;
             }
             return true;
         }
@@ -733,8 +815,8 @@ function checkProjectileZombieCollision(p) {
     return false;
 }
 
-function applySplashDamage(x, y, hitZombie, baseDamage) {
-    const splashRadiusSq = TOWER_CONFIG.SPLASH_RADIUS ** 2;
+function applySplashDamage(x, y, hitZombie, baseDamage, splashRadius) {
+    const splashRadiusSq = splashRadius ** 2;
     const splashDamage = Math.floor(baseDamage * TOWER_CONFIG.SPLASH_DAMAGE_MULT);
 
     for (const z of zombies) {
@@ -745,6 +827,51 @@ function applySplashDamage(x, y, hitZombie, baseDamage) {
             z.health -= splashDamage;
             addDamageNumber(z.x, z.y - 0.3, splashDamage, '#ffaa00');
         }
+    }
+}
+
+function applyBurn(zombie, burnDps, duration) {
+    if (!zombie) return;
+    if (duration <= 0 || burnDps <= 0) return;
+    zombie.burnTimer = Math.max(zombie.burnTimer || 0, duration);
+    zombie.burnDps = Math.max(zombie.burnDps || 0, burnDps);
+}
+
+function applySlow(zombie, slowAmount, duration) {
+    if (!zombie) return;
+    if (duration <= 0 || slowAmount <= 0) return;
+    zombie.slowTimer = Math.max(zombie.slowTimer || 0, duration);
+    zombie.slowAmount = Math.max(zombie.slowAmount || 0, slowAmount);
+}
+
+function applyChainLightning(startZombie, chainCount, chainRange, baseDamage) {
+    if (!startZombie || chainCount <= 0) return;
+    const chainDamage = Math.max(1, Math.floor(baseDamage * 0.6));
+    let current = startZombie;
+    const visited = new Set([startZombie]);
+
+    for (let i = 0; i < chainCount; i++) {
+        let nearest = null;
+        let nearestDist = chainRange;
+
+        for (const z of zombies) {
+            if (visited.has(z)) continue;
+            const dx = z.x - current.x;
+            const dy = z.y - current.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearest = z;
+            }
+        }
+
+        if (!nearest) break;
+        nearest.health -= chainDamage;
+        spawnParticles(nearest.x, nearest.y, '#88ccff', 6);
+        addDamageNumber(nearest.x, nearest.y - 0.4, chainDamage, '#88ccff');
+        applySlow(nearest, 0.2, 1.2);
+        visited.add(nearest);
+        current = nearest;
     }
 }
 

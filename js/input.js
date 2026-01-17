@@ -469,6 +469,21 @@ function interact() {
         }
     }
 
+    // Tame nearby animals
+    if (typeof PetSystem !== 'undefined' && typeof PetSystem.tryTameNearby === 'function') {
+        const tameResult = PetSystem.tryTameNearby(player.x, player.y);
+        if (tameResult.animal) {
+            if (typeof updateUI === 'function') updateUI();
+            showNotification(
+                tameResult.success
+                    ? `<i class="material-icons">pets</i> ${tameResult.animal.type.name} tamed!`
+                    : `<i class="material-icons">pets</i> ${tameResult.reason}`,
+                []
+            );
+            return;
+        }
+    }
+
     // Eat food (if no world interaction found)
     if (resources.food > 0 && player.hunger < player.maxHunger) {
         resources.food--;
