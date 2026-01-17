@@ -88,6 +88,19 @@ function spawnZombie() {
         if (!isValidZombieSpawn(zx, zy)) continue;
 
         const health = ZOMBIE_CONFIG.BASE_HEALTH + currentDay * ZOMBIE_CONFIG.HEALTH_PER_DAY;
+        let zombieType = 'NORMAL';
+
+        if (typeof BiomeSystem !== 'undefined') {
+            const types = BiomeSystem.getZombieTypesForBiome(zx, zy);
+            if (Array.isArray(types) && types.length > 0 && BiomeSystem.shouldSpawnSpecialZombie(zx, zy)) {
+                zombieType = types[Math.floor(Math.random() * types.length)];
+            }
+        }
+
+        if (typeof BossSystem !== 'undefined') {
+            BossSystem.spawnZombieWithType(zombieType, zx, zy);
+            return true;
+        }
 
         const newZombie = {
             x: zx,
@@ -98,7 +111,8 @@ function spawnZombie() {
             damage: ZOMBIE_CONFIG.BASE_DAMAGE + currentDay * ZOMBIE_CONFIG.DAMAGE_PER_DAY,
             attackCooldown: 0,
             frame: 0,
-            animTimer: 0
+            animTimer: 0,
+            typeId: zombieType
         };
 
         // Attach AI
@@ -642,7 +656,13 @@ function updateTowers(dt) {
         }
 
         const [tx, ty] = key.split(',').map(Number);
-        const range = tower.type === TILES.CANNON ? 10 : 7;
+        const stats = typeof BuildingUpgradeSystem !== 'undefined'
+            ? (tower.type === TILES.CANNON
+                ? BuildingUpgradeSystem.getCannonStats(tx, ty)
+                : BuildingUpgradeSystem.getTowerStats(tx, ty))
+            : null;
+
+        const range = stats?.range ?? (tower.type === TILES.CANNON ? TOWER_CONFIG.CANNON_RANGE : TOWER_CONFIG.ARROW_RANGE);
         let nearest = null;
         let nearestDist = range;
 
@@ -656,17 +676,28 @@ function updateTowers(dt) {
 
         if (nearest) {
             const angle = Math.atan2(nearest.y - ty - 0.5, nearest.x - tx - 0.5);
+            const damage = stats?.damage ?? (tower.type === TILES.CANNON ? TOWER_CONFIG.CANNON_DAMAGE : TOWER_CONFIG.ARROW_DAMAGE);
+            const fireRate = stats?.fireRate ?? (tower.type === TILES.CANNON ? 0.4 : 1.0);
+            const projectileSpeed = stats?.projectileSpeed ?? TOWER_CONFIG.PROJECTILE_SPEED;
+            const splashRadius = stats?.splash ?? (tower.type === TILES.CANNON ? TOWER_CONFIG.SPLASH_RADIUS : 0);
+            const chainLightning = stats?.chainLightning || 0;
+
             projectiles.push({
                 x: tx + 0.5, y: ty + 0.5,
-                vx: Math.cos(angle) * 12,
-                vy: Math.sin(angle) * 12,
-                damage: tower.type === TILES.CANNON ? 35 : 18,
-                size: tower.type === TILES.CANNON ? 4 : 2,
+                vx: Math.cos(angle) * projectileSpeed,
+                vy: Math.sin(angle) * projectileSpeed,
+                damage: damage,
+                size: tower.type === TILES.CANNON ? TOWER_CONFIG.CANNON_SIZE : TOWER_CONFIG.ARROW_SIZE,
                 color: tower.type === TILES.CANNON ? '#ff6600' : '#ffff00',
                 life: 1.5,
-                isCannon: tower.type === TILES.CANNON
+                isCannon: tower.type === TILES.CANNON,
+                splashRadius: splashRadius,
+                splashMultiplier: TOWER_CONFIG.SPLASH_DAMAGE_MULT,
+                chainLightning: chainLightning,
+                chainRange: Math.max(3, range * 0.4)
             });
-            tower.cooldown = tower.type === TILES.CANNON ? 1.5 : 0.6;
+
+            tower.cooldown = fireRate > 0 ? 1 / fireRate : (tower.type === TILES.CANNON ? TOWER_CONFIG.CANNON_COOLDOWN : TOWER_CONFIG.ARROW_COOLDOWN);
         }
     }
 }
@@ -724,8 +755,11 @@ function checkProjectileZombieCollision(p) {
             spawnParticles(z.x, z.y, '#ff8844', 4);
             addDamageNumber(z.x, z.y - 0.5, p.damage, '#ffff00');
 
-            if (p.isCannon) {
-                applySplashDamage(p.x, p.y, z, p.damage);
+            if (p.isCannon && p.splashRadius) {
+                applySplashDamage(p.x, p.y, z, p.damage, p.splashRadius, p.splashMultiplier);
+            }
+            if (p.chainLightning) {
+                applyChainLightning(p.x, p.y, z, p.damage, p.chainLightning, p.chainRange);
             }
             return true;
         }
@@ -733,9 +767,9 @@ function checkProjectileZombieCollision(p) {
     return false;
 }
 
-function applySplashDamage(x, y, hitZombie, baseDamage) {
-    const splashRadiusSq = TOWER_CONFIG.SPLASH_RADIUS ** 2;
-    const splashDamage = Math.floor(baseDamage * TOWER_CONFIG.SPLASH_DAMAGE_MULT);
+function applySplashDamage(x, y, hitZombie, baseDamage, radius = TOWER_CONFIG.SPLASH_RADIUS, multiplier = TOWER_CONFIG.SPLASH_DAMAGE_MULT) {
+    const splashRadiusSq = radius ** 2;
+    const splashDamage = Math.floor(baseDamage * multiplier);
 
     for (const z of zombies) {
         if (z === hitZombie) continue;
@@ -744,6 +778,40 @@ function applySplashDamage(x, y, hitZombie, baseDamage) {
         if (dx * dx + dy * dy < splashRadiusSq) {
             z.health -= splashDamage;
             addDamageNumber(z.x, z.y - 0.3, splashDamage, '#ffaa00');
+        }
+    }
+}
+
+function applyChainLightning(x, y, hitZombie, baseDamage, chainCount, range) {
+    if (!chainCount || chainCount <= 0) return;
+
+    const chained = new Set([hitZombie]);
+    let lastTarget = hitZombie;
+
+    for (let i = 0; i < chainCount; i++) {
+        let nearest = null;
+        let nearestDist = range;
+
+        for (const z of zombies) {
+            if (chained.has(z)) continue;
+            const dx = z.x - lastTarget.x;
+            const dy = z.y - lastTarget.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearest = z;
+            }
+        }
+
+        if (!nearest) break;
+        chained.add(nearest);
+        lastTarget = nearest;
+
+        const chainDamage = Math.floor(baseDamage * 0.6);
+        nearest.health -= chainDamage;
+        addDamageNumber(nearest.x, nearest.y - 0.3, chainDamage, '#99ddff');
+        if (typeof spawnParticles === 'function') {
+            spawnParticles(nearest.x, nearest.y, '#99ddff', 4);
         }
     }
 }

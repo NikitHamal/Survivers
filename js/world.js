@@ -98,12 +98,13 @@ function getChunk(cx, cy) {
         chunk._lastAccess = Date.now();
     }
 
+    if (typeof BiomeSystem !== 'undefined') {
+        BiomeSystem.onChunkGenerate(cx, cy, chunk);
+    }
+
     return chunk;
 }
 
-function hasChunk(cx, cy) {
-    return chunks.has(getChunkKey(cx, cy));
-}
 
 function isChunkModified(cx, cy) {
     const key = getChunkKey(cx, cy);
@@ -277,13 +278,25 @@ function generateTileAt(wx, wy) {
         return TILES.GRASS;
     }
 
-    const r = seededRandom(wx, wy);
+    const baseNoise = (noise2D(wx * 0.06, wy * 0.06) + 1) / 2;
 
-    // Rivers using noise
+    // Rivers using noise (preserve water channels across biomes)
     const riverNoise = noise2D(wx * CHUNK_CONFIG.RIVER_SCALE, wy * CHUNK_CONFIG.RIVER_SCALE);
     if (riverNoise > CHUNK_CONFIG.RIVER_MIN && riverNoise < CHUNK_CONFIG.RIVER_MAX) {
+        if (typeof BiomeSystem !== 'undefined') {
+            const biome = BiomeSystem.getBiomeAt(wx, wy);
+            return biome?.tiles?.water ?? TILES.WATER;
+        }
         return TILES.WATER;
     }
+
+    // Biome-driven terrain and resources
+    if (typeof BiomeSystem !== 'undefined') {
+        return BiomeSystem.generateBiomeTile(wx, wy, baseNoise);
+    }
+
+    // Fallback to classic terrain generation
+    const r = seededRandom(wx, wy);
 
     // Forest density varies with noise
     const forestDensity = noise2D(
@@ -467,7 +480,18 @@ function isSolid(tile) {
     if (tile === TILES.STONE) return true;
     if (tile === TILES.IRON) return true;
     if (tile === TILES.BUSH) return true;
+    if (tile === TILES.BERRY_BUSH) return true;
+    if (tile === TILES.CACTUS) return true;
+    if (tile === TILES.DEAD_TREE) return true;
+    if (tile === TILES.ICE_BLOCK) return true;
+    if (tile === TILES.OBSIDIAN) return true;
+    if (tile === TILES.CARVED_STONE) return true;
+    if (tile === TILES.TREASURE_CHEST) return true;
+    if (tile === TILES.METAL_SCRAP) return true;
     if (tile === TILES.WATER) return true;
+    if (tile === TILES.MURKY_WATER) return true;
+    if (tile === TILES.FROZEN_WATER) return true;
+    if (tile === TILES.LAVA) return true;
 
     // Buildings that block
     if (tile === TILES.WALL) return true;
@@ -488,8 +512,20 @@ function isPassable(tile) {
         TILES.TREE,
         TILES.STONE,
         TILES.IRON,
+        TILES.BUSH,
+        TILES.BERRY_BUSH,
+        TILES.CACTUS,
+        TILES.DEAD_TREE,
+        TILES.ICE_BLOCK,
+        TILES.OBSIDIAN,
+        TILES.CARVED_STONE,
+        TILES.TREASURE_CHEST,
+        TILES.METAL_SCRAP,
         TILES.WALL,
         TILES.WATER,
+        TILES.MURKY_WATER,
+        TILES.FROZEN_WATER,
+        TILES.LAVA,
         TILES.HOUSE,
         TILES.HOUSE_BASE,
         TILES.TOWER,

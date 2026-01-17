@@ -7,9 +7,10 @@ function seededRandom(x, y) {
 }
 
 // Enhanced Wall with weathering and depth
-function renderWall(x, y, s, wx, wy) {
+function renderWall(x, y, s, wx, wy, level = 1) {
     const pattern = seededRandom(wx, wy);
     const pattern2 = seededRandom(wx + 100, wy + 100);
+    const tier = Math.min(5, Math.max(1, level));
 
     // Deep shadow for 3D effect
     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
@@ -20,8 +21,15 @@ function renderWall(x, y, s, wx, wy) {
     ctx.fillRect(x - 1, y - 1, s + 2, s + 2);
 
     // Main wall base with variation
-    const wallColors = ['#6a6a6a', '#707070', '#656565', '#727272'];
-    ctx.fillStyle = wallColors[Math.floor(pattern * 4)];
+    const wallPalettes = [
+        ['#6a6a6a', '#707070', '#656565', '#727272'],
+        ['#7a6a5a', '#806e5c', '#71614f', '#887866'],
+        ['#6f6f76', '#7a7a82', '#65656d', '#808089'],
+        ['#5f606a', '#676877', '#545461', '#6d6d7a'],
+        ['#4a4b55', '#51525e', '#42424c', '#5a5b68']
+    ];
+    const palette = wallPalettes[tier - 1];
+    ctx.fillStyle = palette[Math.floor(pattern * palette.length)];
     ctx.fillRect(x, y, s, s);
 
     // Stone brick pattern
@@ -41,6 +49,30 @@ function renderWall(x, y, s, wx, wy) {
     ctx.fillRect(x + 3, y + 3, s * 0.4, 2);
     ctx.fillRect(x + s * 0.55, y + s * 0.36, s * 0.35, 2);
     ctx.fillRect(x + 3, y + s * 0.69, s * 0.2, 2);
+
+    // Upgrade accents
+    if (tier >= 2) {
+        ctx.fillStyle = 'rgba(160, 140, 110, 0.6)';
+        ctx.fillRect(x + s * 0.1, y + s * 0.15, s * 0.8, 2);
+        ctx.fillRect(x + s * 0.1, y + s * 0.7, s * 0.8, 2);
+    }
+    if (tier >= 3) {
+        ctx.fillStyle = 'rgba(40, 40, 40, 0.5)';
+        ctx.fillRect(x + s * 0.15, y + s * 0.3, 3, 3);
+        ctx.fillRect(x + s * 0.75, y + s * 0.3, 3, 3);
+        ctx.fillRect(x + s * 0.15, y + s * 0.55, 3, 3);
+        ctx.fillRect(x + s * 0.75, y + s * 0.55, 3, 3);
+    }
+    if (tier >= 4) {
+        ctx.fillStyle = 'rgba(90, 110, 140, 0.4)';
+        ctx.fillRect(x + s * 0.45, y + s * 0.2, 2, s * 0.6);
+        ctx.fillRect(x + s * 0.35, y + s * 0.45, s * 0.3, 2);
+    }
+    if (tier >= 5) {
+        const glow = 0.5 + Math.sin(pixelTime * 3 + wx) * 0.3;
+        ctx.fillStyle = `rgba(255, 215, 120, ${glow})`;
+        ctx.fillRect(x + s * 0.4, y + s * 0.45, s * 0.2, s * 0.1);
+    }
 
     // Weathering and cracks
     if (pattern > 0.6) {
@@ -66,8 +98,10 @@ function renderWall(x, y, s, wx, wy) {
 }
 
 // Enhanced Campfire with smoke and better flames
-function renderCampfire(x, y, s) {
+function renderCampfire(x, y, s, level = 1) {
     const time = pixelTime || Date.now() / 1000;
+    const tier = Math.min(5, Math.max(1, level));
+    const flameScale = 1 + (tier - 1) * 0.08;
 
     // 1. Ground scorch mark
     ctx.fillStyle = 'rgba(30, 20, 15, 0.5)';
@@ -166,24 +200,24 @@ function renderCampfire(x, y, s) {
 
     // Outer flame (dark red)
     ctx.fillStyle = '#cc2200';
-    drawFlame(ctx, x + s / 2 - 3, y + s * 0.62, s * 0.15, s * 0.35 + f3, f1 * 0.5);
-    drawFlame(ctx, x + s / 2 + 4, y + s * 0.62, s * 0.12, s * 0.3 + f2, -f1 * 0.3);
+    drawFlame(ctx, x + s / 2 - 3, y + s * 0.62, s * 0.15 * flameScale, s * 0.35 * flameScale + f3, f1 * 0.5);
+    drawFlame(ctx, x + s / 2 + 4, y + s * 0.62, s * 0.12 * flameScale, s * 0.3 * flameScale + f2, -f1 * 0.3);
 
     // Main flame (red-orange)
     ctx.fillStyle = '#ff4400';
-    drawFlame(ctx, x + s / 2, y + s * 0.6, s * 0.2, s * 0.45 + f1, f2);
+    drawFlame(ctx, x + s / 2, y + s * 0.6, s * 0.2 * flameScale, s * 0.45 * flameScale + f1, f2);
 
     // Inner flame (orange)
     ctx.fillStyle = '#ff7700';
-    drawFlame(ctx, x + s / 2, y + s * 0.58, s * 0.15, s * 0.38 + f2, f1 * 0.6);
+    drawFlame(ctx, x + s / 2, y + s * 0.58, s * 0.15 * flameScale, s * 0.38 * flameScale + f2, f1 * 0.6);
 
     // Core flame (yellow-orange)
     ctx.fillStyle = '#ffaa00';
-    drawFlame(ctx, x + s / 2, y + s * 0.56, s * 0.1, s * 0.3 + f1 * 0.5, f3);
+    drawFlame(ctx, x + s / 2, y + s * 0.56, s * 0.1 * flameScale, s * 0.3 * flameScale + f1 * 0.5, f3);
 
     // Hot core (yellow)
     ctx.fillStyle = '#ffdd44';
-    drawFlame(ctx, x + s / 2, y + s * 0.54, s * 0.06, s * 0.2 + f2 * 0.4, 0);
+    drawFlame(ctx, x + s / 2, y + s * 0.54, s * 0.06 * flameScale, s * 0.2 * flameScale + f2 * 0.4, 0);
 
     // White hot center
     ctx.fillStyle = '#ffffaa';
@@ -192,7 +226,7 @@ function renderCampfire(x, y, s) {
     ctx.globalAlpha = 1;
 
     // 7. Sparks
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 6 + tier; i++) {
         const sparkLife = (time * 3 + i * 0.8) % 3;
         if (sparkLife < 2.5) {
             const sparkX = x + s * 0.5 + Math.sin(time * 5 + i * 2) * s * 0.15;
@@ -207,7 +241,7 @@ function renderCampfire(x, y, s) {
 
     // 8. Smoke particles
     ctx.globalAlpha = 0.15;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 3 + Math.ceil(tier / 2); i++) {
         const smokeLife = (time * 0.8 + i * 1.2) % 4;
         const smokeX = x + s * 0.5 + Math.sin(time + i * 1.5) * s * 0.1;
         const smokeY = y + s * 0.2 - smokeLife * s * 0.25;
@@ -245,9 +279,12 @@ function drawFlame(ctx, cx, bottomY, width, height, offset) {
 }
 
 // Enhanced House with chimney, better details
-function renderHouse(x, y, s) {
+function renderHouse(x, y, s, level = 1) {
     const s2 = s * 2;
     const time = pixelTime || Date.now() / 1000;
+    const tier = Math.min(5, Math.max(1, level));
+    const roofColors = ['#7a4030', '#8a4a2a', '#7a5a3a', '#6a5a4a', '#5a5050'];
+    const roofHighlight = ['#8a5040', '#9a5a3a', '#8a6a4a', '#7a6a5a', '#6a6060'];
 
     // Ground shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
@@ -309,7 +346,7 @@ function renderHouse(x, y, s) {
     ctx.fill();
 
     // Roof main
-    ctx.fillStyle = '#7a4030';
+    ctx.fillStyle = roofColors[tier - 1];
     ctx.beginPath();
     ctx.moveTo(x - 8, y + s2 * 0.3);
     ctx.lineTo(x + s2 / 2, y - 4);
@@ -318,7 +355,7 @@ function renderHouse(x, y, s) {
     ctx.fill();
 
     // Roof tiles pattern
-    ctx.fillStyle = '#6a3525';
+    ctx.fillStyle = tier >= 4 ? '#4a3a3a' : '#6a3525';
     for (let row = 0; row < 3; row++) {
         const rowY = y + s2 * 0.05 + row * s2 * 0.085;
         const rowWidth = s2 * (0.4 + row * 0.25);
@@ -329,7 +366,7 @@ function renderHouse(x, y, s) {
     }
 
     // Roof highlight
-    ctx.fillStyle = '#8a5040';
+    ctx.fillStyle = roofHighlight[tier - 1];
     ctx.beginPath();
     ctx.moveTo(x + s2 / 2, y - 2);
     ctx.lineTo(x + s2 / 2 + 4, y + s2 * 0.08);
@@ -382,6 +419,9 @@ function renderHouse(x, y, s) {
         { wx: x + s2 * 0.08, lit: true },
         { wx: x + s2 * 0.74, lit: Math.sin(time) > 0 }
     ];
+    if (tier >= 4) {
+        windowPositions.push({ wx: x + s2 * 0.41, lit: true });
+    }
 
     windowPositions.forEach(({ wx, lit }) => {
         // Window frame outline
@@ -428,8 +468,9 @@ function renderHouse(x, y, s) {
 }
 
 // Enhanced Farm with water, more crops, fence
-function renderFarm(x, y, s) {
+function renderFarm(x, y, s, level = 1) {
     const time = pixelTime || Date.now() / 1000;
+    const tier = Math.min(5, Math.max(1, level));
 
     // Tilled soil base
     ctx.fillStyle = '#5a4030';
@@ -470,6 +511,13 @@ function renderFarm(x, y, s) {
     ctx.fillStyle = 'rgba(150, 200, 255, 0.3)';
     ctx.fillRect(x + s * 0.06, y + s * 0.88, 3, 2);
 
+    if (tier >= 3) {
+        ctx.fillStyle = 'rgba(80, 140, 200, 0.35)';
+        ctx.fillRect(x + s * 0.12, y + s * 0.18, s * 0.76, 2);
+        ctx.fillRect(x + s * 0.12, y + s * 0.48, s * 0.76, 2);
+        ctx.fillRect(x + s * 0.12, y + s * 0.78, s * 0.76, 2);
+    }
+
     // Crops with growth stages
     const cropColors = ['#3a7a30', '#4a8a40', '#5a9a50'];
 
@@ -481,7 +529,7 @@ function renderFarm(x, y, s) {
         for (let j = 0; j < 5; j++) {
             const cropX = x + s * 0.12 + j * s * 0.17;
             const cropSwayOffset = cropSway * (j % 2 === 0 ? 1 : -1);
-            const cropHeight = s * (0.12 + growthStage * 0.08);
+            const cropHeight = s * (0.12 + growthStage * (0.08 + 0.02 * (tier - 1)));
 
             // Stem
             ctx.fillStyle = '#2a5a20';
@@ -501,6 +549,14 @@ function renderFarm(x, y, s) {
         }
     }
 
+    if (tier >= 4) {
+        ctx.fillStyle = '#704a2a';
+        ctx.fillRect(x + s * 0.75, y + s * 0.25, 3, s * 0.25);
+        ctx.fillStyle = '#c49a4a';
+        ctx.fillRect(x + s * 0.72, y + s * 0.28, s * 0.1, s * 0.06);
+        ctx.fillRect(x + s * 0.82, y + s * 0.28, s * 0.1, s * 0.06);
+    }
+
     // Corner fence posts
     ctx.fillStyle = PALETTE.outline;
     ctx.fillRect(x, y, 5, s * 0.2);
@@ -515,8 +571,9 @@ function renderFarm(x, y, s) {
 }
 
 // Enhanced Tower with flag and better stonework
-function renderTower(x, y, s) {
+function renderTower(x, y, s, level = 1) {
     const time = pixelTime || Date.now() / 1000;
+    const tier = Math.min(5, Math.max(1, level));
 
     // Ground shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
@@ -533,11 +590,19 @@ function renderTower(x, y, s) {
     ctx.fillRect(x + s * 0.1, y + s * 0.02, s * 0.8, s);
 
     // Main tower body gradient
+    const stonePalettes = [
+        { dark: '#606070', mid: '#707080', light: '#555565' },
+        { dark: '#6a6a7a', mid: '#7a7a8a', light: '#5f5f70' },
+        { dark: '#5e5e70', mid: '#707084', light: '#4f4f62' },
+        { dark: '#565a70', mid: '#666a80', light: '#4a4e60' },
+        { dark: '#4a4f66', mid: '#5b6075', light: '#3e4255' }
+    ];
+    const palette = stonePalettes[tier - 1];
     const towerGrad = ctx.createLinearGradient(x + s * 0.1, 0, x + s * 0.9, 0);
-    towerGrad.addColorStop(0, '#606070');
-    towerGrad.addColorStop(0.3, '#707080');
-    towerGrad.addColorStop(0.7, '#707080');
-    towerGrad.addColorStop(1, '#555565');
+    towerGrad.addColorStop(0, palette.dark);
+    towerGrad.addColorStop(0.3, palette.mid);
+    towerGrad.addColorStop(0.7, palette.mid);
+    towerGrad.addColorStop(1, palette.light);
     ctx.fillStyle = towerGrad;
     ctx.fillRect(x + s * 0.13, y + s * 0.08, s * 0.74, s * 0.92);
 
@@ -560,6 +625,17 @@ function renderTower(x, y, s) {
             ctx.fillRect(brickX, brickY, brickW, 2);
             ctx.fillRect(brickX, brickY, 2, brickH);
         }
+    }
+
+    if (tier >= 3) {
+        ctx.fillStyle = 'rgba(40, 40, 50, 0.5)';
+        ctx.fillRect(x + s * 0.16, y + s * 0.28, s * 0.68, 3);
+        ctx.fillRect(x + s * 0.16, y + s * 0.62, s * 0.68, 3);
+    }
+    if (tier >= 5) {
+        const glow = 0.5 + Math.sin(time * 3 + x) * 0.3;
+        ctx.fillStyle = `rgba(120, 200, 255, ${glow})`;
+        ctx.fillRect(x + s * 0.44, y + s * 0.2, s * 0.12, s * 0.08);
     }
 
     // Arrow slits
@@ -607,7 +683,8 @@ function renderTower(x, y, s) {
 
     // Flag with wave animation
     const flagWave = Math.sin(time * 4) * 2;
-    ctx.fillStyle = '#cc3333';
+    const flagColors = ['#cc3333', '#cc5533', '#cc7733', '#3366cc', '#cc33aa'];
+    ctx.fillStyle = flagColors[tier - 1];
     ctx.beginPath();
     ctx.moveTo(x + s * 0.52, y - s * 0.33);
     ctx.quadraticCurveTo(x + s * 0.65 + flagWave, y - s * 0.28, x + s * 0.72, y - s * 0.25 + flagWave * 0.3);
@@ -628,8 +705,9 @@ function renderTower(x, y, s) {
 }
 
 // Enhanced Cannon with more detail and smoke
-function renderCannon(x, y, s) {
+function renderCannon(x, y, s, level = 1) {
     const time = pixelTime || Date.now() / 1000;
+    const tier = Math.min(5, Math.max(1, level));
 
     // Ground shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
@@ -683,8 +761,9 @@ function renderCannon(x, y, s) {
 
         // Wheel spokes
         ctx.fillStyle = '#6a5a4a';
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
+        const spokeCount = 6 + tier;
+        for (let i = 0; i < spokeCount; i++) {
+            const angle = (i / spokeCount) * Math.PI * 2;
             ctx.fillRect(
                 wx - 1 + Math.cos(angle) * s * 0.02,
                 y + s * 0.82 - 1 + Math.sin(angle) * s * 0.02,
@@ -721,6 +800,9 @@ function renderCannon(x, y, s) {
     ctx.fillStyle = '#3a3a3a';
     ctx.fillRect(x + s * 0.26, y + s * 0.26, s * 0.48, 3);
     ctx.fillRect(x + s * 0.26, y + s * 0.48, s * 0.48, 3);
+    if (tier >= 3) {
+        ctx.fillRect(x + s * 0.26, y + s * 0.37, s * 0.48, 3);
+    }
 
     // Barrel highlight
     ctx.fillStyle = '#6a6a6a';
@@ -736,9 +818,15 @@ function renderCannon(x, y, s) {
     ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(x + s * 0.42, y + s * 0.02, s * 0.16, s * 0.1);
 
+    if (tier >= 5) {
+        const glow = 0.4 + Math.sin(time * 4) * 0.3;
+        ctx.fillStyle = `rgba(255, 140, 80, ${glow})`;
+        ctx.fillRect(x + s * 0.38, y + s * 0.02, s * 0.24, s * 0.12);
+    }
+
     // Smoke wisps (subtle animation)
     ctx.globalAlpha = 0.15;
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 2 + Math.floor(tier / 2); i++) {
         const smokeOffset = (time * 20 + i * 15) % 20;
         const smokeX = x + s * 0.5 + Math.sin(time + i) * 4;
         const smokeY = y - smokeOffset;
@@ -759,6 +847,13 @@ function renderCannon(x, y, s) {
     ctx.beginPath();
     ctx.arc(x + s * 0.85, y + s * 0.7, s * 0.04, 0, Math.PI * 2);
     ctx.fill();
+
+    if (tier >= 4) {
+        ctx.fillStyle = '#2a2a2a';
+        ctx.beginPath();
+        ctx.arc(x + s * 0.78, y + s * 0.72, s * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+    }
 }
 
 // Enhanced Workbench with more tools and drawers

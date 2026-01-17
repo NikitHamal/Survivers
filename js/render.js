@@ -113,6 +113,15 @@ function render(alpha = 1) {
         WeatherSystem.drawWeatherEffects(ctx);
     }
 
+    // Biome tinting
+    if (typeof BiomeSystem !== 'undefined' && player) {
+        const tint = BiomeSystem.getScreenTint(player.x, player.y);
+        if (tint) {
+            ctx.fillStyle = tint;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+
     // System World UI (Markers, Boss Bars, Horde Status)
     if (typeof EventSystem !== 'undefined') {
         EventSystem.drawEventMarkers(ctx);

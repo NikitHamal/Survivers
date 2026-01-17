@@ -1274,20 +1274,70 @@ const PetSystem = (function () {
         return animal;
     }
 
+    function getWildlifeSpawnSettings(biomeId) {
+        const settings = {
+            jungle: { chance: 0.8, distance: [9, 16], maxMultiplier: 1.2 },
+            desert: { chance: 0.6, distance: [12, 18], maxMultiplier: 0.9 },
+            swamp: { chance: 0.7, distance: [10, 16], maxMultiplier: 1.1 },
+            snow: { chance: 0.6, distance: [12, 18], maxMultiplier: 0.8 },
+            volcanic: { chance: 0.5, distance: [12, 20], maxMultiplier: 0.7 },
+            ruins: { chance: 0.65, distance: [10, 17], maxMultiplier: 0.9 }
+        };
+        return settings[biomeId] || settings.jungle;
+    }
+
+    function pickWildPetType(biomeId) {
+        const pools = {
+            jungle: ['WOLF', 'TIGER', 'FOX', 'BOAR', 'BEAR', 'HAWK'],
+            desert: ['CAMEL', 'FOX', 'BOAR', 'HAWK'],
+            swamp: ['BEAVER', 'BOAR', 'BEAR', 'FOX'],
+            snow: ['WOLF', 'BEAR', 'HAWK'],
+            volcanic: ['WOLF', 'BEAR', 'BOAR'],
+            ruins: ['FOX', 'WOLF', 'BOAR', 'BEAVER']
+        };
+        const pool = pools[biomeId] || pools.jungle;
+        const roll = Math.random();
+        if (biomeId === 'volcanic' && roll > 0.97) return 'WOLF_ALPHA';
+        return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    function isValidWildlifeSpawn(x, y) {
+        const tile = getTile(x, y);
+        if (typeof isPassable === 'function' && !isPassable(tile)) return false;
+        if (typeof isInBaseArea === 'function' && isInBaseArea(Math.floor(x), Math.floor(y))) return false;
+
+        if (Array.isArray(buildings)) {
+            const tooClose = buildings.some(b => Math.abs(b.x - x) < 2 && Math.abs(b.y - y) < 2);
+            if (tooClose) return false;
+        }
+
+        return true;
+    }
+
     function spawnNearbyWildAnimals(centerX, centerY, count = 3) {
-        const types = Object.keys(PET_TYPES).filter(t => PET_TYPES[t].rarity !== 'legendary');
+        const biomeId = typeof BiomeSystem !== 'undefined'
+            ? BiomeSystem.getBiomeAt(centerX, centerY)?.id
+            : 'jungle';
         const spawnedAnimals = [];
+        const settings = getWildlifeSpawnSettings(biomeId);
 
         for (let i = 0; i < count; i++) {
-            const typeId = types[Math.floor(Math.random() * types.length)];
-            const angle = Math.random() * Math.PI * 2;
-            const dist = 10 + Math.random() * 10;
-            const x = centerX + Math.cos(angle) * dist;
-            const y = centerY + Math.sin(angle) * dist;
+            let attempts = 0;
+            while (attempts < 6) {
+                attempts++;
+                const typeId = pickWildPetType(biomeId);
+                const angle = Math.random() * Math.PI * 2;
+                const dist = settings.distance[0] + Math.random() * (settings.distance[1] - settings.distance[0]);
+                const x = centerX + Math.cos(angle) * dist;
+                const y = centerY + Math.sin(angle) * dist;
 
-            const animal = spawnWildAnimal(typeId, x, y);
-            if (animal) {
-                spawnedAnimals.push(animal);
+                if (!isValidWildlifeSpawn(x, y)) continue;
+
+                const animal = spawnWildAnimal(typeId, x, y);
+                if (animal) {
+                    spawnedAnimals.push(animal);
+                }
+                break;
             }
         }
 
@@ -1341,9 +1391,17 @@ const PetSystem = (function () {
         spawnTimer += dt;
         if (spawnTimer >= CONFIG.SPAWN_INTERVAL) {
             spawnTimer = 0;
-            if (wildAnimals.length < CONFIG.MAX_WILD_ANIMALS && Math.random() < CONFIG.SPAWN_CHANCE) {
+            const biomeId = typeof BiomeSystem !== 'undefined'
+                ? BiomeSystem.getBiomeAt(player.x, player.y)?.id
+                : 'jungle';
+            const settings = getWildlifeSpawnSettings(biomeId);
+            const nightModifier = isNight ? 0.7 : 1.0;
+            const spawnChance = CONFIG.SPAWN_CHANCE * settings.chance * nightModifier;
+            const maxWild = Math.max(3, Math.floor(CONFIG.MAX_WILD_ANIMALS * settings.maxMultiplier));
+
+            if (wildAnimals.length < maxWild && Math.random() < spawnChance) {
                 // Spawn 1-3 animals nearby
-                const count = 1 + Math.floor(Math.random() * 3);
+                const count = 1 + Math.floor(Math.random() * (isNight ? 2 : 3));
                 spawnNearbyWildAnimals(player.x, player.y, count);
             }
         }

@@ -288,7 +288,10 @@ function updatePlayerMovement(dt) {
         updatePlayerDirection(moveX, moveY);
 
         // Calculate movement
-        const speed = (player.speed || 4.5) * dt;
+        const biomeSpeedMod = typeof BiomeSystem !== 'undefined'
+            ? BiomeSystem.getMovementModifier(player.x, player.y)
+            : 1.0;
+        const speed = (player.speed || 4.5) * biomeSpeedMod * dt;
         const newX = player.x + moveX * speed;
         const newY = player.y + moveY * speed;
 
@@ -393,7 +396,21 @@ function updateZombieSpawning(dt) {
 
     // Calculate spawn rate based on day
     const currentDay = dayCount || 0;
-    const spawnRate = LOOP_CONFIG.ZOMBIE_SPAWN_BASE_RATE * (1 + currentDay * LOOP_CONFIG.ZOMBIE_SPAWN_DAY_MULT);
+    let spawnRate = LOOP_CONFIG.ZOMBIE_SPAWN_BASE_RATE * (1 + currentDay * LOOP_CONFIG.ZOMBIE_SPAWN_DAY_MULT);
+
+    if (typeof BiomeSystem !== 'undefined') {
+        const modifiers = BiomeSystem.getZombieSpawnModifiers(player.x, player.y);
+        if (modifiers?.spawnRate) {
+            spawnRate *= modifiers.spawnRate;
+        }
+    }
+
+    if (typeof WeatherSystem !== 'undefined') {
+        const weather = WeatherSystem.getCurrentWeather();
+        if (weather?.effects?.zombieSpawnModifier) {
+            spawnRate *= weather.effects.zombieSpawnModifier;
+        }
+    }
 
     // Accumulate spawn time
     eventTimers.zombieSpawn += dt * spawnRate;

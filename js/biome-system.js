@@ -39,8 +39,8 @@ const BiomeSystem = (function() {
             },
             resources: {
                 wood: { density: 1.5, type: TILES.TREE },
-                food: { density: 1.2, type: 'berry_bush' },
-                herbs: { density: 0.8, type: 'healing_herb' }
+                food: { density: 1.2, type: TILES.BERRY_BUSH },
+                herbs: { density: 0.8, type: TILES.HEALING_HERB }
             },
             hazards: {
                 poisonPlant: { density: 0.5, damage: 5, type: 'poison' },
@@ -72,14 +72,14 @@ const BiomeSystem = (function() {
                 foliage: '#8a7a3a'
             },
             tiles: {
-                primary: 'SAND',
-                secondary: 'SANDSTONE',
+                primary: TILES.SAND,
+                secondary: TILES.SANDSTONE,
                 water: TILES.WATER
             },
             resources: {
                 stone: { density: 1.3, type: TILES.STONE },
                 iron: { density: 1.5, type: TILES.IRON },
-                cactus: { density: 0.4, type: 'cactus' }
+                cactus: { density: 0.4, type: TILES.CACTUS }
             },
             hazards: {
                 heatwave: { density: 0.3, hungerDrain: 1.5 },
@@ -112,14 +112,14 @@ const BiomeSystem = (function() {
                 foliage: '#2a4a2a'
             },
             tiles: {
-                primary: 'MUD',
-                secondary: 'MARSH',
-                water: 'MURKY_WATER'
+                primary: TILES.MUD,
+                secondary: TILES.MARSH,
+                water: TILES.MURKY_WATER
             },
             resources: {
-                wood: { density: 0.8, type: 'dead_tree' },
-                herbs: { density: 1.5, type: 'swamp_herb' },
-                mushrooms: { density: 1.2, type: 'glowing_mushroom' }
+                wood: { density: 0.8, type: TILES.DEAD_TREE },
+                herbs: { density: 1.5, type: TILES.SWAMP_HERB },
+                mushrooms: { density: 1.2, type: TILES.GLOWING_MUSHROOM }
             },
             hazards: {
                 poisonGas: { density: 0.4, damage: 3, type: 'poison', radius: 2 },
@@ -152,14 +152,14 @@ const BiomeSystem = (function() {
                 foliage: '#4a6a8a'
             },
             tiles: {
-                primary: 'SNOW',
-                secondary: 'ICE',
-                water: 'FROZEN_WATER'
+                primary: TILES.SNOW,
+                secondary: TILES.ICE,
+                water: TILES.FROZEN_WATER
             },
             resources: {
                 stone: { density: 1.0, type: TILES.STONE },
                 iron: { density: 1.8, type: TILES.IRON },
-                ice: { density: 0.6, type: 'ice_block' }
+                ice: { density: 0.6, type: TILES.ICE_BLOCK }
             },
             hazards: {
                 frostbite: { density: 0.3, damage: 2, type: 'cold', interval: 5 },
@@ -192,14 +192,14 @@ const BiomeSystem = (function() {
                 foliage: '#4a3a2a'
             },
             tiles: {
-                primary: 'VOLCANIC_ROCK',
-                secondary: 'ASH',
-                water: 'LAVA'
+                primary: TILES.VOLCANIC_ROCK,
+                secondary: TILES.ASH,
+                water: TILES.LAVA
             },
             resources: {
-                stone: { density: 1.2, type: 'obsidian' },
+                stone: { density: 1.2, type: TILES.OBSIDIAN },
                 iron: { density: 2.0, type: TILES.IRON },
-                gems: { density: 0.3, type: 'fire_gem' }
+                gems: { density: 0.3, type: TILES.FIRE_GEM }
             },
             hazards: {
                 lavaPool: { density: 0.3, damage: 25, type: 'fire' },
@@ -232,14 +232,14 @@ const BiomeSystem = (function() {
                 foliage: '#4a5a4a'
             },
             tiles: {
-                primary: 'COBBLESTONE',
-                secondary: 'CRACKED_STONE',
+                primary: TILES.COBBLESTONE,
+                secondary: TILES.CRACKED_STONE,
                 water: TILES.WATER
             },
             resources: {
-                stone: { density: 1.5, type: 'carved_stone' },
-                loot: { density: 0.5, type: 'treasure_chest' },
-                scrap: { density: 0.8, type: 'metal_scrap' }
+                stone: { density: 1.5, type: TILES.CARVED_STONE },
+                loot: { density: 0.5, type: TILES.TREASURE_CHEST },
+                scrap: { density: 0.8, type: TILES.METAL_SCRAP }
             },
             hazards: {
                 collapse: { density: 0.1, damage: 20, radius: 2 },
@@ -261,19 +261,19 @@ const BiomeSystem = (function() {
 
     // ============= SPECIAL TILES =============
     const BIOME_TILES = {
-        SAND: 20,
-        SANDSTONE: 21,
-        MUD: 22,
-        MARSH: 23,
-        MURKY_WATER: 24,
-        SNOW: 25,
-        ICE: 26,
-        FROZEN_WATER: 27,
-        VOLCANIC_ROCK: 28,
-        ASH: 29,
-        LAVA: 30,
-        COBBLESTONE: 31,
-        CRACKED_STONE: 32
+        SAND: TILES.SAND,
+        SANDSTONE: TILES.SANDSTONE,
+        MUD: TILES.MUD,
+        MARSH: TILES.MARSH,
+        MURKY_WATER: TILES.MURKY_WATER,
+        SNOW: TILES.SNOW,
+        ICE: TILES.ICE,
+        FROZEN_WATER: TILES.FROZEN_WATER,
+        VOLCANIC_ROCK: TILES.VOLCANIC_ROCK,
+        ASH: TILES.ASH,
+        LAVA: TILES.LAVA,
+        COBBLESTONE: TILES.COBBLESTONE,
+        CRACKED_STONE: TILES.CRACKED_STONE
     };
 
     // ============= STATE =============

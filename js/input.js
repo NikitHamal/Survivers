@@ -200,8 +200,26 @@ function cancelPlayerPath() {
 }
 
 function isHarvestable(tile) {
-    return tile === TILES.TREE || tile === TILES.BUSH ||
-        tile === TILES.STONE || tile === TILES.IRON || tile === TILES.FARM;
+    const harvestableTiles = [
+        TILES.TREE,
+        TILES.BUSH,
+        TILES.BERRY_BUSH,
+        TILES.HEALING_HERB,
+        TILES.CACTUS,
+        TILES.DEAD_TREE,
+        TILES.SWAMP_HERB,
+        TILES.GLOWING_MUSHROOM,
+        TILES.STONE,
+        TILES.IRON,
+        TILES.ICE_BLOCK,
+        TILES.OBSIDIAN,
+        TILES.FIRE_GEM,
+        TILES.CARVED_STONE,
+        TILES.TREASURE_CHEST,
+        TILES.METAL_SCRAP,
+        TILES.FARM
+    ];
+    return harvestableTiles.includes(tile);
 }
 
 // Helper to determine if a harvested tile should become floor or grass
@@ -247,6 +265,55 @@ function harvestTile(x, y, tile) {
             spawnParticles(x + 0.5, y + 0.5, '#4a8a3a', 6);
             harvested = true;
             break;
+        case TILES.BERRY_BUSH:
+            resources.food += 1 + Math.floor(Math.random() * 2);
+            if (Math.random() < 0.3) resources.wood += 1;
+            setTile(x, y, groundTile);
+            player.exp += 5;
+            spawnParticles(x + 0.5, y + 0.5, '#6a3a5a', 8);
+            harvested = true;
+            break;
+        case TILES.HEALING_HERB:
+            resources.food += 1;
+            player.health = Math.min(player.maxHealth, player.health + 2);
+            setTile(x, y, groundTile);
+            player.exp += 6;
+            spawnParticles(x + 0.5, y + 0.5, '#44aa66', 6);
+            harvested = true;
+            break;
+        case TILES.CACTUS:
+            resources.food += 1;
+            resources.wood += 1;
+            player.health = Math.max(0, player.health - 2);
+            setTile(x, y, groundTile);
+            player.exp += 6;
+            spawnParticles(x + 0.5, y + 0.5, '#5ca856', 8);
+            harvested = true;
+            break;
+        case TILES.DEAD_TREE:
+            resources.wood += 2 + Math.floor(Math.random() * 2);
+            resources.stone += Math.random() < 0.2 ? 1 : 0;
+            setTile(x, y, groundTile);
+            player.exp += 6;
+            spawnParticles(x + 0.5, y + 0.5, '#5a3a2a', 8);
+            harvested = true;
+            break;
+        case TILES.SWAMP_HERB:
+            resources.food += 1;
+            if (Math.random() < 0.3) resources.wood += 1;
+            setTile(x, y, groundTile);
+            player.exp += 6;
+            spawnParticles(x + 0.5, y + 0.5, '#2f6b4f', 8);
+            harvested = true;
+            break;
+        case TILES.GLOWING_MUSHROOM:
+            resources.food += 1;
+            if (Math.random() < 0.2) player.exp += 3;
+            setTile(x, y, groundTile);
+            player.exp += 5;
+            spawnParticles(x + 0.5, y + 0.5, '#8f6bff', 10);
+            harvested = true;
+            break;
         case TILES.STONE:
             resources.stone += 3 + Math.floor(Math.random() * 2);
             setTile(x, y, groundTile);
@@ -260,6 +327,56 @@ function harvestTile(x, y, tile) {
             setTile(x, y, groundTile);
             player.exp += 15;
             spawnParticles(x + 0.5, y + 0.5, '#5a5a7a', 10);
+            harvested = true;
+            break;
+        case TILES.ICE_BLOCK:
+            resources.stone += 1;
+            resources.food += Math.random() < 0.2 ? 1 : 0;
+            setTile(x, y, groundTile);
+            player.exp += 8;
+            spawnParticles(x + 0.5, y + 0.5, '#88ccff', 10);
+            harvested = true;
+            break;
+        case TILES.OBSIDIAN:
+            resources.stone += 4;
+            resources.iron += 1;
+            setTile(x, y, groundTile);
+            player.exp += 18;
+            spawnParticles(x + 0.5, y + 0.5, '#2b2b35', 12);
+            harvested = true;
+            break;
+        case TILES.FIRE_GEM:
+            resources.iron += 1;
+            resources.food += Math.random() < 0.3 ? 1 : 0;
+            setTile(x, y, groundTile);
+            player.exp += 20;
+            spawnParticles(x + 0.5, y + 0.5, '#ff6633', 12);
+            harvested = true;
+            break;
+        case TILES.CARVED_STONE:
+            resources.stone += 3;
+            resources.iron += Math.random() < 0.2 ? 1 : 0;
+            setTile(x, y, groundTile);
+            player.exp += 12;
+            spawnParticles(x + 0.5, y + 0.5, '#9a9a9a', 10);
+            harvested = true;
+            break;
+        case TILES.TREASURE_CHEST:
+            resources.wood += 5 + Math.floor(Math.random() * 4);
+            resources.stone += 3 + Math.floor(Math.random() * 3);
+            resources.iron += 2 + Math.floor(Math.random() * 2);
+            resources.food += 4 + Math.floor(Math.random() * 4);
+            setTile(x, y, groundTile);
+            player.exp += 25;
+            spawnParticles(x + 0.5, y + 0.5, '#ffd27a', 16);
+            harvested = true;
+            break;
+        case TILES.METAL_SCRAP:
+            resources.iron += 2 + Math.floor(Math.random() * 2);
+            resources.stone += 1;
+            setTile(x, y, groundTile);
+            player.exp += 12;
+            spawnParticles(x + 0.5, y + 0.5, '#8b8f99', 10);
             harvested = true;
             break;
         case TILES.FARM:
