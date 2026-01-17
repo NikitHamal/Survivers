@@ -20,32 +20,6 @@ const LOOP_CONFIG = {
     ZOMBIE_SPAWN_DAY_MULT: 0.3,     // Additional rate multiplier per day
 };
 
-// Timing state
-let timing = {
-    lastFrameTime: 0,
-    accumulator: 0,
-    gameTime: 0,
-    frameCount: 0,
-    fpsTimer: 0,
-    fps: 0,
-    lastVisibilityTime: 0
-};
-
-// Time-based event accumulators
-let eventTimers = {
-    hunger: 0,
-    survivorFood: 0,
-    chunkCleanup: 0,
-    zombieSpawn: 0
-};
-
-// Input state with cleanup tracking
-let inputState = {
-    keys: {},
-    keysPressedThisFrame: new Set(),
-    keysReleasedThisFrame: new Set()
-};
-
 // Animation frame ID for cancellation
 let animationFrameId = null;
 
@@ -697,7 +671,9 @@ function init() {
     addEventListenerTracked(window, 'keydown', handleKeyDown);
     addEventListenerTracked(window, 'keyup', handleKeyUp);
     addEventListenerTracked(document, 'visibilitychange', handleVisibilityChange);
-    addEventListenerTracked(canvas, 'click', handleClick);
+    // addEventListenerTracked(canvas, 'click', handleClick); // Deprecated for custom drag handling
+    addEventListenerTracked(canvas, 'mousedown', handleMouseDown);
+    addEventListenerTracked(canvas, 'mouseup', handleMouseUp);
     addEventListenerTracked(canvas, 'mousemove', handleMouseMove);
 
     // Right-click for move-to command

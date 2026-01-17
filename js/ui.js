@@ -137,22 +137,39 @@ function selectBuilding(idx) {
     gameState.paused = false;
 }
 
-function canBuild(x, y) {
+function canBuild(x, y, buildingType = null, ignorePos = null) {
+    const type = buildingType || selectedBuilding;
+    if (!type) return false;
+
     const tile = getTile(x, y);
     const dist = Math.sqrt((x + 0.5 - player.x) ** 2 + (y + 0.5 - player.y) ** 2);
 
     // Houses are 2x2
-    if (selectedBuilding.tile === TILES.HOUSE) {
+    if (type.tile === TILES.HOUSE) {
         for (let dy = 0; dy < 2; dy++) {
             for (let dx = 0; dx < 2; dx++) {
-                const nt = getTile(x + dx, y + dy);
+                const tx = x + dx;
+                const ty = y + dy;
+
+                // If it's the building we are moving, it's "empty" for this check
+                if (ignorePos && tx >= ignorePos.x && tx <= ignorePos.x + 1 &&
+                    ty >= ignorePos.y && ty <= ignorePos.y + 1) {
+                    continue;
+                }
+
+                const nt = getTile(tx, ty);
                 if (nt !== TILES.GRASS && nt !== TILES.FLOOR) return false;
             }
         }
-        return dist < 12;
+        return true;
     }
 
-    return (tile === TILES.GRASS || tile === TILES.FLOOR) && dist < 12;
+    // 1x1 buildings
+    if (ignorePos && x === ignorePos.x && y === ignorePos.y) {
+        return true;
+    }
+
+    return (tile === TILES.GRASS || tile === TILES.FLOOR);
 }
 
 function placeBuild(x, y) {
@@ -634,11 +651,15 @@ function toggleEquipmentMenu() {
 }
 
 function closeAllMenus() {
-    const menus = ['buildMenu', 'survivorMenu', 'questMenu', 'skillMenu', 'achievementMenu', 'craftingMenu', 'equipmentMenu'];
+    const menus = ['buildMenu', 'survivorMenu', 'questMenu', 'skillMenu', 'achievementMenu', 'craftingMenu', 'equipmentMenu', 'upgradeDialog', 'petMenu', 'farmMenu', 'shelterMenu', 'cookingMenu'];
     menus.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
+    // Ensure the system state is also reset
+    if (typeof BuildingUpgradeSystem !== 'undefined' && BuildingUpgradeSystem.closeUpgradeUI) {
+        BuildingUpgradeSystem.closeUpgradeUI();
+    }
     if (typeof closeBuildMenu === 'function') closeBuildMenu();
 }
 

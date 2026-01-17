@@ -97,6 +97,11 @@ function render(alpha = 1) {
         renderBuildPreview(camX, camY);
     }
 
+    // Drag preview
+    if (isDraggingBuilding && draggedBuilding) {
+        renderDragPreview(camX, camY);
+    }
+
     // Render move target marker
     renderMoveTargetEnhanced(camX, camY);
 
@@ -138,6 +143,40 @@ function render(alpha = 1) {
     }
     if (typeof CookingSystem !== 'undefined') {
         CookingSystem.renderCooking(ctx);
+    }
+
+
+    // Draw building upgrade progress bars
+    if (typeof BuildingUpgradeSystem !== 'undefined' && BuildingUpgradeSystem.getActiveUpgrades) {
+        const upgrades = BuildingUpgradeSystem.getActiveUpgrades();
+        for (const upgrade of upgrades) {
+            // Check if visible
+            const screenX = (upgrade.x * TILE_SIZE * SCALE) - camera.x;
+            const screenY = (upgrade.y * TILE_SIZE * SCALE) - camera.y;
+
+            if (screenX > -TILE_SIZE * SCALE && screenX < canvas.width &&
+                screenY > -TILE_SIZE * SCALE && screenY < canvas.height) {
+
+                const progress = upgrade.progress / upgrade.totalTime;
+                const barWidth = TILE_SIZE * SCALE * 0.8;
+                const barHeight = 6;
+                const barX = screenX + (TILE_SIZE * SCALE - barWidth) / 2;
+                const barY = screenY - 10; // Float above
+
+                // Background
+                ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                ctx.fillRect(barX, barY, barWidth, barHeight);
+
+                // Border
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(barX, barY, barWidth, barHeight);
+
+                // Fill
+                ctx.fillStyle = '#f1c40f'; // Gold
+                ctx.fillRect(barX + 1, barY + 1, (barWidth - 2) * progress, barHeight - 2);
+            }
+        }
     }
 
     // Post-processing effects
@@ -182,6 +221,49 @@ function renderBuildPreview(camX, camY) {
         ctx.fillRect(sx, sy + i, 2, 1);
         ctx.fillRect(sx + size - 2, sy + i, 2, 1);
     }
+
+    ctx.globalAlpha = 1;
+
+    // Outline
+    ctx.strokeStyle = canPlace ? '#22ff22' : '#ff2222';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(sx + 1, sy + 1, size - 2, size - 2);
+}
+
+function renderDragPreview(camX, camY) {
+    if (!dragHoverTile) return;
+
+    const sx = dragHoverTile.x * TILE_SIZE * SCALE - camX;
+    const sy = dragHoverTile.y * TILE_SIZE * SCALE - camY;
+    const s = TILE_SIZE * SCALE;
+
+    const ignorePos = { x: draggedBuilding.originalX, y: draggedBuilding.originalY };
+    const canPlace = canBuild(dragHoverTile.x, dragHoverTile.y, draggedBuilding.type, ignorePos);
+
+    // Pulsing effect
+    const pulse = Math.sin(pixelTime * 6) * 0.1 + 0.9;
+
+    const isHouse = draggedBuilding.type.tile === TILES.HOUSE;
+    const size = isHouse ? s * 2 : s;
+
+    // Skeleton/Ghost look
+    ctx.globalAlpha = 0.4 * pulse;
+    ctx.fillStyle = canPlace ? '#44ff44' : '#ff4444';
+    ctx.fillRect(sx, sy, size, size);
+
+    // Draw the icon of the building
+    const icon = draggedBuilding.type.icon || '📦';
+    ctx.globalAlpha = 0.7;
+    ctx.font = `${size * 0.6}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(icon, sx + size / 2, sy + size / 2);
+
+    // Grid Highlight
+    ctx.globalAlpha = 0.2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sx, sy, size, size);
 
     ctx.globalAlpha = 1;
 

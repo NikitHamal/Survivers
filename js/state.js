@@ -59,3 +59,37 @@ let buildPreviewX = 0, buildPreviewY = 0;
 
 // Seeded random for world gen
 let seed = Date.now() % 100000;
+
+// Building Drag State
+let isDraggingBuilding = false;
+let draggedBuilding = null;
+let dragHoverTile = { x: 0, y: 0 };
+let mouseDown = false;
+let mouseDownTime = 0;
+let dragStartTile = { x: 0, y: 0 };
+
+// Input state
+let inputState = {
+    keys: {},
+    keysPressedThisFrame: new Set(),
+    keysReleasedThisFrame: new Set()
+};
+
+// Global timing state
+let timing = {
+    lastFrameTime: 0,
+    accumulator: 0,
+    gameTime: 0,
+    frameCount: 0,
+    fpsTimer: 0,
+    fps: 0,
+    lastVisibilityTime: 0
+};
+
+// Time-based event accumulators
+let eventTimers = {
+    hunger: 0,
+    survivorFood: 0,
+    chunkCleanup: 0,
+    zombieSpawn: 0
+};

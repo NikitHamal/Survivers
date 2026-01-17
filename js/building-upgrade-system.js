@@ -4,7 +4,7 @@
 // Complete building upgrade system with tiers,
 // bonuses, visual changes, and special abilities
 
-const BuildingUpgradeSystem = (function() {
+const BuildingUpgradeSystem = (function () {
     'use strict';
 
     // ============= CONFIGURATION =============
@@ -375,10 +375,10 @@ const BuildingUpgradeSystem = (function() {
             ]
         },
 
-        STORAGE: {
-            id: 'storage',
+        CHEST: {
+            id: 'chest',
             name: 'Storage',
-            tile: TILES.STORAGE,
+            tile: TILES.CHEST,
             category: 'production',
             baseCost: { wood: 30, stone: 10 },
             baseHealth: 100,
@@ -492,6 +492,63 @@ const BuildingUpgradeSystem = (function() {
                     stats: { foodProduction: 5.0, growthSpeed: 3.0 },
                     bonus: { droughtResistance: true, weatherProtection: true, autoHarvest: true },
                     special: 'auto_harvest'
+                }
+            ]
+        },
+
+        HOUSE: {
+            id: 'house',
+            name: 'House',
+            tile: TILES.HOUSE,
+            category: 'utility',
+            baseCost: { wood: 20, stone: 10 },
+            baseHealth: 300,
+            baseStats: { survivorCapacity: 2 },
+            upgrades: [
+                {
+                    level: 1,
+                    name: 'Small Shack',
+                    health: 300,
+                    icon: '🛖',
+                    description: 'Small shelter for survivors',
+                    stats: { survivorCapacity: 2 }
+                },
+                {
+                    level: 2,
+                    name: 'Wooden House',
+                    health: 450,
+                    icon: '🏠',
+                    description: 'Solid wooden construction',
+                    cost: { wood: 30, stone: 20 },
+                    stats: { survivorCapacity: 4 }
+                },
+                {
+                    level: 3,
+                    name: 'Stone Cottage',
+                    health: 600,
+                    icon: '🏡',
+                    description: 'Comfortable stone house',
+                    cost: { wood: 40, stone: 50, iron: 15 },
+                    stats: { survivorCapacity: 6 }
+                },
+                {
+                    level: 4,
+                    name: 'Large Estate',
+                    health: 800,
+                    icon: '🏰',
+                    description: 'Ample space for a large team',
+                    cost: { stone: 80, iron: 40 },
+                    stats: { survivorCapacity: 10 }
+                },
+                {
+                    level: 5,
+                    name: 'Survivor Mansion',
+                    health: 1200,
+                    icon: '🏙️',
+                    description: 'The ultimate survivor base',
+                    cost: { stone: 150, iron: 100, food: 50 },
+                    stats: { survivorCapacity: 20 },
+                    special: 'luxury_living'
                 }
             ]
         }
@@ -895,6 +952,9 @@ const BuildingUpgradeSystem = (function() {
         // Update active upgrades
         updateUpgrades(dt);
 
+        // Refresh UI if dialog is open
+        if (selectedBuildingPos) updateUI();
+
         // Process special building effects
         for (const building of buildings) {
             const data = getBuildingData(building.x, building.y);
@@ -996,6 +1056,178 @@ const BuildingUpgradeSystem = (function() {
         }
     }
 
+    // ============= UI HELPERS =============
+    let selectedBuildingPos = null; // {x, y}
+
+    function getUpgradeProgress(x, y) {
+        const key = `${x},${y}`;
+        const upgrade = activeUpgrades.find(u => u.key === key);
+        if (!upgrade) return null;
+
+        return {
+            progress: upgrade.progress,
+            totalTime: upgrade.totalTime,
+            percent: (upgrade.progress / upgrade.totalTime) * 100,
+            remaining: Math.max(0, upgrade.totalTime - upgrade.progress),
+            targetLevel: upgrade.targetLevel
+        };
+    }
+
+    function showUpgradeUI(x, y) {
+        selectedBuildingPos = { x, y };
+        updateUI();
+
+        const dialog = document.getElementById('upgradeDialog');
+        if (dialog) {
+            dialog.style.display = 'block';
+        }
+    }
+
+    function closeUpgradeUI() {
+        selectedBuildingPos = null;
+        const dialog = document.getElementById('upgradeDialog');
+        if (dialog) {
+            dialog.style.display = 'none';
+        }
+    }
+
+    function updateUI() {
+        if (!selectedBuildingPos) return;
+
+        const { x, y } = selectedBuildingPos;
+        const data = getBuildingData(x, y);
+
+        // If building is gone or invalid, close UI
+        if (!data) {
+            closeUpgradeUI();
+            return;
+        }
+
+        const building = buildings.find(b => b.x === x && b.y === y);
+        const upgradeProgress = getUpgradeProgress(x, y);
+
+        // Update Content
+        const contentEl = document.getElementById('upgradeContent');
+        if (contentEl) {
+            let html = `
+                ${data.upgrade.icon} <strong>${data.upgrade.name}</strong>
+                <div>Level ${data.level} / ${data.maxLevel}</div>
+                <div>Health: ${Math.floor(building?.health || 0)} / ${data.upgrade.health}</div>
+            `;
+
+            if (data.upgrade.description) {
+                html += `<div style="font-style: italic; margin-top: 5px; color: #aaa;">${data.upgrade.description}</div>`;
+            }
+
+            // Show stats
+            if (data.upgrade.stats) {
+                html += `<div style="margin-top: 10px; font-size: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">`;
+                for (const [key, val] of Object.entries(data.upgrade.stats)) {
+                    html += `<div style="text-align: left;"><span style="color:#888;">${key}:</span> <span style="color:#eee;">${val}</span></div>`;
+                }
+                html += `</div>`;
+            }
+
+            contentEl.innerHTML = html;
+        }
+
+        // Update Progress Bar
+        const progressContainer = document.getElementById('upgradeProgressBarContainer');
+        const progressFill = document.getElementById('upgradeProgressFill');
+        const timeLeft = document.getElementById('upgradeTimeLeft');
+
+        if (upgradeProgress && progressContainer) {
+            progressContainer.style.display = 'block';
+            if (progressFill) progressFill.style.width = `${upgradeProgress.percent}%`;
+            if (timeLeft) timeLeft.textContent = `${upgradeProgress.remaining.toFixed(1)}s`;
+        } else if (progressContainer) {
+            progressContainer.style.display = 'none';
+        }
+
+        // Update Buttons (only if not upgrading, or if cancel is needed)
+        const actionsEl = document.getElementById('upgradeActions');
+        if (actionsEl) {
+            // Rebuild buttons only if needed (simplified: always rebuild for reactive state usually, 
+            // but for performance we might check. For now, rebuild is safe for this scale).
+            actionsEl.innerHTML = ''; // Clear
+
+            if (data.canUpgrade && !upgradeProgress) {
+                const nextUpgrade = data.nextUpgrade;
+                const costStr = Object.entries(nextUpgrade.cost)
+                    .map(([r, a]) => `${a} ${r}`) // swapped for reading "10 wood"
+                    .join(', ');
+
+                const btn = document.createElement('button');
+                btn.className = 'upgrade-btn accept';
+                btn.innerHTML = `<i class="material-icons">arrow_upward</i> Upgrade <span style="font-size: 11px; opacity: 0.8;">(${costStr})</span>`;
+                btn.onclick = () => {
+                    startUpgrade(x, y);
+                    updateUI(); // Refresh immediately
+                };
+                actionsEl.appendChild(btn);
+            }
+
+            if (upgradeProgress) {
+                const btn = document.createElement('button');
+                btn.className = 'upgrade-btn reject';
+                btn.innerHTML = `<i class="material-icons">cancel</i> Cancel`;
+                btn.onclick = () => {
+                    cancelUpgrade(x, y);
+                    updateUI();
+                };
+                actionsEl.appendChild(btn);
+            }
+
+            const repairCheck = canRepairBuilding(x, y);
+            if (repairCheck.canRepair && !upgradeProgress) {
+                const costStr = Object.entries(repairCheck.cost)
+                    .map(([r, a]) => `${a} ${r}`)
+                    .join(', ');
+
+                const btn = document.createElement('button');
+                btn.className = 'upgrade-btn accept';
+                btn.innerHTML = `<i class="material-icons">build</i> Repair <div style="font-size: 10px;">(${costStr})</div>`;
+                btn.onclick = () => {
+                    repairBuilding(x, y);
+                    updateUI();
+                };
+                actionsEl.appendChild(btn);
+            }
+        }
+    }
+
+    // ============= BUILDING MOVEMENT =============
+    function moveBuilding(oldX, oldY, newX, newY) {
+        const oldKey = `${oldX},${oldY}`;
+        const level = buildingLevels.get(oldKey);
+
+        // Move level data
+        if (level) {
+            buildingLevels.delete(oldKey);
+            setBuildingLevel(newX, newY, level);
+        }
+
+        // Update active upgrade if any
+        const upgrade = activeUpgrades.find(u => u.key === oldKey);
+        if (upgrade) {
+            upgrade.x = newX;
+            upgrade.y = newY;
+            upgrade.key = `${newX},${newY}`;
+        }
+
+        // Ensure the new building object in the world tracking has the correct level
+        const newBuilding = buildings.find(b => b.x === newX && b.y === newY);
+        if (newBuilding && level) {
+            newBuilding.level = level;
+        }
+
+        // If UI was open for this building, update position
+        if (selectedBuildingPos && selectedBuildingPos.x === oldX && selectedBuildingPos.y === oldY) {
+            selectedBuildingPos = { x: newX, y: newY };
+            updateUI();
+        }
+    }
+
     // ============= SERIALIZATION =============
     function getState() {
         return {
@@ -1019,11 +1251,31 @@ const BuildingUpgradeSystem = (function() {
 
         activeUpgrades = (state.activeUpgrades || []).map(u => {
             const tile = getTile(u.x, u.y);
-            const type = getBuildingType(tile);
+            // If tile is floor (moved?), try to find building in buildings array? 
+            // For now assume tile type is correct or persisted elsewhere.
+            // Actually getTile might be just data. 
+            // We need to re-link the type.
+            const building = buildings.find(b => b.x === u.x && b.y === u.y);
+            // Best effort to find type from buildings array or tile
+            let type = null;
+            if (building) {
+                // get type from tile at location
+                const t = getTile(u.x, u.y);
+                type = getBuildingType(t);
+            }
+
+            // Fallback if needed, but safe to assume it works if world loaded first
+            if (!type) {
+                // Try to guess from active upgrade data if we stored it? We didn't.
+                // We re-derive from world.
+                const t = getTile(u.x, u.y);
+                type = getBuildingType(t);
+            }
+
             return {
                 ...u,
                 buildingType: type,
-                startTime: Date.now()
+                startTime: Date.now() // Reset start time reference for smoothness if needed, but progress is saved
             };
         }).filter(u => u.buildingType);
     }
@@ -1041,6 +1293,7 @@ const BuildingUpgradeSystem = (function() {
         getBuildingStats,
         getTowerStats,
         getCannonStats,
+        getActiveUpgrades: () => activeUpgrades, // Exposed for renderer
 
         // Upgrades
         canUpgradeBuilding,
@@ -1053,11 +1306,16 @@ const BuildingUpgradeSystem = (function() {
         calculateRepairCost,
         repairBuilding,
 
+        // Movement
+        moveBuilding,
+
         // Updates
         update,
 
         // UI
         showUpgradeUI,
+        closeUpgradeUI,
+        updateUI,
 
         // State
         getState,

@@ -58,34 +58,146 @@ function handleKeyPress(e) {
     }
 }
 
-function handleMouseMove(e) {
-    if (!buildMode) return;
+// ============= MOUSE HANDLING =============
 
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = (e.clientX - rect.left + camera.x) / SCALE / TILE_SIZE;
-    const mouseY = (e.clientY - rect.top + camera.y) / SCALE / TILE_SIZE;
-
-    buildPreviewX = Math.floor(mouseX);
-    buildPreviewY = Math.floor(mouseY);
-}
-
-function handleClick(e) {
+function handleMouseDown(e) {
     if (!gameState.running) return;
 
+    // Store start time and position
+    mouseDown = true;
+    mouseDownTime = Date.now();
+
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left + camera.x) / SCALE / TILE_SIZE;
+    const my = (e.clientY - rect.top + camera.y) / SCALE / TILE_SIZE;
+
+    // Root Tile Check
+    let tx = Math.floor(mx);
+    let ty = Math.floor(my);
+    const tile = getTile(tx, ty);
+
+    // If it's a house base, find the root house tile
+    if (tile === TILES.HOUSE_BASE) {
+        // Simple search in neighbors for TILES.HOUSE (limited to 2x2)
+        if (getTile(tx - 1, ty) === TILES.HOUSE) tx -= 1;
+        else if (getTile(tx, ty - 1) === TILES.HOUSE) ty -= 1;
+        else if (getTile(tx - 1, ty - 1) === TILES.HOUSE) { tx -= 1; ty -= 1; }
+    }
+
+    dragStartTile = { x: tx, y: ty };
+
+    // Check if clicking a building for potential drag
+    if (typeof BuildingUpgradeSystem !== 'undefined') {
+        const rootTile = getTile(tx, ty);
+        const buildingType = BuildingUpgradeSystem.getBuildingType(rootTile);
+        if (buildingType) {
+            // Collect background tiles to restore later (Grass, Floor, etc.)
+            const bgTiles = [];
+            if (buildingType.tile === TILES.HOUSE) {
+                for (let dy = 0; dy < 2; dy++) {
+                    for (let dx = 0; dx < 2; dx++) {
+                        const b = typeof getBuilding === 'function' ? getBuilding(tx + dx, ty + dy) : null;
+                        bgTiles.push(b ? b.bgTile : TILES.GRASS);
+                    }
+                }
+            } else {
+                const b = typeof getBuilding === 'function' ? getBuilding(tx, ty) : null;
+                bgTiles.push(b ? b.bgTile : TILES.GRASS);
+            }
+
+            draggedBuilding = {
+                originalX: tx,
+                originalY: ty,
+                type: buildingType,
+                bgTiles: bgTiles
+            };
+        } else {
+            draggedBuilding = null;
+        }
+    }
+}
+
+function handleMouseUp(e) {
+    if (!gameState.running) return;
+    mouseDown = false;
+
+    const clickDuration = Date.now() - mouseDownTime;
     const rect = canvas.getBoundingClientRect();
     const clickX = (e.clientX - rect.left + camera.x) / SCALE / TILE_SIZE;
     const clickY = (e.clientY - rect.top + camera.y) / SCALE / TILE_SIZE;
     const tileX = Math.floor(clickX);
     const tileY = Math.floor(clickY);
 
-    // Build mode takes priority
-    if (buildMode && selectedBuilding) {
-        if (canBuild(tileX, tileY)) {
-            placeBuild(tileX, tileY);
+    // If we were dragging a building
+    if (isDraggingBuilding && draggedBuilding) {
+        // Drop logic
+        const ignorePos = { x: draggedBuilding.originalX, y: draggedBuilding.originalY };
+        if (canBuild(tileX, tileY, draggedBuilding.type, ignorePos)) { // Reuse build check which usually checks for empty space
+            // Move the building
+            if (typeof BuildingUpgradeSystem !== 'undefined' && BuildingUpgradeSystem.moveBuilding) {
+                const type = draggedBuilding.type;
+
+                // 1. Clear old tile(s) using correct background tiles
+                if (type.tile === TILES.HOUSE) {
+                    let idx = 0;
+                    for (let dy = 0; dy < 2; dy++) {
+                        for (let dx = 0; dx < 2; dx++) {
+                            const bg = draggedBuilding.bgTiles[idx++] ?? TILES.GRASS;
+                            setTile(draggedBuilding.originalX + dx, draggedBuilding.originalY + dy, bg);
+                        }
+                    }
+                } else {
+                    const bg = (draggedBuilding.bgTiles && draggedBuilding.bgTiles[0]) ?? TILES.GRASS;
+                    setTile(draggedBuilding.originalX, draggedBuilding.originalY, bg);
+                }
+
+                // 2. Set new tile(s)
+                if (type.tile === TILES.HOUSE) {
+                    setTile(tileX, tileY, TILES.HOUSE);
+                    setTile(tileX + 1, tileY, TILES.HOUSE_BASE);
+                    setTile(tileX, tileY + 1, TILES.HOUSE_BASE);
+                    setTile(tileX + 1, tileY + 1, TILES.HOUSE_BASE);
+                } else {
+                    setTile(tileX, tileY, type.tile);
+                }
+
+                // 3. Update System Data
+                BuildingUpgradeSystem.moveBuilding(
+                    draggedBuilding.originalX, draggedBuilding.originalY,
+                    tileX, tileY
+                );
+
+                spawnParticles(tileX + 0.5, tileY + 0.5, '#ffd700', 15);
+            }
         }
+
+        // Reset drag state
+        isDraggingBuilding = false;
+        draggedBuilding = null;
+        document.body.style.cursor = 'default';
         return;
     }
 
+    // Normal Click Logic (Short duration)
+    if (clickDuration < 300) {
+        // Build mode takes priority
+        if (buildMode && selectedBuilding) {
+            if (canBuild(tileX, tileY)) {
+                placeBuild(tileX, tileY);
+            }
+            return;
+        }
+
+        // Standard Interaction
+        handleClickInteraction(clickX, clickY, tileX, tileY);
+    }
+
+    // Cleanup simple drag attempts that didn't become drags
+    draggedBuilding = null;
+    inputState.keysPressedThisFrame.clear(); // Cleanup hack if needed
+}
+
+function handleClickInteraction(clickX, clickY, tileX, tileY) {
     // Calculate distance to click
     const tile = getTile(tileX, tileY);
     const dist = Math.sqrt((clickX - player.x) ** 2 + (clickY - player.y) ** 2);
@@ -95,15 +207,6 @@ function handleClick(e) {
         if (isHarvestable(tile)) {
             harvestTile(tileX, tileY, tile);
             return;
-        }
-
-        // Check if building interaction
-        if (typeof BuildingUpgradeSystem !== 'undefined') {
-            const buildingType = BuildingUpgradeSystem.getBuildingType(tile);
-            if (buildingType) {
-                BuildingUpgradeSystem.showUpgradeUI(tileX, tileY);
-                return;
-            }
         }
     }
 
@@ -124,11 +227,61 @@ function handleClick(e) {
     setPlayerMoveTarget(clickX, clickY);
 }
 
+function handleMouseMove(e) {
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = (e.clientX - rect.left + camera.x) / SCALE / TILE_SIZE;
+    const mouseY = (e.clientY - rect.top + camera.y) / SCALE / TILE_SIZE;
+
+    // Check for Drag Initiation
+    if (mouseDown && draggedBuilding && !isDraggingBuilding) {
+        const duration = Date.now() - mouseDownTime;
+        const dist = Math.hypot(Math.floor(mouseX) - dragStartTile.x, Math.floor(mouseY) - dragStartTile.y);
+
+        // Threshold: 300ms hold OR moved to a new tile
+        if (duration > 300 || dist >= 1) {
+            isDraggingBuilding = true;
+            document.body.style.cursor = 'grabbing';
+        }
+    }
+
+    if (buildMode) {
+        buildPreviewX = Math.floor(mouseX);
+        buildPreviewY = Math.floor(mouseY);
+    }
+
+    // Visuals for dragging
+    if (isDraggingBuilding) {
+        dragHoverTile = { x: Math.floor(mouseX), y: Math.floor(mouseY) };
+        // We could render a ghost building here in render.js if we exported dragHoverTile
+    }
+}
+
+function handleClick(e) {
+    // Deprecated - redirected to handleMouseUp logic if needed, 
+    // but we are replacing the event listener so this might not be called.
+}
+
 function handleRightClick(e) {
     e.preventDefault();
     if (!gameState.running) return;
 
-    // Right-click now cancels movement and removes the marker
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = (e.clientX - rect.left + camera.x) / SCALE / TILE_SIZE;
+    const mouseY = (e.clientY - rect.top + camera.y) / SCALE / TILE_SIZE;
+    const tileX = Math.floor(mouseX);
+    const tileY = Math.floor(mouseY);
+    const tile = getTile(tileX, tileY);
+
+    // Check if building interaction (Upgrade)
+    if (typeof BuildingUpgradeSystem !== 'undefined') {
+        const buildingType = BuildingUpgradeSystem.getBuildingType(tile);
+        if (buildingType) {
+            BuildingUpgradeSystem.showUpgradeUI(tileX, tileY);
+            return;
+        }
+    }
+
+    // Right-click cancels movement if no building
     cancelPlayerPath();
 }
 

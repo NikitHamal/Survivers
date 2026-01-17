@@ -290,6 +290,23 @@
             <div id="recipeBook" class="recipe-book"></div>
         </div>
 
+        <div id="upgradeDialog" class="ui-panel menu-dialog" style="width: 400px; display: none;">
+            <span class="close-btn" onclick="BuildingUpgradeSystem.closeUpgradeUI()">✕</span>
+            <div class="menu-title">⚡ Building Upgrade</div>
+            <div id="upgradeContent" class="upgrade-content">
+                <!-- Populated dynamically -->
+            </div>
+            <div id="upgradeProgressBarContainer" class="upgrade-progress-container" style="display: none;">
+                <div class="upgrade-status-text">Upgrading... <span id="upgradeTimeLeft">00:00</span></div>
+                <div class="upgrade-progress-bar">
+                    <div id="upgradeProgressFill" class="upgrade-progress-fill"></div>
+                </div>
+            </div>
+            <div id="upgradeActions" class="upgrade-actions">
+                <!-- Buttons -->
+            </div>
+        </div>
+
         <div id="startScreen">
             <h1>JUNGLE SURVIVORS</h1>
             <p>The world has fallen to zombies. You are one of the few survivors, stranded in a mysterious jungle.</p>
