@@ -821,6 +821,20 @@ function renderDarkness(ctx, camX, camY, alpha = 1) {
                     color: { r: 255, g: 180, b: 80 }
                 });
             }
+
+            if (getTile(b.x, b.y) === TILES.LANTERN) {
+                const stats = typeof BuildingUpgradeSystem !== 'undefined'
+                    ? BuildingUpgradeSystem.getBuildingStats(b.x, b.y)
+                    : null;
+                const radius = ((stats?.lightRadius || 5) * TILE_SIZE) * SCALE;
+                lights.push({
+                    x: fX,
+                    y: fY - TILE_SIZE * SCALE * 0.2,
+                    radius: radius,
+                    intensity: 0.8 + Math.sin(gameTime * 5 + b.y) * 0.08,
+                    color: { r: 255, g: 200, b: 120 }
+                });
+            }
         }
     });
 

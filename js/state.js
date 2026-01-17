@@ -44,7 +44,7 @@ let followMode = false;
 let buildings = []; // Track all placed structures
 let activeChunks = new Set(); // Track which chunks should stay in memory
 
-let resources = { wood: 0, stone: 0, iron: 0, food: 20 };
+let resources = { wood: 0, stone: 0, iron: 0, food: 20, water: 0 };
 
 let dayCount = 1;
 let timeOfDay = 0.1; // Start in morning

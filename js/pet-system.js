@@ -553,13 +553,14 @@ const PetSystem = (function () {
     let tamingSession = null;
     let playerMount = null;
     let nextPetId = 1;
+    let currentPet = null;
 
     let spawnTimer = 0;                 // Current spawn cooldown timer
     let nextAnimalId = 1;
 
     // ============= HELPER FUNCTIONS =============
     function getPetDistanceTo(entity) {
-        if (!entity || !entity.x || !entity.y) return Infinity;
+        if (!currentPet || !entity || entity.x === undefined || entity.y === undefined) return Infinity;
         return Math.sqrt((currentPet.x - entity.x) ** 2 + (currentPet.y - entity.y) ** 2);
     }
 
@@ -736,6 +737,10 @@ const PetSystem = (function () {
             // Mount penalty if carrying player
             if (this.type.canMount && playerMount === this) {
                 speed *= 0.7;
+            }
+
+            if (typeof BiomeSystem !== 'undefined') {
+                speed *= BiomeSystem.getMovementModifier(this.x, this.y);
             }
 
             return speed;
@@ -1056,6 +1061,7 @@ const PetSystem = (function () {
             let damage = this.getDamage();
 
             // Apply ability modifiers
+            currentPet = this;
             for (const ability of this.abilities) {
                 const abilityData = PET_ABILITIES[ability];
                 if (abilityData && abilityData.type === 'active') {
@@ -1065,6 +1071,7 @@ const PetSystem = (function () {
                     }
                 }
             }
+            currentPet = null;
 
             // Apply to target
             if (target.health !== undefined) {
@@ -1275,15 +1282,17 @@ const PetSystem = (function () {
     }
 
     function spawnNearbyWildAnimals(centerX, centerY, count = 3) {
-        const types = Object.keys(PET_TYPES).filter(t => PET_TYPES[t].rarity !== 'legendary');
+        let types = getHabitatTypes(centerX, centerY);
+        if (!types.length) {
+            types = Object.keys(PET_TYPES).filter(t => PET_TYPES[t].rarity !== 'legendary');
+        }
         const spawnedAnimals = [];
 
         for (let i = 0; i < count; i++) {
             const typeId = types[Math.floor(Math.random() * types.length)];
-            const angle = Math.random() * Math.PI * 2;
-            const dist = 10 + Math.random() * 10;
-            const x = centerX + Math.cos(angle) * dist;
-            const y = centerY + Math.sin(angle) * dist;
+            const spawnPoint = findValidAnimalSpawn(centerX, centerY, 8, 18);
+            if (!spawnPoint) continue;
+            const { x, y } = spawnPoint;
 
             const animal = spawnWildAnimal(typeId, x, y);
             if (animal) {
@@ -1299,6 +1308,42 @@ const PetSystem = (function () {
             const dist = Math.sqrt((animal.x - x) ** 2 + (animal.y - y) ** 2);
             return dist < radius;
         });
+    }
+
+    function getHabitatTypes(x, y) {
+        const allTypes = Object.keys(PET_TYPES).filter(t => PET_TYPES[t].rarity !== 'legendary');
+        if (typeof BiomeSystem === 'undefined') return allTypes;
+
+        const biome = BiomeSystem.getBiomeAt(x, y);
+        if (!biome) return allTypes;
+
+        const habitatMap = {
+            jungle: ['WOLF', 'BOAR', 'FOX', 'BEAR', 'TIGER'],
+            desert: ['CAMEL', 'FOX', 'BOAR'],
+            swamp: ['BOAR', 'BEAVER', 'WOLF'],
+            snow: ['WOLF', 'BEAR', 'FOX'],
+            volcanic: ['WOLF', 'BOAR', 'BEAR'],
+            ruins: ['WOLF', 'FOX', 'HAWK']
+        };
+
+        const habitat = habitatMap[biome.id] || allTypes;
+        return habitat.filter(typeId => PET_TYPES[typeId]);
+    }
+
+    function findValidAnimalSpawn(centerX, centerY, minDist, maxDist) {
+        for (let i = 0; i < 12; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = minDist + Math.random() * (maxDist - minDist);
+            const x = centerX + Math.cos(angle) * dist;
+            const y = centerY + Math.sin(angle) * dist;
+
+            if (isInBaseArea && isInBaseArea(Math.floor(x), Math.floor(y))) continue;
+            if (isSolidAt(x, y, 0.35)) continue;
+            if (getTile(Math.floor(x), Math.floor(y)) === TILES.WATER) continue;
+            return { x, y };
+        }
+
+        return null;
     }
 
     // ============= MOUNT SYSTEM =============

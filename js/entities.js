@@ -66,7 +66,14 @@ const activeTowers = new Map(); // key: "x,y", value: { type, cooldown }
 // ============================================
 function spawnZombie() {
     const currentDay = dayCount || 0;
-    const maxZombies = ZOMBIE_CONFIG.MAX_BASE + currentDay * ZOMBIE_CONFIG.MAX_PER_DAY;
+    let maxZombies = ZOMBIE_CONFIG.MAX_BASE + currentDay * ZOMBIE_CONFIG.MAX_PER_DAY;
+    let biomeModifiers = null;
+    if (typeof BiomeSystem !== 'undefined') {
+        biomeModifiers = BiomeSystem.getZombieSpawnModifiers(player.x, player.y);
+        if (biomeModifiers?.spawnRate) {
+            maxZombies = Math.max(5, Math.floor(maxZombies * biomeModifiers.spawnRate));
+        }
+    }
 
     if (!Array.isArray(zombies)) {
         console.warn('spawnZombie: zombies array is invalid');
@@ -87,15 +94,23 @@ function spawnZombie() {
         // Validate spawn position
         if (!isValidZombieSpawn(zx, zy)) continue;
 
-        const health = ZOMBIE_CONFIG.BASE_HEALTH + currentDay * ZOMBIE_CONFIG.HEALTH_PER_DAY;
+        let health = ZOMBIE_CONFIG.BASE_HEALTH + currentDay * ZOMBIE_CONFIG.HEALTH_PER_DAY;
+        let speed = ZOMBIE_CONFIG.BASE_SPEED + currentDay * ZOMBIE_CONFIG.SPEED_PER_DAY;
+        let damage = ZOMBIE_CONFIG.BASE_DAMAGE + currentDay * ZOMBIE_CONFIG.DAMAGE_PER_DAY;
+
+        if (typeof BiomeSystem !== 'undefined' && BiomeSystem.shouldSpawnSpecialZombie(zx, zy)) {
+            health *= 1.35;
+            speed *= 1.15;
+            damage *= 1.25;
+        }
 
         const newZombie = {
             x: zx,
             y: zy,
             health: health,
             maxHealth: health,
-            speed: ZOMBIE_CONFIG.BASE_SPEED + currentDay * ZOMBIE_CONFIG.SPEED_PER_DAY,
-            damage: ZOMBIE_CONFIG.BASE_DAMAGE + currentDay * ZOMBIE_CONFIG.DAMAGE_PER_DAY,
+            speed: speed,
+            damage: damage,
             attackCooldown: 0,
             frame: 0,
             animTimer: 0
@@ -642,7 +657,29 @@ function updateTowers(dt) {
         }
 
         const [tx, ty] = key.split(',').map(Number);
-        const range = tower.type === TILES.CANNON ? 10 : 7;
+        let range = tower.type === TILES.CANNON ? 10 : 7;
+        let damage = tower.type === TILES.CANNON ? 35 : 18;
+        let fireRate = tower.type === TILES.CANNON ? 0.4 : 1.0;
+        let splash = tower.type === TILES.CANNON ? 2 : 0;
+        let size = tower.type === TILES.CANNON ? 4 : 2;
+
+        if (typeof BuildingUpgradeSystem !== 'undefined') {
+            if (tower.type === TILES.CANNON) {
+                const stats = BuildingUpgradeSystem.getCannonStats(tx, ty) || {};
+                range = stats.range || range;
+                damage = stats.damage || damage;
+                fireRate = stats.fireRate || fireRate;
+                splash = stats.splash || splash;
+            } else {
+                const stats = BuildingUpgradeSystem.getTowerStats(tx, ty) || {};
+                range = stats.range || range;
+                damage = stats.damage || damage;
+                fireRate = stats.fireRate || fireRate;
+            }
+        }
+
+        const baseCooldown = tower.type === TILES.CANNON ? 1.5 : 0.6;
+        const cooldown = baseCooldown / Math.max(0.2, fireRate);
         let nearest = null;
         let nearestDist = range;
 
@@ -660,13 +697,14 @@ function updateTowers(dt) {
                 x: tx + 0.5, y: ty + 0.5,
                 vx: Math.cos(angle) * 12,
                 vy: Math.sin(angle) * 12,
-                damage: tower.type === TILES.CANNON ? 35 : 18,
-                size: tower.type === TILES.CANNON ? 4 : 2,
+                damage: damage,
+                size: size,
                 color: tower.type === TILES.CANNON ? '#ff6600' : '#ffff00',
                 life: 1.5,
-                isCannon: tower.type === TILES.CANNON
+                isCannon: tower.type === TILES.CANNON,
+                splashRadius: splash
             });
-            tower.cooldown = tower.type === TILES.CANNON ? 1.5 : 0.6;
+            tower.cooldown = cooldown;
         }
     }
 }
@@ -725,7 +763,7 @@ function checkProjectileZombieCollision(p) {
             addDamageNumber(z.x, z.y - 0.5, p.damage, '#ffff00');
 
             if (p.isCannon) {
-                applySplashDamage(p.x, p.y, z, p.damage);
+                applySplashDamage(p.x, p.y, z, p.damage, p.splashRadius);
             }
             return true;
         }
@@ -733,8 +771,9 @@ function checkProjectileZombieCollision(p) {
     return false;
 }
 
-function applySplashDamage(x, y, hitZombie, baseDamage) {
-    const splashRadiusSq = TOWER_CONFIG.SPLASH_RADIUS ** 2;
+function applySplashDamage(x, y, hitZombie, baseDamage, splashRadius) {
+    const radius = splashRadius || TOWER_CONFIG.SPLASH_RADIUS;
+    const splashRadiusSq = radius ** 2;
     const splashDamage = Math.floor(baseDamage * TOWER_CONFIG.SPLASH_DAMAGE_MULT);
 
     for (const z of zombies) {

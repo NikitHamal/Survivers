@@ -236,6 +236,20 @@ function renderPostProcessing() {
             ctx.fillRect(0, y, canvas.width, 1);
         }
     }
+
+    if (typeof BiomeSystem !== 'undefined') {
+        const fog = BiomeSystem.getFogDensity(player.x, player.y);
+        if (fog > 0) {
+            ctx.fillStyle = `rgba(40, 50, 40, ${Math.min(0.6, fog)})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        const tint = BiomeSystem.getScreenTint(player.x, player.y);
+        if (tint) {
+            ctx.fillStyle = tint;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+    }
 }
 
 // Debug collision rendering

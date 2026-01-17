@@ -436,6 +436,124 @@ const BuildingUpgradeSystem = (function() {
             ]
         },
 
+        LANTERN: {
+            id: 'lantern',
+            name: 'Lantern Post',
+            tile: TILES.LANTERN,
+            category: 'utility',
+            baseCost: { wood: 5, iron: 3 },
+            baseHealth: 60,
+            baseStats: { lightRadius: 5, moraleBoost: 1 },
+            upgrades: [
+                {
+                    level: 1,
+                    name: 'Lantern Post',
+                    health: 60,
+                    icon: '🏮',
+                    description: 'Basic lighting for the base',
+                    stats: { lightRadius: 5, moraleBoost: 1 }
+                },
+                {
+                    level: 2,
+                    name: 'Sturdy Lantern',
+                    health: 80,
+                    icon: '🕯️',
+                    description: 'Brighter flame, sturdier frame',
+                    cost: { wood: 10, iron: 6 },
+                    stats: { lightRadius: 6, moraleBoost: 2 }
+                },
+                {
+                    level: 3,
+                    name: 'Beacon Post',
+                    health: 110,
+                    icon: '🔆',
+                    description: 'Visible beacon for allies',
+                    cost: { wood: 15, iron: 10, stone: 5 },
+                    stats: { lightRadius: 8, moraleBoost: 4 },
+                    bonus: { visionRange: 1.1 }
+                },
+                {
+                    level: 4,
+                    name: 'Signal Beacon',
+                    health: 140,
+                    icon: '📡',
+                    description: 'Guides survivors and wards enemies',
+                    cost: { wood: 20, iron: 15, stone: 10 },
+                    stats: { lightRadius: 10, moraleBoost: 6 },
+                    bonus: { zombieRepel: 0.1 }
+                },
+                {
+                    level: 5,
+                    name: 'Guardian Light',
+                    health: 180,
+                    icon: '✨',
+                    description: 'Legendary light that boosts the base',
+                    cost: { wood: 30, iron: 25, stone: 20, food: 10 },
+                    stats: { lightRadius: 13, moraleBoost: 10 },
+                    bonus: { zombieRepel: 0.2, expBonus: 0.05 }
+                }
+            ]
+        },
+
+        WELL: {
+            id: 'well',
+            name: 'Well',
+            tile: TILES.WELL,
+            category: 'utility',
+            baseCost: { wood: 10, stone: 25 },
+            baseHealth: 150,
+            baseStats: { waterRate: 0.3, moraleBoost: 1 },
+            upgrades: [
+                {
+                    level: 1,
+                    name: 'Shallow Well',
+                    health: 150,
+                    icon: '🪣',
+                    description: 'Draws small amounts of water',
+                    stats: { waterRate: 0.3, moraleBoost: 1 }
+                },
+                {
+                    level: 2,
+                    name: 'Stone Well',
+                    health: 200,
+                    icon: '⛲',
+                    description: 'Cleaner water supply',
+                    cost: { stone: 30, wood: 10 },
+                    stats: { waterRate: 0.5, moraleBoost: 2 }
+                },
+                {
+                    level: 3,
+                    name: 'Reinforced Well',
+                    health: 260,
+                    icon: '🏺',
+                    description: 'Steady water flow',
+                    cost: { stone: 40, wood: 15, iron: 5 },
+                    stats: { waterRate: 0.8, moraleBoost: 3 },
+                    bonus: { droughtResistance: true }
+                },
+                {
+                    level: 4,
+                    name: 'Deep Well',
+                    health: 320,
+                    icon: '🏗️',
+                    description: 'Deep aquifer access',
+                    cost: { stone: 60, wood: 20, iron: 15 },
+                    stats: { waterRate: 1.2, moraleBoost: 5 },
+                    bonus: { droughtResistance: true }
+                },
+                {
+                    level: 5,
+                    name: 'Sacred Spring',
+                    health: 400,
+                    icon: '💧',
+                    description: 'Endless clean water source',
+                    cost: { stone: 90, wood: 30, iron: 25, food: 10 },
+                    stats: { waterRate: 1.8, moraleBoost: 8 },
+                    bonus: { droughtResistance: true, healthRegen: 0.2 }
+                }
+            ]
+        },
+
         FARM: {
             id: 'farm',
             name: 'Farm Plot',
@@ -920,6 +1038,19 @@ const BuildingUpgradeSystem = (function() {
                     resources.wood += genRate * dt;
                     resources.stone += genRate * 0.5 * dt;
                     break;
+            }
+        }
+
+        // Passive production for utility buildings
+        for (const building of buildings) {
+            const data = getBuildingData(building.x, building.y);
+            if (!data) continue;
+
+            const stats = getBuildingStats(building.x, building.y);
+            if (!stats) continue;
+
+            if (data.type.tile === TILES.WELL && stats.waterRate) {
+                resources.water = (resources.water || 0) + stats.waterRate * dt;
             }
         }
     }

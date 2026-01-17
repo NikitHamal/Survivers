@@ -4,6 +4,8 @@ function updateUI() {
     document.getElementById('stoneCount').textContent = resources.stone;
     document.getElementById('ironCount').textContent = resources.iron;
     document.getElementById('foodCount').textContent = resources.food;
+    const waterEl = document.getElementById('waterCount');
+    if (waterEl) waterEl.textContent = Math.floor(resources.water || 0);
     document.getElementById('survivorCount').textContent = survivors.length;
 
     document.getElementById('healthText').textContent = Math.floor(player.health);
@@ -388,7 +390,10 @@ function renderMinimap() {
         [TILES.CAMPFIRE]: [170, 68, 0],
         [TILES.TOWER]: [74, 74, 106],
         [TILES.CANNON]: [74, 74, 106],
-        [TILES.BUSH]: [34, 139, 34]
+        [TILES.BUSH]: [34, 139, 34],
+        [TILES.STORAGE]: [90, 70, 50],
+        [TILES.LANTERN]: [200, 160, 80],
+        [TILES.WELL]: [90, 90, 110]
     };
 
     for (let dy = -range; dy < range; dy++) {
@@ -647,25 +652,4 @@ function closeAllMenus() {
         if (el) el.style.display = 'none';
     });
     if (typeof closeBuildMenu === 'function') closeBuildMenu();
-}
-
-function interact() {
-    // Basic interaction: eat food if available
-    if (resources.food >= 5 && player.health < player.maxHealth) {
-        resources.food -= 5;
-        player.health = Math.min(player.maxHealth, player.health + 10);
-        showNotification("Ate some food. Health +10", []);
-    } else if (resources.food < 5) {
-        showNotification("Not enough food!", []);
-    } else {
-        showNotification("Health is full.", []);
-    }
-}
-
-function attackAction() {
-    // Set space key as pressed in input state to trigger attack in game loop
-    if (typeof inputState !== 'undefined') {
-        inputState.space = true;
-        // The attack logic in game.js handles the actual hit
-    }
 }

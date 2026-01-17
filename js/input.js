@@ -214,7 +214,10 @@ function determineHarvestedGround(x, y) {
         getTile(x, y - 1)
     ];
 
-    const structures = [TILES.FLOOR, TILES.HOUSE, TILES.CHEST, TILES.WORKBENCH, TILES.BED, TILES.WALL, TILES.CAMPFIRE];
+    const structures = [
+        TILES.FLOOR, TILES.HOUSE, TILES.CHEST, TILES.WORKBENCH, TILES.BED,
+        TILES.WALL, TILES.CAMPFIRE, TILES.STORAGE, TILES.LANTERN, TILES.WELL
+    ];
     let floorCount = 0;
 
     for (const t of neighbors) {
@@ -313,6 +316,19 @@ function interact() {
                     setTile(coord.x, coord.y, TILES.FLOOR);
                 }
             }]);
+            return;
+        }
+
+        if (tile === TILES.WELL) {
+            resources.water = (resources.water || 0) + 3;
+            spawnParticles(player.x, player.y, '#66aaff', 6);
+            showNotification('<i class="material-icons">water_drop</i> Drew fresh water.', []);
+            if (typeof updateUI === 'function') updateUI();
+            return;
+        }
+
+        if (tile === TILES.STORAGE) {
+            showNotification('<i class="material-icons">inventory_2</i> Storage secured.', []);
             return;
         }
     }

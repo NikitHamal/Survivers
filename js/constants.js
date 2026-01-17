@@ -12,7 +12,7 @@ const TILES = {
     WALL: 5, FLOOR: 7, CAMPFIRE: 8,
     HOUSE: 9, FARM: 10, TOWER: 11, CANNON: 12,
     WORKBENCH: 13, CHEST: 14, BED: 15, BUSH: 16,
-    SPIKES: 17, HOUSE_BASE: 18
+    SPIKES: 17, HOUSE_BASE: 18, STORAGE: 19, LANTERN: 20, WELL: 21
 };
 
 const ROLES = ['None', 'Builder', 'Soldier', 'Guard', 'Farmer', 'Woodcutter', 'Miner', 'Hunter', 'Medic'];
@@ -28,5 +28,8 @@ const BUILDINGS = [
     { name: 'Cannon', icon: '💣', cost: { stone: 25, iron: 20 }, tile: TILES.CANNON, desc: 'Heavy damage' },
     { name: 'Workbench', icon: '🔧', cost: { wood: 15 }, tile: TILES.WORKBENCH, desc: 'Crafting' },
     { name: 'Chest', icon: '📦', cost: { wood: 10 }, tile: TILES.CHEST, desc: 'Storage' },
-    { name: 'Bed', icon: '🛏️', cost: { wood: 15 }, tile: TILES.BED, desc: 'Rest & heal' }
+    { name: 'Bed', icon: '🛏️', cost: { wood: 15 }, tile: TILES.BED, desc: 'Rest & heal' },
+    { name: 'Storage', icon: '🛢️', cost: { wood: 20, stone: 5 }, tile: TILES.STORAGE, desc: 'Resource cache' },
+    { name: 'Lantern', icon: '🏮', cost: { wood: 5, iron: 3 }, tile: TILES.LANTERN, desc: 'Area light' },
+    { name: 'Well', icon: '🪣', cost: { wood: 10, stone: 25 }, tile: TILES.WELL, desc: 'Draw water' }
 ];

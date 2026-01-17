@@ -260,6 +260,10 @@ function generateChunk(cx, cy) {
         }
     }
 
+    if (typeof BiomeSystem !== 'undefined' && BiomeSystem.onChunkGenerate) {
+        return BiomeSystem.onChunkGenerate(cx, cy, chunk);
+    }
+
     return chunk;
 }
 
@@ -275,6 +279,12 @@ function generateTileAt(wx, wy) {
     if (typeof noise2D !== 'function' || typeof seededRandom !== 'function') {
         console.warn('Missing noise functions for terrain generation');
         return TILES.GRASS;
+    }
+
+    if (typeof BiomeSystem !== 'undefined' && BiomeSystem.generateBiomeTile) {
+        const baseNoise = (noise2D(wx * CHUNK_CONFIG.RIVER_SCALE, wy * CHUNK_CONFIG.RIVER_SCALE) + 1) / 2;
+        const biomeTile = BiomeSystem.generateBiomeTile(wx, wy, baseNoise);
+        return normalizeBiomeTile(biomeTile);
     }
 
     const r = seededRandom(wx, wy);
@@ -309,6 +319,42 @@ function generateTileAt(wx, wy) {
     }
 
     return TILES.GRASS;
+}
+
+function normalizeBiomeTile(tile) {
+    if (typeof tile === 'number') {
+        return tile;
+    }
+
+    const tileMap = {
+        SAND: TILES.GRASS,
+        SANDSTONE: TILES.GRASS,
+        MUD: TILES.GRASS,
+        MARSH: TILES.GRASS,
+        SNOW: TILES.GRASS,
+        ICE: TILES.GRASS,
+        VOLCANIC_ROCK: TILES.GRASS,
+        ASH: TILES.GRASS,
+        COBBLESTONE: TILES.GRASS,
+        CRACKED_STONE: TILES.GRASS,
+        MURKY_WATER: TILES.WATER,
+        FROZEN_WATER: TILES.WATER,
+        LAVA: TILES.WATER,
+        cactus: TILES.BUSH,
+        dead_tree: TILES.TREE,
+        glowing_mushroom: TILES.BUSH,
+        ice_block: TILES.STONE,
+        obsidian: TILES.STONE,
+        carved_stone: TILES.STONE,
+        metal_scrap: TILES.STONE,
+        treasure_chest: TILES.BUSH,
+        healing_herb: TILES.BUSH,
+        swamp_herb: TILES.BUSH,
+        berry_bush: TILES.BUSH,
+        fire_gem: TILES.IRON
+    };
+
+    return tileMap[tile] !== undefined ? tileMap[tile] : TILES.GRASS;
 }
 
 // ============= TILE ACCESS =============
@@ -382,10 +428,16 @@ function setTile(wx, wy, tile) {
 
 function updateBuildingTracking(wx, wy, oldTile, newTile) {
     const functionalTiles = [
+        TILES.WALL,
         TILES.TOWER,
         TILES.CANNON,
         TILES.FARM,
         TILES.CAMPFIRE,
+        TILES.WORKBENCH,
+        TILES.BED,
+        TILES.STORAGE,
+        TILES.LANTERN,
+        TILES.WELL,
         TILES.HOUSE,
         TILES.SPIKES
     ];
@@ -421,6 +473,7 @@ function updateBuildingTracking(wx, wy, oldTile, newTile) {
                 x: wx,
                 y: wy,
                 tile: newTile,
+                type: newTile,
                 level: 1,
                 lastUpdate: typeof gameTime !== 'undefined' ? gameTime : Date.now(),
                 health: getBuildingMaxHealth(newTile),
@@ -448,7 +501,12 @@ function getBuildingMaxHealth(tileType) {
         [TILES.HOUSE]: 500, // House is bigger and tougher
         [TILES.FARM]: 100,
         [TILES.CAMPFIRE]: 80,
-        [TILES.SPIKES]: 120
+        [TILES.SPIKES]: 120,
+        [TILES.WORKBENCH]: 120,
+        [TILES.BED]: 80,
+        [TILES.STORAGE]: 140,
+        [TILES.LANTERN]: 60,
+        [TILES.WELL]: 200
     };
 
     return healthMap[tileType] || 100;

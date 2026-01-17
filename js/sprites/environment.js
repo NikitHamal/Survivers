@@ -9,7 +9,7 @@ function renderGroundLayer(tile, sx, sy, wx, wy) {
     const structures = [
         TILES.HOUSE, TILES.CHEST, TILES.WORKBENCH, TILES.BED,
         TILES.TOWER, TILES.CANNON, TILES.SPIKES, TILES.WALL,
-        TILES.WALL_BROKEN, TILES.CAMPFIRE
+        TILES.WALL_BROKEN, TILES.CAMPFIRE, TILES.STORAGE, TILES.LANTERN, TILES.WELL
     ];
 
     let useFloorBackground = structures.includes(tile) || tile === TILES.FLOOR;
@@ -84,12 +84,17 @@ function renderGrassTexture(x, y, s, wx, wy, density) {
 function renderWater(x, y, s, wx, wy) {
     const time = pixelTime;
 
+    const baseWater = typeof BiomeSystem !== 'undefined'
+        ? BiomeSystem.getTileColor(TILES.WATER, wx, wy)
+        : (PALETTE.water1 || '#29b6f6');
+    const waveWater = shadeColor(baseWater, 18);
+
     // 1. Deep Water Base
-    ctx.fillStyle = PALETTE.water1 || '#29b6f6';
+    ctx.fillStyle = baseWater;
     ctx.fillRect(x, y, s, s);
 
     // 2. Moving Waves (Sine wave patterns)
-    ctx.fillStyle = PALETTE.water2 || '#4fc3f7'; // Lighter
+    ctx.fillStyle = waveWater; // Lighter
 
     // Create varying wave offsets based on world position
     const offset1 = Math.sin(time * 2 + wx * 0.5) * (s * 0.2);
@@ -157,17 +162,275 @@ function renderObjectLayer(tile, sx, sy, wx, wy) {
         case TILES.STONE: renderStone(px, py, s, wx, wy); break;
         case TILES.IRON: renderIronOre(px, py, s, wx, wy); break;
         // ... (Other buildings use your previous building code) ...
-        case TILES.WALL: renderWall(px, py, s, wx, wy); break;
-        case TILES.CAMPFIRE: renderCampfire(px, py, s); break;
+        case TILES.WALL:
+        case TILES.CAMPFIRE:
+        case TILES.FARM:
+        case TILES.TOWER:
+        case TILES.CANNON:
+        case TILES.WORKBENCH:
+        case TILES.BED:
+        case TILES.STORAGE:
+        case TILES.LANTERN:
+        case TILES.WELL:
+            renderUpgradedBuilding(tile, px, py, s, wx, wy);
+            break;
         case TILES.HOUSE: renderHouse(px, py, s); break;
-        case TILES.FARM: renderFarm(px, py, s); break;
-        case TILES.TOWER: renderTower(px, py, s); break;
-        case TILES.CANNON: renderCannon(px, py, s); break;
-        case TILES.WORKBENCH: renderWorkbench(px, py, s); break;
         case TILES.CHEST: renderChest(px, py, s); break;
-        case TILES.BED: renderBed(px, py, s); break;
         case TILES.SPIKES: renderSpikes(px, py, s); break;
     }
+}
+
+function renderUpgradedBuilding(tile, x, y, s, wx, wy) {
+    const level = (typeof BuildingUpgradeSystem !== 'undefined' && BuildingUpgradeSystem.getBuildingLevel)
+        ? BuildingUpgradeSystem.getBuildingLevel(wx, wy)
+        : 1;
+
+    switch (tile) {
+        case TILES.WALL:
+            renderWall(x, y, s, wx, wy);
+            renderWallUpgradeOverlay(x, y, s, level);
+            break;
+        case TILES.CAMPFIRE:
+            renderCampfire(x, y, s);
+            renderCampfireUpgradeOverlay(x, y, s, level);
+            break;
+        case TILES.FARM:
+            renderFarm(x, y, s);
+            renderFarmUpgradeOverlay(x, y, s, level);
+            break;
+        case TILES.TOWER:
+            renderTower(x, y, s);
+            renderTowerUpgradeOverlay(x, y, s, level);
+            break;
+        case TILES.CANNON:
+            renderCannon(x, y, s);
+            renderCannonUpgradeOverlay(x, y, s, level);
+            break;
+        case TILES.WORKBENCH:
+            renderWorkbench(x, y, s);
+            renderWorkbenchUpgradeOverlay(x, y, s, level);
+            break;
+        case TILES.BED:
+            renderBed(x, y, s);
+            renderBedUpgradeOverlay(x, y, s, level);
+            break;
+        case TILES.STORAGE:
+            renderBarrel(x, y, s);
+            renderStorageUpgradeOverlay(x, y, s, level);
+            break;
+        case TILES.LANTERN:
+            renderLanternPost(x, y, s);
+            renderLanternUpgradeOverlay(x, y, s, level);
+            break;
+        case TILES.WELL:
+            renderWell(x, y, s);
+            renderWellUpgradeOverlay(x, y, s, level);
+            break;
+    }
+}
+
+function renderWallUpgradeOverlay(x, y, s, level) {
+    if (level < 2) return;
+    ctx.fillStyle = 'rgba(40, 40, 40, 0.3)';
+    ctx.fillRect(x + 2, y + s * 0.45, s - 4, 3);
+    if (level >= 3) {
+        ctx.fillStyle = '#888888';
+        ctx.fillRect(x + s * 0.2, y + s * 0.1, s * 0.6, 3);
+    }
+    if (level >= 4) {
+        ctx.fillStyle = '#444444';
+        for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(x + s * (0.15 + i * 0.2), y - 2);
+            ctx.lineTo(x + s * (0.2 + i * 0.2), y + s * 0.1);
+            ctx.lineTo(x + s * (0.25 + i * 0.2), y - 2);
+            ctx.fill();
+        }
+    }
+    if (level >= 5) {
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.4)';
+        ctx.fillRect(x + s * 0.1, y + s * 0.7, s * 0.8, 2);
+    }
+}
+
+function renderCampfireUpgradeOverlay(x, y, s, level) {
+    if (level < 2) return;
+    ctx.globalAlpha = 0.2 + level * 0.05;
+    ctx.fillStyle = '#ffcc66';
+    ctx.beginPath();
+    ctx.ellipse(x + s / 2, y + s * 0.6, s * (0.35 + level * 0.04), s * 0.15, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    if (level >= 4) {
+        ctx.fillStyle = '#553322';
+        ctx.fillRect(x + s * 0.2, y + s * 0.82, s * 0.6, 2);
+    }
+}
+
+function renderFarmUpgradeOverlay(x, y, s, level) {
+    if (level < 2) return;
+    ctx.fillStyle = '#6a8a3a';
+    ctx.fillRect(x + s * 0.1, y + s * 0.18, s * 0.8, 2);
+    if (level >= 3) {
+        ctx.fillStyle = 'rgba(70, 130, 180, 0.6)';
+        ctx.fillRect(x + s * 0.05, y + s * 0.05, 3, s * 0.9);
+    }
+    if (level >= 4) {
+        ctx.strokeStyle = 'rgba(120, 200, 120, 0.5)';
+        ctx.strokeRect(x + 2, y + 2, s - 4, s - 4);
+    }
+    if (level >= 5) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillRect(x + s * 0.75, y + s * 0.2, 3, 6);
+    }
+}
+
+function renderTowerUpgradeOverlay(x, y, s, level) {
+    if (level < 2) return;
+    ctx.fillStyle = '#aa4444';
+    ctx.fillRect(x + s * 0.7, y - 6, 2, s * 0.2);
+    ctx.fillRect(x + s * 0.7, y - 6, s * 0.12, s * 0.05);
+    if (level >= 3) {
+        ctx.fillStyle = '#333333';
+        ctx.fillRect(x + s * 0.15, y + s * 0.65, s * 0.2, 3);
+        ctx.fillRect(x + s * 0.22, y + s * 0.6, s * 0.06, s * 0.1);
+    }
+    if (level >= 4) {
+        ctx.fillStyle = '#ffcc66';
+        ctx.fillRect(x + s * 0.45, y + s * 0.15, 3, 3);
+    }
+    if (level >= 5) {
+        ctx.fillStyle = 'rgba(120, 180, 255, 0.6)';
+        ctx.beginPath();
+        ctx.arc(x + s * 0.5, y + s * 0.1, 4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function renderCannonUpgradeOverlay(x, y, s, level) {
+    if (level < 2) return;
+    ctx.fillStyle = '#555555';
+    ctx.fillRect(x + s * 0.2, y + s * 0.35, s * 0.6, 3);
+    if (level >= 3) {
+        ctx.fillStyle = '#333333';
+        ctx.fillRect(x + s * 0.35, y + s * 0.1, s * 0.3, 3);
+    }
+    if (level >= 4) {
+        ctx.fillStyle = '#884422';
+        ctx.fillRect(x + s * 0.1, y + s * 0.8, s * 0.2, 3);
+        ctx.fillRect(x + s * 0.7, y + s * 0.8, s * 0.2, 3);
+    }
+    if (level >= 5) {
+        ctx.fillStyle = 'rgba(255, 80, 40, 0.6)';
+        ctx.fillRect(x + s * 0.42, y + s * 0.05, s * 0.16, 2);
+    }
+}
+
+function renderWorkbenchUpgradeOverlay(x, y, s, level) {
+    if (level < 2) return;
+    ctx.fillStyle = '#888888';
+    ctx.fillRect(x + s * 0.12, y + s * 0.25, s * 0.1, 3);
+    if (level >= 3) {
+        ctx.fillStyle = '#444444';
+        ctx.fillRect(x + s * 0.65, y + s * 0.3, s * 0.2, s * 0.1);
+    }
+    if (level >= 4) {
+        ctx.fillStyle = '#ff6600';
+        ctx.fillRect(x + s * 0.3, y + s * 0.15, s * 0.08, s * 0.05);
+    }
+    if (level >= 5) {
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.6)';
+        ctx.fillRect(x + s * 0.75, y + s * 0.2, 3, 3);
+    }
+}
+
+function renderBedUpgradeOverlay(x, y, s, level) {
+    if (level < 2) return;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x + s * 0.6, y + s * 0.32, s * 0.2, s * 0.08);
+    if (level >= 3) {
+        ctx.fillStyle = '#cccccc';
+        ctx.fillRect(x + s * 0.1, y + s * 0.32, s * 0.2, s * 0.08);
+    }
+    if (level >= 4) {
+        ctx.fillStyle = '#ffd700';
+        ctx.fillRect(x + s * 0.45, y + s * 0.72, s * 0.1, 2);
+    }
+    if (level >= 5) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.fillRect(x + s * 0.3, y + s * 0.42, s * 0.05, s * 0.05);
+    }
+}
+
+function renderStorageUpgradeOverlay(x, y, s, level) {
+    if (level < 2) return;
+    ctx.fillStyle = '#666666';
+    ctx.fillRect(x + s * 0.12, y + s * 0.32, s * 0.76, 2);
+    if (level >= 3) {
+        ctx.fillStyle = '#444444';
+        ctx.fillRect(x + s * 0.45, y + s * 0.55, s * 0.1, s * 0.08);
+    }
+    if (level >= 4) {
+        ctx.fillStyle = '#aa8844';
+        ctx.fillRect(x + s * 0.47, y + s * 0.58, s * 0.06, s * 0.04);
+    }
+    if (level >= 5) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.fillRect(x + s * 0.25, y + s * 0.25, 3, 3);
+    }
+}
+
+function renderLanternUpgradeOverlay(x, y, s, level) {
+    if (level < 2) return;
+    ctx.fillStyle = 'rgba(255, 220, 140, 0.2)';
+    ctx.beginPath();
+    ctx.arc(x + s / 2, y + s * 0.25, s * (0.25 + level * 0.05), 0, Math.PI * 2);
+    ctx.fill();
+    if (level >= 4) {
+        ctx.fillStyle = '#cccccc';
+        ctx.fillRect(x + s * 0.15, y + s * 0.15, 2, s * 0.7);
+        ctx.fillRect(x + s * 0.83, y + s * 0.15, 2, s * 0.7);
+    }
+}
+
+function renderWellUpgradeOverlay(x, y, s, level) {
+    if (level < 2) return;
+    ctx.fillStyle = '#7a6a5a';
+    ctx.fillRect(x + s * 0.2, y + s * 0.18, s * 0.6, 3);
+    if (level >= 3) {
+        ctx.fillStyle = '#8a7a6a';
+        ctx.fillRect(x + s * 0.48, y + s * 0.12, 2, s * 0.2);
+    }
+    if (level >= 4) {
+        ctx.fillStyle = '#aa8844';
+        ctx.fillRect(x + s * 0.52, y + s * 0.4, s * 0.1, s * 0.08);
+    }
+    if (level >= 5) {
+        ctx.fillStyle = 'rgba(120, 200, 255, 0.5)';
+        ctx.fillRect(x + s * 0.35, y + s * 0.48, s * 0.12, 2);
+    }
+}
+
+function shadeColor(color, amount) {
+    const rgb = hexToRgb(color);
+    if (!rgb) return color;
+    const r = Math.max(0, Math.min(255, rgb.r + amount));
+    const g = Math.max(0, Math.min(255, rgb.g + amount));
+    const b = Math.max(0, Math.min(255, rgb.b + amount));
+    return `rgb(${r}, ${g}, ${b})`;
+}
+
+function hexToRgb(hex) {
+    if (typeof hex !== 'string') return null;
+    const normalized = hex.startsWith('#') ? hex.slice(1) : hex;
+    if (normalized.length !== 6) return null;
+    const num = parseInt(normalized, 16);
+    if (Number.isNaN(num)) return null;
+    return {
+        r: (num >> 16) & 255,
+        g: (num >> 8) & 255,
+        b: num & 255
+    };
 }
 
 function renderTree(x, y, s, wx, wy) {

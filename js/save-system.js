@@ -476,6 +476,7 @@ const SaveSystem = (function () {
                 x: b.x,
                 y: b.y,
                 tile: b.tile,
+                type: b.tile,
                 level: b.level || 1,
                 health: b.health,
                 maxHealth: b.maxHealth
