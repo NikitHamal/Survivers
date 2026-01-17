@@ -888,8 +888,14 @@ const PetSystem = (function () {
                 this.breedingCooldown -= dt;
             }
 
-            // Update AI
-            this.updateAI(dt);
+            // Use enhanced AI system if available
+            if (typeof PetAI !== 'undefined') {
+                const aiController = PetAI.getController(this);
+                aiController.update(dt);
+            } else {
+                // Fallback to basic AI
+                this.updateAI(dt);
+            }
 
             // Update animation
             this.animTimer += dt;

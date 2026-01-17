@@ -215,6 +215,152 @@ function debugRainToggle() {
     }
 }
 
+// ============= BUILDING UPGRADE DEBUG =============
+function debugUpgradeNearbyBuildings(tier = 5) {
+    if (typeof BuildingUpgradeSystem === 'undefined') {
+        if (typeof showNotification === 'function') showNotification("BuildingUpgradeSystem not loaded!");
+        return;
+    }
+
+    tier = Math.max(1, Math.min(5, tier));
+    const radius = 10;
+    let count = 0;
+
+    // Get chunks around player
+    const chunkSize = typeof CHUNK_SIZE !== 'undefined' ? CHUNK_SIZE : 16;
+    const playerChunkX = Math.floor(player.x / chunkSize);
+    const playerChunkY = Math.floor(player.y / chunkSize);
+
+    for (let cx = playerChunkX - 1; cx <= playerChunkX + 1; cx++) {
+        for (let cy = playerChunkY - 1; cy <= playerChunkY + 1; cy++) {
+            const chunkKey = `${cx},${cy}`;
+            const chunk = chunks.get(chunkKey);
+            if (!chunk) continue;
+
+            for (let lx = 0; lx < chunkSize; lx++) {
+                for (let ly = 0; ly < chunkSize; ly++) {
+                    const wx = cx * chunkSize + lx;
+                    const wy = cy * chunkSize + ly;
+                    const tile = chunk[ly * chunkSize + lx];
+
+                    // Check if it's a building
+                    const buildingTiles = [TILES.WALL, TILES.TOWER, TILES.CAMPFIRE, TILES.CANNON,
+                                          TILES.WORKBENCH, TILES.BED, TILES.CHEST, TILES.FARM];
+                    if (!buildingTiles.includes(tile)) continue;
+
+                    // Check distance
+                    const dist = Math.sqrt((wx - player.x) ** 2 + (wy - player.y) ** 2);
+                    if (dist > radius) continue;
+
+                    // Use proper API to set building level
+                    BuildingUpgradeSystem.setBuildingLevel(wx, wy, tier);
+                    count++;
+                }
+            }
+        }
+    }
+
+    if (typeof showNotification === 'function') {
+        showNotification(`Debug: ${count} buildings upgraded to tier ${tier}!`);
+    }
+}
+
+function debugSpawnTieredBuilding(buildingType = 'wall', tier = 3) {
+    if (typeof BuildingUpgradeSystem === 'undefined') {
+        if (typeof showNotification === 'function') showNotification("BuildingUpgradeSystem not loaded!");
+        return;
+    }
+
+    tier = Math.max(1, Math.min(5, tier));
+
+    // Map building type string to TILES constant
+    const buildingMap = {
+        'wall': TILES.WALL,
+        'tower': TILES.TOWER,
+        'campfire': TILES.CAMPFIRE,
+        'cannon': TILES.CANNON,
+        'workbench': TILES.WORKBENCH,
+        'bed': TILES.BED,
+        'chest': TILES.CHEST,
+        'farm': TILES.FARM
+    };
+
+    const tileType = buildingMap[buildingType.toLowerCase()];
+    if (!tileType) {
+        if (typeof showNotification === 'function') {
+            showNotification(`Unknown building type: ${buildingType}. Use: wall, tower, campfire, cannon, workbench, bed, chest, farm`);
+        }
+        return;
+    }
+
+    // Place building in front of player
+    const px = Math.floor(player.x) + (player.direction === 0 ? 2 : player.direction === 2 ? -2 : 0);
+    const py = Math.floor(player.y) + (player.direction === 1 ? 2 : player.direction === 3 ? -2 : 0);
+
+    // Set tile
+    if (typeof setTileAt === 'function') {
+        setTileAt(px, py, tileType);
+    }
+
+    // Use proper API to set building level
+    BuildingUpgradeSystem.setBuildingLevel(px, py, tier);
+
+    if (typeof showNotification === 'function') {
+        showNotification(`Debug: Spawned tier ${tier} ${buildingType} at (${px}, ${py})`);
+    }
+}
+
+function debugShowAllTiers() {
+    // Spawn a row of walls at all 5 tiers for comparison
+    const startX = Math.floor(player.x) + 3;
+    const startY = Math.floor(player.y);
+
+    for (let tier = 1; tier <= 5; tier++) {
+        const wx = startX + (tier - 1) * 2;
+        const wy = startY;
+
+        if (typeof setTileAt === 'function') {
+            setTileAt(wx, wy, TILES.WALL);
+        }
+
+        if (typeof BuildingUpgradeSystem !== 'undefined') {
+            BuildingUpgradeSystem.setBuildingLevel(wx, wy, tier);
+        }
+    }
+
+    if (typeof showNotification === 'function') {
+        showNotification("Debug: Spawned walls at tiers 1-5 for comparison!");
+    }
+}
+
+function debugShowAllTieredBuildings() {
+    // Spawn walls, towers, and campfires at all 5 tiers for comparison
+    const startX = Math.floor(player.x) + 3;
+    const startY = Math.floor(player.y);
+
+    const buildingTypes = [TILES.WALL, TILES.TOWER, TILES.CAMPFIRE];
+    const buildingNames = ['Wall', 'Tower', 'Campfire'];
+
+    for (let row = 0; row < buildingTypes.length; row++) {
+        for (let tier = 1; tier <= 5; tier++) {
+            const wx = startX + (tier - 1) * 2;
+            const wy = startY + row * 2;
+
+            if (typeof setTileAt === 'function') {
+                setTileAt(wx, wy, buildingTypes[row]);
+            }
+
+            if (typeof BuildingUpgradeSystem !== 'undefined') {
+                BuildingUpgradeSystem.setBuildingLevel(wx, wy, tier);
+            }
+        }
+    }
+
+    if (typeof showNotification === 'function') {
+        showNotification("Debug: Spawned all building types at tiers 1-5!");
+    }
+}
+
 // Helper to spawn survivor immediately
 function spawnNewSurvivor(force = false) {
     if (typeof survivors === 'undefined') return;
@@ -266,3 +412,282 @@ function spawnZombie(force = false) {
     zombies.push(newZombie);
     if (typeof showNotification === 'function') showNotification('Debug: Zombie Spawned');
 }
+
+// ============= ECOSYSTEM DEBUG =============
+function debugSpawnEcosystemAnimal(type = 'random') {
+    if (typeof EcosystemSystem === 'undefined') {
+        if (typeof showNotification === 'function') showNotification("EcosystemSystem not loaded!");
+        return;
+    }
+
+    const types = ['wolf', 'bear', 'tiger', 'fox', 'hawk', 'rabbit', 'deer', 'boar', 'snake', 'camel', 'beaver'];
+    const spawnType = type === 'random' ? types[Math.floor(Math.random() * types.length)] : type;
+
+    const animal = EcosystemSystem.spawnNearPlayer(spawnType);
+    if (animal) {
+        if (typeof showNotification === 'function') {
+            showNotification(`Debug: Spawned ${spawnType} at (${animal.x.toFixed(1)}, ${animal.y.toFixed(1)})`);
+        }
+        if (typeof spawnParticles === 'function') {
+            spawnParticles(animal.x, animal.y, '#88ff88', 8);
+        }
+    }
+}
+
+function debugSpawnPredators(count = 3) {
+    const predators = ['wolf', 'bear', 'tiger', 'snake', 'hawk', 'fox'];
+    for (let i = 0; i < count; i++) {
+        const type = predators[Math.floor(Math.random() * predators.length)];
+        debugSpawnEcosystemAnimal(type);
+    }
+}
+
+function debugSpawnPrey(count = 5) {
+    const prey = ['rabbit', 'deer', 'boar', 'camel', 'beaver'];
+    for (let i = 0; i < count; i++) {
+        const type = prey[Math.floor(Math.random() * prey.length)];
+        debugSpawnEcosystemAnimal(type);
+    }
+}
+
+function debugKillAllAnimals() {
+    if (typeof EcosystemSystem === 'undefined') {
+        if (typeof showNotification === 'function') showNotification("EcosystemSystem not loaded!");
+        return;
+    }
+
+    const count = EcosystemSystem.getAnimals().length;
+    EcosystemSystem.debugKillAll();
+    if (typeof showNotification === 'function') {
+        showNotification(`Debug: ${count} ecosystem animals removed!`);
+    }
+}
+
+function debugShowEcosystemStats() {
+    if (typeof EcosystemSystem === 'undefined') {
+        console.log("EcosystemSystem not loaded!");
+        return;
+    }
+
+    const stats = EcosystemSystem.getStats();
+    console.log("=== ECOSYSTEM STATS ===");
+    console.log(`Total Animals: ${stats.totalAnimals}`);
+    console.log(`Total Corpses: ${stats.totalCorpses}`);
+    console.log(`Migration Groups: ${stats.migrationGroups}`);
+    console.log(`Recent Hunts: ${stats.recentHunts}`);
+    console.log("\nPopulations by Type:");
+    for (const [type, count] of Object.entries(stats.populations)) {
+        console.log(`  ${type}: ${count}`);
+    }
+    console.log("\nPopulations by Biome:");
+    for (const [biome, pop] of Object.entries(stats.biomePopulations)) {
+        console.log(`  ${biome}: ${pop.total} (prey: ${pop.prey}, predators: ${pop.predators})`);
+    }
+
+    if (typeof showNotification === 'function') {
+        showNotification(`Ecosystem: ${stats.totalAnimals} animals, ${stats.totalCorpses} corpses`);
+    }
+}
+
+function debugTriggerHunt() {
+    if (typeof EcosystemSystem === 'undefined') {
+        if (typeof showNotification === 'function') showNotification("EcosystemSystem not loaded!");
+        return;
+    }
+
+    // Spawn a predator and prey close together
+    const prey = EcosystemSystem.spawnNearPlayer('rabbit', 3, 5);
+    if (prey) {
+        const predator = EcosystemSystem.spawnAnimal('wolf', prey.x + 1, prey.y, prey.biome);
+        if (predator) {
+            predator.hunger = 0.1; // Very hungry, will hunt
+            if (typeof showNotification === 'function') {
+                showNotification("Debug: Spawned hungry wolf near rabbit - watch the hunt!");
+            }
+        }
+    }
+}
+
+// ============= SURVIVOR AI DEBUG =============
+function debugShowSurvivorAIStats() {
+    if (typeof SurvivorAISystem === 'undefined') {
+        console.log("SurvivorAISystem not loaded!");
+        return;
+    }
+
+    console.log("=== SURVIVOR AI STATS ===");
+    for (const survivor of survivors) {
+        if (survivor.isPlayer) continue;
+        const ai = SurvivorAISystem.getAI(survivor);
+        if (ai) {
+            console.log(`${survivor.name} (${survivor.role}):`);
+            console.log(`  State: ${survivor.state}`);
+            console.log(`  Position: (${survivor.x.toFixed(1)}, ${survivor.y.toFixed(1)})`);
+            console.log(`  Health: ${survivor.health}/${survivor.maxHealth}`);
+            console.log(`  Is Following: ${survivor.isFollowing}`);
+        }
+    }
+}
+
+function debugSetAllSurvivorsFollowing(follow = true) {
+    if (!Array.isArray(survivors)) return;
+
+    for (const survivor of survivors) {
+        if (survivor.isPlayer) continue;
+        survivor.isFollowing = follow;
+        survivor.state = follow ? 'FOLLOWING' : 'IDLE';
+    }
+
+    if (typeof showNotification === 'function') {
+        showNotification(follow ? "All survivors now following!" : "All survivors stopped following.");
+    }
+}
+
+function debugAssignRandomRoles() {
+    if (!Array.isArray(survivors)) return;
+
+    const roles = ['Soldier', 'Guard', 'Builder', 'Farmer', 'Woodcutter', 'Miner', 'Hunter', 'Medic'];
+
+    for (const survivor of survivors) {
+        if (survivor.isPlayer) continue;
+        survivor.role = roles[Math.floor(Math.random() * roles.length)];
+    }
+
+    if (typeof updateSurvivorList === 'function') updateSurvivorList();
+    if (typeof showNotification === 'function') {
+        showNotification("Assigned random roles to all survivors!");
+    }
+}
+
+// ============= ANIMAL AI DEBUG =============
+function debugShowAnimalAIStats() {
+    if (typeof AnimalAISystem === 'undefined') {
+        console.log("AnimalAISystem not loaded!");
+        return;
+    }
+
+    console.log("=== ANIMAL AI STATS ===");
+    const animals = AnimalAISystem.getAnimals();
+    for (const animal of animals) {
+        console.log(`${animal.type} at (${animal.x.toFixed(1)}, ${animal.y.toFixed(1)}):`);
+        console.log(`  Health: ${animal.health}/${animal.maxHealth}`);
+        console.log(`  State: ${animal.state}`);
+        const ai = AnimalAISystem.getAI(animal);
+        if (ai) {
+            console.log(`  AI State: ${ai.currentState}`);
+        }
+    }
+
+    if (typeof showNotification === 'function') {
+        showNotification(`Animal AI: ${animals.length} animals tracked`);
+    }
+}
+
+// ============= BIOME DEBUG =============
+function debugShowBiomeAt(x, y) {
+    if (typeof WorldVariation === 'undefined') {
+        console.log("WorldVariation not loaded!");
+        return;
+    }
+
+    x = x ?? player.x;
+    y = y ?? player.y;
+
+    const biome = WorldVariation.getBiomeAt(x, y);
+    const biomeData = WorldVariation.getBiomeDataAt(x, y);
+
+    console.log(`Biome at (${x.toFixed(1)}, ${y.toFixed(1)}): ${biome}`);
+    if (biomeData) {
+        console.log("Biome Data:", biomeData);
+    }
+
+    if (typeof showNotification === 'function') {
+        showNotification(`Current biome: ${biome}`);
+    }
+}
+
+function debugTeleportToBiome(biome) {
+    if (typeof WorldVariation === 'undefined') {
+        if (typeof showNotification === 'function') showNotification("WorldVariation not loaded!");
+        return;
+    }
+
+    // Search outward from player for target biome
+    for (let radius = 10; radius < 200; radius += 10) {
+        for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 8) {
+            const x = player.x + Math.cos(angle) * radius;
+            const y = player.y + Math.sin(angle) * radius;
+            const foundBiome = WorldVariation.getBiomeAt(x, y);
+
+            if (foundBiome === biome) {
+                player.x = x;
+                player.y = y;
+                if (typeof showNotification === 'function') {
+                    showNotification(`Teleported to ${biome} biome!`);
+                }
+                return;
+            }
+        }
+    }
+
+    if (typeof showNotification === 'function') {
+        showNotification(`Could not find ${biome} biome nearby.`);
+    }
+}
+
+// ============= FULL SYSTEM STATUS =============
+function debugSystemStatus() {
+    console.log("=== GAME SYSTEM STATUS ===");
+
+    const systems = [
+        { name: 'WeatherSystem', obj: typeof WeatherSystem !== 'undefined' ? WeatherSystem : null },
+        { name: 'BiomeSystem', obj: typeof BiomeSystem !== 'undefined' ? BiomeSystem : null },
+        { name: 'BossSystem', obj: typeof BossSystem !== 'undefined' ? BossSystem : null },
+        { name: 'HordeSystem', obj: typeof HordeSystem !== 'undefined' ? HordeSystem : null },
+        { name: 'MoraleSystem', obj: typeof MoraleSystem !== 'undefined' ? MoraleSystem : null },
+        { name: 'EventSystem', obj: typeof EventSystem !== 'undefined' ? EventSystem : null },
+        { name: 'SkillSystem', obj: typeof SkillSystem !== 'undefined' ? SkillSystem : null },
+        { name: 'QuestSystem', obj: typeof QuestSystem !== 'undefined' ? QuestSystem : null },
+        { name: 'CraftingSystem', obj: typeof CraftingSystem !== 'undefined' ? CraftingSystem : null },
+        { name: 'EquipmentSystem', obj: typeof EquipmentSystem !== 'undefined' ? EquipmentSystem : null },
+        { name: 'BuildingUpgradeSystem', obj: typeof BuildingUpgradeSystem !== 'undefined' ? BuildingUpgradeSystem : null },
+        { name: 'SpawnSystem', obj: typeof SpawnSystem !== 'undefined' ? SpawnSystem : null },
+        { name: 'PetSystem', obj: typeof PetSystem !== 'undefined' ? PetSystem : null },
+        { name: 'ShelterSystem', obj: typeof ShelterSystem !== 'undefined' ? ShelterSystem : null },
+        { name: 'FarmingSystem', obj: typeof FarmingSystem !== 'undefined' ? FarmingSystem : null },
+        { name: 'CookingSystem', obj: typeof CookingSystem !== 'undefined' ? CookingSystem : null },
+        { name: 'WorldVariation', obj: typeof WorldVariation !== 'undefined' ? WorldVariation : null },
+        { name: 'SurvivorAISystem', obj: typeof SurvivorAISystem !== 'undefined' ? SurvivorAISystem : null },
+        { name: 'AnimalAISystem', obj: typeof AnimalAISystem !== 'undefined' ? AnimalAISystem : null },
+        { name: 'EcosystemSystem', obj: typeof EcosystemSystem !== 'undefined' ? EcosystemSystem : null },
+        { name: 'EventBus', obj: typeof EventBus !== 'undefined' ? EventBus : null }
+    ];
+
+    let loaded = 0;
+    for (const sys of systems) {
+        const status = sys.obj ? '✓ LOADED' : '✗ NOT LOADED';
+        console.log(`  ${sys.name}: ${status}`);
+        if (sys.obj) loaded++;
+    }
+
+    console.log(`\nTotal: ${loaded}/${systems.length} systems loaded`);
+
+    if (typeof showNotification === 'function') {
+        showNotification(`Systems: ${loaded}/${systems.length} loaded`);
+    }
+}
+
+// Make debug functions globally accessible
+window.debugSpawnEcosystemAnimal = debugSpawnEcosystemAnimal;
+window.debugSpawnPredators = debugSpawnPredators;
+window.debugSpawnPrey = debugSpawnPrey;
+window.debugKillAllAnimals = debugKillAllAnimals;
+window.debugShowEcosystemStats = debugShowEcosystemStats;
+window.debugTriggerHunt = debugTriggerHunt;
+window.debugShowSurvivorAIStats = debugShowSurvivorAIStats;
+window.debugSetAllSurvivorsFollowing = debugSetAllSurvivorsFollowing;
+window.debugAssignRandomRoles = debugAssignRandomRoles;
+window.debugShowAnimalAIStats = debugShowAnimalAIStats;
+window.debugShowBiomeAt = debugShowBiomeAt;
+window.debugTeleportToBiome = debugTeleportToBiome;
+window.debugSystemStatus = debugSystemStatus;

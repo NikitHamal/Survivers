@@ -389,6 +389,39 @@
                 <button class="debug-btn" onclick="debugTameNearby()">Tame Nearby Animals</button>
             </div>
         </div>
+
+        <div class="debug-section">
+            <h4>Ecosystem & Wildlife</h4>
+            <div class="debug-row">
+                <button class="debug-btn" onclick="debugSpawnEcosystemAnimal()">Spawn Animal</button>
+                <button class="debug-btn" onclick="debugSpawnPredators(3)">Spawn Predators</button>
+                <button class="debug-btn" onclick="debugSpawnPrey(5)">Spawn Prey</button>
+                <button class="debug-btn" onclick="debugTriggerHunt()">Trigger Hunt</button>
+                <button class="debug-btn danger" onclick="debugKillAllAnimals()">Kill All Animals</button>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <h4>AI & Biomes</h4>
+            <div class="debug-row">
+                <button class="debug-btn" onclick="debugSetAllSurvivorsFollowing(true)">All Follow</button>
+                <button class="debug-btn" onclick="debugSetAllSurvivorsFollowing(false)">All Stop</button>
+                <button class="debug-btn" onclick="debugAssignRandomRoles()">Random Roles</button>
+                <button class="debug-btn" onclick="debugShowBiomeAt()">Show Biome</button>
+                <button class="debug-btn" onclick="debugSystemStatus()">System Status</button>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <h4>Biome Teleport</h4>
+            <div class="debug-row">
+                <button class="debug-btn" onclick="debugTeleportToBiome('jungle')">Jungle</button>
+                <button class="debug-btn" onclick="debugTeleportToBiome('snow')">Snow</button>
+                <button class="debug-btn" onclick="debugTeleportToBiome('desert')">Desert</button>
+                <button class="debug-btn" onclick="debugTeleportToBiome('swamp')">Swamp</button>
+                <button class="debug-btn" onclick="debugTeleportToBiome('volcanic')">Volcanic</button>
+            </div>
+        </div>
     </div>
 
     <!-- Game Scripts -->
@@ -411,13 +444,19 @@
     <script src="js/horde-system.js"></script>
     <script src="js/morale-system.js"></script>
     <script src="js/boss-system.js"></script>
+    <script src="js/spawn-system.js"></script>
 
     <!-- Phase 1 New Systems -->
     <script src="js/event-bus.js"></script>
+    <script src="js/pet-ai.js"></script>
     <script src="js/pet-system.js"></script>
     <script src="js/shelter-system.js"></script>
     <script src="js/farming-system.js"></script>
     <script src="js/cooking-system.js"></script>
+    <script src="js/world-variation.js"></script>
+    <script src="js/survivor-ai.js"></script>
+    <script src="js/animal-ai.js"></script>
+    <script src="js/ecosystem-system.js"></script>
 
     <script src="js/phase1-ui.js"></script>
 
@@ -434,7 +473,10 @@
     <script src="js/sprites/environment.js"></script>
     <script src="js/sprites/buildings.js"></script>
     <script src="js/sprites/entities.js"></script>
+    <script src="js/sprites/animals.js"></script>
     <script src="js/sprites/pets.js"></script>
+    <script src="js/sprites/upgrades.js"></script>
+    <script src="js/sprites/biomes.js"></script>
 
     <script src="js/render.js"></script>
     <script src="js/game.js"></script>

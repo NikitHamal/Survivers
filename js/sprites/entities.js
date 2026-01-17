@@ -404,3 +404,156 @@ function renderProjectile(p, camX, camY) {
     ctx.arc(sx, sy, p.size * SCALE, 0, Math.PI * 2);
     ctx.fill();
 }
+
+// ============= ANIMAL RENDERING =============
+function renderAnimal(animal, renderX, renderY, camX, camY) {
+    if (!animal || !animal.type) return;
+
+    const s = TILE_SIZE * SCALE;
+    const sx = (renderX - 0.5) * s - camX;
+    const sy = (renderY - 0.6) * s - camY;
+
+    // Use AnimalSprites if available
+    if (typeof AnimalSprites !== 'undefined' && AnimalSprites.renderAnimalSprite) {
+        const direction = animal.direction || 0;
+        const frame = Math.floor((animal.animTimer || 0) * 4) % 4;
+        const spriteScale = SCALE * 0.8;
+
+        try {
+            const sprite = AnimalSprites.renderAnimalSprite(animal.type, direction, frame, spriteScale);
+            if (sprite) {
+                ctx.drawImage(sprite, sx, sy);
+
+                // Health bar for damaged animals
+                if (animal.health < animal.maxHealth) {
+                    renderEntityHealthBar(sx, sy - 8, s, animal.health, animal.maxHealth);
+                }
+                return;
+            }
+        } catch (e) {
+            // Fallback to simple rendering
+        }
+    }
+
+    // Fallback simple rendering
+    renderSimpleAnimal(animal, sx, sy, s);
+}
+
+function renderSimpleAnimal(animal, sx, sy, s) {
+    const type = animal.type.toLowerCase();
+
+    // Simple color-coded shapes
+    const animalColors = {
+        wolf: '#6a6a6a',
+        bear: '#4a3520',
+        tiger: '#d4881a',
+        fox: '#d4642a',
+        hawk: '#8b6914',
+        rabbit: '#aa9988',
+        deer: '#b8865a',
+        boar: '#5a4030',
+        snake: '#4a6a3a',
+        camel: '#c4a35a',
+        beaver: '#4a3020'
+    };
+
+    const color = animalColors[type] || '#888888';
+
+    // Body
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(sx + s * 0.2, sy + s * 0.3, s * 0.6, s * 0.5);
+    ctx.fillStyle = color;
+    ctx.fillRect(sx + s * 0.22, sy + s * 0.32, s * 0.56, s * 0.46);
+
+    // Head (smaller, offset based on direction)
+    const headOffsetX = animal.direction === 0 ? 0.15 : animal.direction === 2 ? -0.15 : 0;
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(sx + s * (0.35 + headOffsetX), sy + s * 0.15, s * 0.3, s * 0.25);
+    ctx.fillStyle = color;
+    ctx.fillRect(sx + s * (0.37 + headOffsetX), sy + s * 0.17, s * 0.26, s * 0.21);
+
+    // Eyes
+    if (animal.direction !== 3) {
+        ctx.fillStyle = '#222';
+        ctx.fillRect(sx + s * (0.42 + headOffsetX), sy + s * 0.22, s * 0.04, s * 0.04);
+        if (animal.direction === 1) {
+            ctx.fillRect(sx + s * 0.54, sy + s * 0.22, s * 0.04, s * 0.04);
+        }
+    }
+
+    // Legs (simple)
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(sx + s * 0.25, sy + s * 0.7, s * 0.12, s * 0.2);
+    ctx.fillRect(sx + s * 0.63, sy + s * 0.7, s * 0.12, s * 0.2);
+
+    // Health bar for damaged animals
+    if (animal.health < animal.maxHealth) {
+        renderEntityHealthBar(sx, sy - 8, s, animal.health, animal.maxHealth);
+    }
+}
+
+function renderPet(pet, renderX, renderY, camX, camY) {
+    if (!pet || !pet.type) return;
+
+    const s = TILE_SIZE * SCALE;
+    const sx = (renderX - 0.5) * s - camX;
+    const sy = (renderY - 0.6) * s - camY;
+
+    // Use PetSprites if available
+    if (typeof PetSprites !== 'undefined' && PetSprites.renderPetSprite) {
+        const direction = pet.direction || 0;
+        const frame = Math.floor((pet.animTimer || 0) * 4) % 4;
+
+        try {
+            PetSprites.renderPetSprite(ctx, pet, { x: camX, y: camY });
+            return;
+        } catch (e) {
+            // Fallback
+        }
+    }
+
+    // Fallback to AnimalSprites with pet indicator
+    if (typeof AnimalSprites !== 'undefined') {
+        renderAnimal(pet, renderX, renderY, camX, camY);
+
+        // Add pet indicator (heart for tamed)
+        if (!pet.isWild) {
+            ctx.fillStyle = '#ff6688';
+            ctx.beginPath();
+            const hx = sx + s * 0.5;
+            const hy = sy - 4;
+            // Simple heart shape
+            ctx.arc(hx - 3, hy, 3, Math.PI, 0);
+            ctx.arc(hx + 3, hy, 3, Math.PI, 0);
+            ctx.lineTo(hx, hy + 6);
+            ctx.closePath();
+            ctx.fill();
+        }
+        return;
+    }
+
+    // Ultimate fallback
+    renderSimpleAnimal(pet, sx, sy, s);
+}
+
+function renderEntityHealthBar(sx, sy, width, health, maxHealth) {
+    const barWidth = width * 0.8;
+    const barHeight = 4;
+    const barX = sx + (width - barWidth) / 2;
+
+    // Background
+    ctx.fillStyle = '#333';
+    ctx.fillRect(barX, sy, barWidth, barHeight);
+
+    // Health fill
+    const healthPercent = Math.max(0, health / maxHealth);
+    const fillColor = healthPercent > 0.5 ? '#44ff44' :
+        healthPercent > 0.25 ? '#ffaa00' : '#ff4444';
+    ctx.fillStyle = fillColor;
+    ctx.fillRect(barX, sy, barWidth * healthPercent, barHeight);
+
+    // Border
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, sy, barWidth, barHeight);
+}

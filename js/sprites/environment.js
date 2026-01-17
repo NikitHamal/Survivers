@@ -4,6 +4,23 @@ function renderGroundLayer(tile, sx, sy, wx, wy) {
     const s = TILE_SIZE * SCALE;
     const px = Math.floor(sx);
     const py = Math.floor(sy);
+    const time = pixelTime || Date.now() / 1000;
+
+    // Check for biome-specific tiles first (tiles 20-49)
+    if (typeof BiomeSprites !== 'undefined' && tile >= 20 && tile <= 49) {
+        // Check if it's a ground-type biome tile
+        const groundTiles = [20, 25, 30, 31, 35, 36, 40, 41, 48]; // SAND, MUD, SNOW, ICE, VOLCANIC_ROCK, ASH, COBBLESTONE, CRACKED_STONE, MARSH
+        if (groundTiles.includes(tile)) {
+            BiomeSprites.renderBiomeTile(ctx, tile, px, py, s, wx, wy, time);
+            return;
+        }
+        // For water-type biome tiles
+        const waterTiles = [26, 32, 37]; // MURKY_WATER, FROZEN_WATER, LAVA
+        if (waterTiles.includes(tile)) {
+            BiomeSprites.renderBiomeTile(ctx, tile, px, py, s, wx, wy, time);
+            return;
+        }
+    }
 
     // Determine if we need a floor background (for buildings)
     const structures = [
@@ -19,12 +36,27 @@ function renderGroundLayer(tile, sx, sy, wx, wy) {
     } else if (tile === TILES.WATER) {
         renderWater(px, py, s, wx, wy);
     } else {
-        // Biome Support Preservation
-        if (typeof BiomeSystem !== 'undefined') {
+        // Biome Support with WorldVariation integration
+        if (typeof WorldVariation !== 'undefined') {
+            const biome = WorldVariation.getBiomeAt(wx, wy);
+            const biomeColors = {
+                jungle: { base: '#2d5a27', accent: '#3d6a37' },
+                desert: { base: '#c4a35a', accent: '#d4b36a' },
+                swamp: { base: '#3a4a2a', accent: '#4a5a3a' },
+                snow: { base: '#d8e8f8', accent: '#e8f8ff' },
+                volcanic: { base: '#3a2a2a', accent: '#4a3a3a' },
+                ruins: { base: '#5a5a4a', accent: '#6a6a5a' },
+                plains: { base: '#4caf50', accent: '#388e3c' }
+            };
+            const colors = biomeColors[biome?.id] || biomeColors.plains;
+            const noise = seededRandom(wx, wy);
+            ctx.fillStyle = noise > 0.5 ? colors.base : colors.accent;
+            ctx.fillRect(px, py, s, s);
+            renderGrassTexture(px, py, s, wx, wy, 0.1);
+        } else if (typeof BiomeSystem !== 'undefined') {
             const biomeColor = BiomeSystem.getTileColor(tile, wx, wy);
             ctx.fillStyle = biomeColor;
             ctx.fillRect(px, py, s, s);
-            // Add texture over biome color
             renderGrassTexture(px, py, s, wx, wy, 0.1);
         } else {
             renderGrass(px, py, s, wx, wy, tile);
@@ -149,6 +181,27 @@ function renderObjectLayer(tile, sx, sy, wx, wy) {
     const s = TILE_SIZE * SCALE;
     const px = Math.floor(sx);
     const py = Math.floor(sy);
+    const time = pixelTime || Date.now() / 1000;
+
+    // Check for biome-specific object tiles first (tiles 20-49)
+    if (typeof BiomeSprites !== 'undefined' && tile >= 20 && tile <= 49) {
+        // Object-type biome tiles (trees, vegetation, special structures)
+        const objectTiles = [22, 23, 27, 28, 33, 38, 42, 45]; // CACTUS, PALM_TREE, DEAD_TREE, MUSHROOM, PINE_TREE, OBSIDIAN, PILLAR, FLOWER_PATCH
+        if (objectTiles.includes(tile)) {
+            BiomeSprites.renderBiomeTile(ctx, tile, px, py, s, wx, wy, time);
+            return;
+        }
+    }
+
+    // Get building tier for visual upgrades
+    let tier = 1;
+    if (typeof BuildingUpgradeSystem !== 'undefined') {
+        tier = BuildingUpgradeSystem.getBuildingLevel(wx, wy);
+    }
+
+    // Check if UpgradeVisuals is available and building supports tiered rendering
+    const tieredBuildings = [TILES.WALL, TILES.TOWER, TILES.CAMPFIRE];
+    const useUpgradeVisuals = typeof UpgradeVisuals !== 'undefined' && tieredBuildings.includes(tile);
 
     // Pass specific context to helpers
     switch (tile) {
@@ -156,12 +209,35 @@ function renderObjectLayer(tile, sx, sy, wx, wy) {
         case TILES.BUSH: renderBush(px, py, s, wx, wy); break;
         case TILES.STONE: renderStone(px, py, s, wx, wy); break;
         case TILES.IRON: renderIronOre(px, py, s, wx, wy); break;
-        // ... (Other buildings use your previous building code) ...
-        case TILES.WALL: renderWall(px, py, s, wx, wy); break;
-        case TILES.CAMPFIRE: renderCampfire(px, py, s); break;
+
+        // Buildings with tiered visual upgrade support
+        case TILES.WALL:
+            if (useUpgradeVisuals && tier > 1) {
+                UpgradeVisuals.renderTieredWall(ctx, px, py, s, tier, wx, wy, time);
+            } else {
+                renderWall(px, py, s, wx, wy);
+            }
+            break;
+
+        case TILES.TOWER:
+            if (useUpgradeVisuals && tier > 1) {
+                UpgradeVisuals.renderTieredTower(ctx, px, py, s, tier, time);
+            } else {
+                renderTower(px, py, s);
+            }
+            break;
+
+        case TILES.CAMPFIRE:
+            if (useUpgradeVisuals && tier > 1) {
+                UpgradeVisuals.renderTieredCampfire(ctx, px, py, s, tier, time);
+            } else {
+                renderCampfire(px, py, s);
+            }
+            break;
+
+        // Other buildings (not yet tiered)
         case TILES.HOUSE: renderHouse(px, py, s); break;
         case TILES.FARM: renderFarm(px, py, s); break;
-        case TILES.TOWER: renderTower(px, py, s); break;
         case TILES.CANNON: renderCannon(px, py, s); break;
         case TILES.WORKBENCH: renderWorkbench(px, py, s); break;
         case TILES.CHEST: renderChest(px, py, s); break;

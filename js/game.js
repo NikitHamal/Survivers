@@ -191,6 +191,13 @@ function fixedUpdate(dt) {
     if (typeof FarmingSystem !== 'undefined') FarmingSystem.update(dt);
     if (typeof CookingSystem !== 'undefined') CookingSystem.update(dt);
 
+    // Advanced AI Systems
+    if (typeof SurvivorAISystem !== 'undefined') SurvivorAISystem.update(dt);
+    if (typeof AnimalAISystem !== 'undefined') AnimalAISystem.update(dt);
+
+    // Ecosystem and Food Chain
+    if (typeof EcosystemSystem !== 'undefined') EcosystemSystem.update(dt);
+
     // Tower updates (always check, let tower system decide based on night)
     updateTowers(dt);
 
@@ -386,6 +393,13 @@ function updatePlayerCooldowns(dt) {
 }
 
 function updateZombieSpawning(dt) {
+    // Use advanced spawn system if available
+    if (typeof SpawnSystem !== 'undefined') {
+        SpawnSystem.update(dt);
+        return;
+    }
+
+    // Fallback to basic spawning
     if (!isNight) {
         eventTimers.zombieSpawn = 0;
         return;
@@ -884,6 +898,7 @@ function resetGameState() {
     if (typeof FarmingSystem !== 'undefined') FarmingSystem.setState({ farmTiles: [], livestock: [], processors: [] });
     if (typeof ShelterSystem !== 'undefined') ShelterSystem.setState({ shelters: [], fires: [] });
     if (typeof CookingSystem !== 'undefined') CookingSystem.setState({ activeRecipes: [], nutritionState: null });
+    if (typeof EcosystemSystem !== 'undefined') EcosystemSystem.setState({ animals: [] });
 
     // Clear input
     clearAllInput();

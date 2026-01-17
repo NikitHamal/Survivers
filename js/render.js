@@ -58,6 +58,40 @@ function render(alpha = 1) {
         entities.push({ type: 'zombie', data: z, x: rx, y: ry, sortY: ry });
     });
 
+    // Add ecosystem animals
+    if (typeof EcosystemSystem !== 'undefined') {
+        const animals = EcosystemSystem.getAnimals();
+        animals.forEach(a => {
+            if (a.health > 0) {
+                const rx = lerp(a.prevX ?? a.x, a.x, alpha);
+                const ry = lerp(a.prevY ?? a.y, a.y, alpha);
+                entities.push({ type: 'animal', data: a, x: rx, y: ry, sortY: ry });
+            }
+        });
+    }
+
+    // Add wild animals from PetSystem
+    if (typeof PetSystem !== 'undefined') {
+        const wildAnimals = PetSystem.getWildAnimals ? PetSystem.getWildAnimals() : [];
+        wildAnimals.forEach(a => {
+            if (a.health > 0) {
+                const rx = lerp(a.prevX ?? a.x, a.x, alpha);
+                const ry = lerp(a.prevY ?? a.y, a.y, alpha);
+                entities.push({ type: 'wild_animal', data: a, x: rx, y: ry, sortY: ry });
+            }
+        });
+
+        // Add pets
+        const pets = PetSystem.getPets ? PetSystem.getPets() : [];
+        pets.forEach(p => {
+            if (p.health > 0) {
+                const rx = lerp(p.prevX ?? p.x, p.x, alpha);
+                const ry = lerp(p.prevY ?? p.y, p.y, alpha);
+                entities.push({ type: 'pet', data: p, x: rx, y: ry, sortY: ry });
+            }
+        });
+    }
+
     entities.sort((a, b) => a.sortY - b.sortY);
 
     // Render entity shadows first
@@ -78,6 +112,10 @@ function render(alpha = 1) {
             }
         } else if (e.type === 'zombie') {
             renderZombieEnhanced(e.data, e.x, e.y, camX, camY);
+        } else if (e.type === 'animal' || e.type === 'wild_animal') {
+            renderAnimal(e.data, e.x, e.y, camX, camY);
+        } else if (e.type === 'pet') {
+            renderPet(e.data, e.x, e.y, camX, camY);
         }
     });
 
@@ -127,9 +165,7 @@ function render(alpha = 1) {
     }
 
     // Phase 1 New Systems Rendering
-    if (typeof PetSystem !== 'undefined') {
-        PetSystem.renderPets(ctx);
-    }
+    // Note: Pets/animals are now rendered via Y-sorted entity loop for proper depth sorting
     if (typeof ShelterSystem !== 'undefined') {
         ShelterSystem.renderShelters(ctx);
     }
