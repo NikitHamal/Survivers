@@ -435,6 +435,35 @@ function renderMinimap() {
         }
     });
 
+    // Pets & Animals
+    if (typeof PetSystem !== 'undefined') {
+        // Tamed Pets
+        minimapCtx.fillStyle = '#00ffff';
+        const pets = PetSystem.getAllPets();
+        if (pets) {
+            pets.forEach(p => {
+                const dx = p.x - player.x;
+                const dy = p.y - player.y;
+                if (Math.abs(dx) < range && Math.abs(dy) < range) {
+                    minimapCtx.fillRect(halfSize + dx * mapScale - 1, halfSize + dy * mapScale - 1, 2, 2);
+                }
+            });
+        }
+
+        // Wild Animals
+        minimapCtx.fillStyle = '#ffa500';
+        const wild = PetSystem.getWildAnimals();
+        if (wild) {
+            wild.forEach(a => {
+                const dx = a.x - player.x;
+                const dy = a.y - player.y;
+                if (Math.abs(dx) < range && Math.abs(dy) < range) {
+                    minimapCtx.fillRect(halfSize + dx * mapScale - 1, halfSize + dy * mapScale - 1, 2, 2);
+                }
+            });
+        }
+    }
+
     // Player
     minimapCtx.fillStyle = '#4488ff';
     minimapCtx.fillRect(halfSize - 2, halfSize - 2, 4, 4);

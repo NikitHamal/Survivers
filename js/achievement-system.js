@@ -4,7 +4,7 @@
 // Complete achievement system with categories, tiers,
 // progress tracking, unlockables, and special rewards
 
-const AchievementSystem = (function() {
+const AchievementSystem = (function () {
     'use strict';
 
     // ============= CONFIGURATION =============
@@ -776,7 +776,7 @@ const AchievementSystem = (function() {
                     <div style="font-size: 16px; margin: 5px 0;">${achievement.name}</div>
                     <div style="font-size: 12px; opacity: 0.8;">${achievement.description}</div>
                 </div>`,
-                [{ text: 'Awesome!', action: () => {}, class: 'accept' }]
+                [{ text: 'Awesome!', action: () => { }, class: 'accept' }]
             );
         }
 
@@ -1084,7 +1084,12 @@ const AchievementSystem = (function() {
 
         // State
         getState,
-        setState
+        setState,
+        unlockAll: () => {
+            for (const achievement of Object.values(ACHIEVEMENTS)) {
+                unlockAchievement(achievement);
+            }
+        }
     };
 })();
 

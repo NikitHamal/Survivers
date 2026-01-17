@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="css/systems.css">
     <link rel="stylesheet" href="css/overlays.css">
     <link rel="stylesheet" href="css/debug.css">
+    <link rel="stylesheet" href="css/systems-extended.css">
 </head>
 
 <body>
@@ -129,6 +130,9 @@
             <button class="action-btn" onclick="toggleFollow()"><span class="key">[F]</span> Follow</button>
             <button class="action-btn" onclick="interact()"><span class="key">[E]</span> Use</button>
             <button class="action-btn" onclick="attackAction()"><span class="key">[SPACE]</span> Attack</button>
+            <button class="action-btn primary" onclick="togglePetMenu()"><span class="key">[P]</span> Pets</button>
+            <button class="action-btn primary" onclick="toggleFarmMenu()"><span class="key">[G]</span> Farm</button>
+            <button class="action-btn warning" onclick="toggleCookingMenu()"><span class="key">[O]</span> Cook</button>
         </div>
 
         <div id="buildMenu">
@@ -204,6 +208,88 @@
             <div id="achievementList" class="achievement-grid"></div>
         </div>
 
+        <!-- NEW PHASE 1 SYSTEM PANELS -->
+        <div id="petMenu" class="ui-panel menu-dialog">
+            <span class="close-btn" onclick="togglePetMenu()">✕</span>
+            <div class="menu-title">🐾 Pet Management</div>
+            <div id="petList" class="pet-list"></div>
+            <div id="petDetails" class="pet-details" style="display:none;"></div>
+            <div id="petTaming" class="pet-taming" style="display:none;">
+                <h4>Taming Progress</h4>
+                <div class="taming-progress">
+                    <div id="tamingPatience" class="taming-bar"></div>
+                </div>
+                <p>Tame wild animals by feeding them and approaching slowly!</p>
+            </div>
+        </div>
+
+        <div id="farmMenu" class="ui-panel menu-dialog">
+            <span class="close-btn" onclick="toggleFarmMenu()">✕</span>
+            <div class="menu-title">🌾 Farming & Agriculture</div>
+            <div class="farm-tabs">
+                <button class="tab-btn active" onclick="showFarmTab('crops')">Crops</button>
+                <button class="tab-btn" onclick="showFarmTab('livestock')">Livestock</button>
+                <button class="tab-btn" onclick="showFarmTab('processors')">Processors</button>
+            </div>
+            <div id="farmCrops" class="farm-crops"></div>
+            <div id="farmLivestock" class="farm-livestock" style="display:none;"></div>
+            <div id="farmProcessors" class="farm-processors" style="display:none;"></div>
+        </div>
+
+        <div id="shelterMenu" class="ui-panel menu-dialog">
+            <span class="close-btn" onclick="toggleShelterMenu()">✕</span>
+            <div class="menu-title">🏠 Shelter & Comfort</div>
+            <div id="shelterList" class="shelter-list"></div>
+            <div id="temperatureInfo" class="temperature-info"></div>
+            <div id="comfortInfo" class="comfort-info"></div>
+            <div id="fireManagement" class="fire-management"></div>
+        </div>
+
+        <div id="cookingMenu" class="ui-panel menu-dialog">
+            <span class="close-btn" onclick="toggleCookingMenu()">✕</span>
+            <div class="menu-title">🍳 Cooking & Nutrition</div>
+            <div class="nutrition-panel">
+                <div class="nutrition-header">
+                    <span class="nutrition-title">Daily Nutrition</span>
+                    <span id="nutritionBalance" class="balance-indicator">Optimal</span>
+                </div>
+                <div class="nutrition-grid">
+                    <div class="nutrition-item">
+                        <div class="nutrition-label">Calories</div>
+                        <div class="nutrition-value" id="nutritionCalories">0 / 2000</div>
+                        <div class="nutrition-bar">
+                            <div id="caloriesFill" class="nutrition-fill"></div>
+                        </div>
+                    </div>
+                    <div class="nutrition-item">
+                        <div class="nutrition-label">Protein</div>
+                        <div class="nutrition-value" id="nutritionProtein">0 / 50g</div>
+                        <div class="nutrition-bar">
+                            <div id="proteinFill" class="nutrition-fill"></div>
+                        </div>
+                    </div>
+                    <div class="nutrition-item">
+                        <div class="nutrition-label">Carbs</div>
+                        <div class="nutrition-value" id="nutritionCarbs">0 / 250g</div>
+                        <div class="nutrition-bar">
+                            <div id="carbsFill" class="nutrition-fill"></div>
+                        </div>
+                    </div>
+                    <div class="nutrition-item">
+                        <div class="nutrition-label">Vitamins</div>
+                        <div class="nutrition-value" id="nutritionVitamins">0 / 100</div>
+                        <div class="nutrition-bar">
+                            <div id="vitaminsFill" class="nutrition-fill"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="cookingQueue" class="cooking-queue"></div>
+            <div id="foodInventory" class="food-inventory"></div>
+            <div id="buffPanel" class="buff-panel"></div>
+            <div id="recipeBook" class="recipe-book"></div>
+        </div>
+
         <div id="startScreen">
             <h1>JUNGLE SURVIVORS</h1>
             <p>The world has fallen to zombies. You are one of the few survivors, stranded in a mysterious jungle.</p>
@@ -233,13 +319,19 @@
         <div class="menu-title">⚡ GOD MODE / DEBUG ⚡</div>
 
         <div class="debug-section">
-            <h4>Player</h4>
+            <h4>Player & Movement</h4>
             <div class="debug-row">
-                <button class="debug-btn" onclick="debugToggleGodMode()">Invincible: <span
+                <button class="debug-btn" onclick="debugToggleGodMode()">God Mode: <span
                         id="debugInvincible">OFF</span></button>
-                <button class="debug-btn" onclick="debugHealAll()">Heal All</button>
+                <button class="debug-btn" onclick="debugToggleSpeedHack()">Speed Hack: <span
+                        id="debugSpeed">OFF</span></button>
                 <button class="debug-btn" onclick="debugToggleCollision()">Collision: <span
                         id="debugCollision">OFF</span></button>
+                <button class="debug-btn" onclick="debugHealAll()">Heal All</button>
+                <button class="debug-btn" onclick="debugMaxStats()">Max Lvl/Stats</button>
+                <button class="debug-btn" onclick="debugUnlockAll()">Unlock All</button>
+                <button class="debug-btn" onclick="debugToggleInvisibility()">Invisibility: <span
+                        id="debugInvisibility">OFF</span></button>
             </div>
         </div>
 
@@ -278,12 +370,23 @@
         </div>
 
         <div class="debug-section">
-            <h4>World</h4>
+            <h4>World & Time</h4>
             <div class="debug-row">
                 <button class="debug-btn" onclick="debugTime(true)">Set Day</button>
                 <button class="debug-btn" onclick="debugTime(false)">Set Night</button>
                 <button class="debug-btn" onclick="debugSpawnSurvivor()">Spawn Survivor</button>
+                <button class="debug-btn" onclick="debugAdvanceTime(1)">+1 Hour</button>
+                <button class="debug-btn" onclick="debugRainToggle()">Toggle Rain</button>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <h4>Combat & Pets</h4>
+            <div class="debug-row">
                 <button class="debug-btn" onclick="debugSpawnZombie()">Spawn Zombie</button>
+                <button class="debug-btn danger" onclick="debugKillAllZombies()">KILL ALL ZOMBIES</button>
+                <button class="debug-btn" onclick="debugSpawnPet()">Spawn Random Pet</button>
+                <button class="debug-btn" onclick="debugTameNearby()">Tame Nearby Animals</button>
             </div>
         </div>
     </div>
@@ -309,6 +412,15 @@
     <script src="js/morale-system.js"></script>
     <script src="js/boss-system.js"></script>
 
+    <!-- Phase 1 New Systems -->
+    <script src="js/event-bus.js"></script>
+    <script src="js/pet-system.js"></script>
+    <script src="js/shelter-system.js"></script>
+    <script src="js/farming-system.js"></script>
+    <script src="js/cooking-system.js"></script>
+
+    <script src="js/phase1-ui.js"></script>
+
     <script src="js/world.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/pathfinding.js"></script>
@@ -316,6 +428,14 @@
     <script src="js/input.js"></script>
     <script src="js/effects.js"></script>
     <script src="js/entities.js"></script>
+    
+    <!-- Sprites Modules -->
+    <script src="js/sprites/core.js"></script>
+    <script src="js/sprites/environment.js"></script>
+    <script src="js/sprites/buildings.js"></script>
+    <script src="js/sprites/entities.js"></script>
+    <script src="js/sprites/pets.js"></script>
+
     <script src="js/render.js"></script>
     <script src="js/game.js"></script>
     <script src="js/main.js"></script>

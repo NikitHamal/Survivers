@@ -185,6 +185,12 @@ function fixedUpdate(dt) {
     if (typeof CraftingSystem !== 'undefined') CraftingSystem.updateCrafting(dt);
     if (typeof EquipmentSystem !== 'undefined') EquipmentSystem.updateBuffs(dt);
 
+    // Phase 1 New Systems Update
+    if (typeof PetSystem !== 'undefined') PetSystem.update(dt);
+    if (typeof ShelterSystem !== 'undefined') ShelterSystem.update(dt);
+    if (typeof FarmingSystem !== 'undefined') FarmingSystem.update(dt);
+    if (typeof CookingSystem !== 'undefined') CookingSystem.update(dt);
+
     // Tower updates (always check, let tower system decide based on night)
     updateTowers(dt);
 
@@ -337,9 +343,21 @@ function updatePlayerMovement(dt) {
                     }, 100);
                 }
                 player.stuckTime = 0;
+
+        // Pet taming approach integration
+        if (typeof PetSystem !== 'undefined') {
+            const moveAngle = Math.atan2(moveY, moveX);
+            PetSystem.approachTamingPet(moveAngle);
+        }
             }
         } else {
             player.stuckTime = 0;
+
+        // Pet taming approach integration
+        if (typeof PetSystem !== 'undefined') {
+            const moveAngle = Math.atan2(moveY, moveX);
+            PetSystem.approachTamingPet(moveAngle);
+        }
         }
     }
 }
@@ -791,6 +809,11 @@ function startGame() {
         updateSurvivorList();
     }
 
+    // Spawn initial wildlife
+    if (typeof PetSystem !== 'undefined') {
+        PetSystem.spawnNearbyWildAnimals(player.x, player.y, 6);
+    }
+
     // Start game loop
     gameState.running = true;
     gameState.paused = false;
@@ -855,6 +878,12 @@ function resetGameState() {
     damageNumbers = [];
     buildings = [];
     if (typeof activeTowers !== 'undefined') activeTowers.clear();
+
+    // Reset New Systems State
+    if (typeof PetSystem !== 'undefined') PetSystem.setState({ pets: [], wildAnimals: [], nextPetId: 1 });
+    if (typeof FarmingSystem !== 'undefined') FarmingSystem.setState({ farmTiles: [], livestock: [], processors: [] });
+    if (typeof ShelterSystem !== 'undefined') ShelterSystem.setState({ shelters: [], fires: [] });
+    if (typeof CookingSystem !== 'undefined') CookingSystem.setState({ activeRecipes: [], nutritionState: null });
 
     // Clear input
     clearAllInput();

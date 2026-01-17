@@ -1,6 +1,7 @@
 :root {
     /* Main Palette */
     --primary-gold: #f1c40f;
+    --primary-gold-rgb: 241, 196, 15;
     --primary-orange: #e67e22;
     --primary-blue: #3498db;
     --success: #2ecc71;

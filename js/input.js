@@ -107,6 +107,20 @@ function handleClick(e) {
         }
     }
 
+    // Check for animals/pets
+    if (typeof PetSystem !== 'undefined') {
+        const wildAnimals = PetSystem.getWildAnimals();
+        for (const animal of wildAnimals) {
+            const distToClick = Math.sqrt((clickX - animal.x) ** 2 + (clickY - animal.y) ** 2);
+            if (distToClick < 1.5) { // Clicked on animal
+                if (PetSystem.startTaming(animal)) {
+                    showNotification(`Started taming ${animal.type.name}!`, []);
+                    return;
+                }
+            }
+        }
+    }
+
     // Otherwise, click-to-move
     setPlayerMoveTarget(clickX, clickY);
 }
@@ -303,11 +317,30 @@ function interact() {
         }
     }
 
+    // Pet feeding/taming integration
+    if (resources.food > 0 && typeof PetSystem !== 'undefined') {
+        const session = PetSystem.getTamingSession();
+        if (session && session.isActive) {
+            const distToPet = Math.sqrt((player.x - session.pet.x) ** 2 + (player.y - session.pet.y) ** 2);
+            if (distToPet < 2.5) {
+                // Try feeding with regular food (treating as generic protein/meat for compatibility)
+                if (PetSystem.feedTamingPet('meat')) {
+                    resources.food--;
+                    spawnParticles(session.pet.x, session.pet.y, '#ffd700', 8);
+                    showNotification(`Fed the wild ${session.pet.type.name}!`, []);
+                    if (typeof updateUI === 'function') updateUI();
+                    return;
+                }
+            }
+        }
+    }
+
     // Eat food (if no world interaction found)
     if (resources.food > 0 && player.hunger < player.maxHunger) {
         resources.food--;
         player.hunger = Math.min(player.hunger + 25, player.maxHunger);
         spawnParticles(player.x, player.y, '#88cc88', 5);
+        if (typeof updateUI === 'function') updateUI();
     }
 }
 
