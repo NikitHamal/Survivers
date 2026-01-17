@@ -5,36 +5,27 @@ function renderGroundLayer(tile, sx, sy, wx, wy) {
     const px = Math.floor(sx);
     const py = Math.floor(sy);
 
-    // Determine ground type
-    let useFloorBackground = false;
+    // Determine if we need a floor background (for buildings)
     const structures = [
         TILES.HOUSE, TILES.CHEST, TILES.WORKBENCH, TILES.BED,
         TILES.TOWER, TILES.CANNON, TILES.SPIKES, TILES.WALL,
         TILES.WALL_BROKEN, TILES.CAMPFIRE
     ];
 
-    if (structures.includes(tile) || tile === TILES.FLOOR) {
-        useFloorBackground = true;
-    }
+    let useFloorBackground = structures.includes(tile) || tile === TILES.FLOOR;
 
     if (useFloorBackground) {
-        // Wooden floor with planks
         renderWoodenFloor(px, py, s, wx, wy);
     } else if (tile === TILES.WATER) {
         renderWater(px, py, s, wx, wy);
     } else {
-        // Enhanced grass with Biome support
+        // Biome Support Preservation
         if (typeof BiomeSystem !== 'undefined') {
             const biomeColor = BiomeSystem.getTileColor(tile, wx, wy);
             ctx.fillStyle = biomeColor;
             ctx.fillRect(px, py, s, s);
-
-            // Add biome-specific patterns
-            const pattern = seededRandom(wx, wy);
-            if (pattern > 0.7) {
-                ctx.fillStyle = 'rgba(0,0,0,0.1)';
-                ctx.fillRect(px + s * 0.2, py + s * 0.2, s * 0.6, s * 0.6);
-            }
+            // Add texture over biome color
+            renderGrassTexture(px, py, s, wx, wy, 0.1);
         } else {
             renderGrass(px, py, s, wx, wy, tile);
         }
@@ -42,111 +33,116 @@ function renderGroundLayer(tile, sx, sy, wx, wy) {
 }
 
 function renderGrass(x, y, s, wx, wy, tile) {
-    // Base grass with pattern variation
-    const pattern = seededRandom(wx, wy);
-    const grassBase = pattern > 0.5 ? PALETTE.grass1 : PALETTE.grass2;
-    ctx.fillStyle = grassBase;
+    // 1. Base Gradient (Subtle variation per tile)
+    const noise = seededRandom(wx, wy);
+    // varied greens
+    const g1 = PALETTE.grass1 || '#4caf50';
+    const g2 = PALETTE.grass2 || '#388e3c';
+
+    ctx.fillStyle = noise > 0.5 ? g1 : g2;
     ctx.fillRect(x, y, s, s);
 
-    // Add grass texture patches
-    if (pattern > 0.3) {
-        ctx.fillStyle = PALETTE.grass3;
-        const patchX = Math.floor(seededRandom(wx * 2, wy) * s * 0.6);
-        const patchY = Math.floor(seededRandom(wx, wy * 2) * s * 0.6);
-        ctx.fillRect(x + patchX, y + patchY, s * 0.3, s * 0.3);
-    }
+    // 2. Texture (Blades of grass)
+    renderGrassTexture(x, y, s, wx, wy, 1.0);
 
-    // Small grass tufts (animated)
-    if (tile === TILES.GRASS && seededRandom(wx * 3, wy * 3) > 0.6) {
-        const windOffset = Math.sin(pixelTime * 2 + wx * 0.5) * 1;
-
-        ctx.fillStyle = PALETTE.leaf2;
-        // Tuft 1
-        ctx.fillRect(x + s * 0.2 + windOffset, y + s * 0.65, 2, s * 0.2);
-        ctx.fillRect(x + s * 0.25 + windOffset, y + s * 0.6, 2, s * 0.25);
-        ctx.fillRect(x + s * 0.22 + windOffset, y + s * 0.7, 2, s * 0.15);
-
-        // Tuft 2
-        ctx.fillRect(x + s * 0.65 - windOffset, y + s * 0.55, 2, s * 0.25);
-        ctx.fillRect(x + s * 0.7 - windOffset, y + s * 0.6, 2, s * 0.2);
-    }
-
-    // Occasional flowers
-    if (seededRandom(wx * 7, wy * 11) > 0.92) {
-        const fx = x + s * 0.3 + seededRandom(wx * 5, wy) * s * 0.4;
-        const fy = y + s * 0.4 + seededRandom(wx, wy * 5) * s * 0.3;
-        const flowerColors = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff'];
-        const flowerColor = flowerColors[Math.floor(seededRandom(wx * 13, wy * 17) * 4)];
+    // 3. Flowers (Animated swaying)
+    if (tile === TILES.GRASS && seededRandom(wx * 2, wy * 2) > 0.9) {
+        const fx = x + s * 0.2 + seededRandom(wx, wy) * s * 0.6;
+        const fy = y + s * 0.2 + seededRandom(wy, wx) * s * 0.6;
+        const sway = Math.sin(pixelTime * 3 + wx) * 2;
 
         // Stem
-        ctx.fillStyle = PALETTE.leaf1;
-        ctx.fillRect(fx + 1, fy + 3, 2, 5);
+        ctx.fillStyle = '#1b5e20';
+        ctx.fillRect(fx + 1 + sway, fy + 4, 1, 4);
 
         // Petals
-        ctx.fillStyle = flowerColor;
-        ctx.fillRect(fx, fy, 4, 4);
-        ctx.fillStyle = '#ffff88';
-        ctx.fillRect(fx + 1, fy + 1, 2, 2);
+        const cols = ['#ffeb3b', '#f44336', '#e91e63', '#9c27b0'];
+        const colIndex = Math.floor(seededRandom(wx * 3, wy * 3) * cols.length);
+        ctx.fillStyle = cols[colIndex];
+        ctx.fillRect(fx + sway, fy, 3, 3);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(fx + 1 + sway, fy + 1, 1, 1);
     }
+}
 
-    // Grid lines (subtle, like Pokemon)
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
-    ctx.fillRect(x, y, s, 1);
-    ctx.fillRect(x, y, 1, s);
+function renderGrassTexture(x, y, s, wx, wy, density) {
+    const count = Math.floor(3 * density);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)'; // Darker green/shadow
+
+    for (let i = 0; i < count; i++) {
+        // Deterministic positions based on world coordinates
+        const ox = (seededRandom(wx + i, wy) * 0.8 + 0.1) * s;
+        const oy = (seededRandom(wx, wy + i) * 0.8 + 0.1) * s;
+
+        // Draw little "V" shapes
+        ctx.fillRect(x + ox, y + oy, 1, 2);
+        ctx.fillRect(x + ox + 2, y + oy, 1, 2);
+        ctx.fillRect(x + ox + 1, y + oy + 2, 1, 1);
+    }
 }
 
 function renderWater(x, y, s, wx, wy) {
-    // Animated water with waves
-    const time = pixelTime * 2;
-    const wavePhase = Math.sin(time + wx * 0.8 + wy * 0.6);
+    const time = pixelTime;
 
-    // Deep water base
-    ctx.fillStyle = wavePhase > 0 ? PALETTE.water1 : PALETTE.water3;
+    // 1. Deep Water Base
+    ctx.fillStyle = PALETTE.water1 || '#29b6f6';
     ctx.fillRect(x, y, s, s);
 
-    // Wave highlights
-    ctx.fillStyle = PALETTE.water2;
-    const waveY = Math.floor(s * 0.3 + wavePhase * 3);
-    ctx.fillRect(x + s * 0.1, y + waveY, s * 0.3, 2);
-    ctx.fillRect(x + s * 0.5, y + waveY + 4, s * 0.35, 2);
+    // 2. Moving Waves (Sine wave patterns)
+    ctx.fillStyle = PALETTE.water2 || '#4fc3f7'; // Lighter
 
-    // Sparkle
-    if (Math.sin(time * 3 + wx * wy) > 0.8) {
+    // Create varying wave offsets based on world position
+    const offset1 = Math.sin(time * 2 + wx * 0.5) * (s * 0.2);
+    const offset2 = Math.cos(time * 1.5 + wy * 0.5) * (s * 0.2);
+
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(x, y + s * 0.2 + offset1, s, s * 0.2);
+    ctx.fillRect(x, y + s * 0.6 + offset2, s, s * 0.15);
+    ctx.globalAlpha = 1.0;
+
+    // 3. Sparkles/Glints (Randomly appearing)
+    // We use time in the seed so they twinkle
+    const twinkleSeed = Math.floor(time * 5) + wx + wy;
+    if (Math.sin(twinkleSeed) > 0.95) {
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(x + s * 0.4, y + s * 0.4, 2, 2);
+        const tx = x + (Math.sin(twinkleSeed * 123) * 0.5 + 0.5) * s;
+        const ty = y + (Math.cos(twinkleSeed * 321) * 0.5 + 0.5) * s;
+        ctx.fillRect(tx, ty, 2, 2);
     }
 
-    // Dark edges for depth
-    ctx.fillStyle = PALETTE.waterDeep;
-    ctx.fillRect(x, y, s, 2);
-    ctx.fillRect(x, y, 2, s);
+    // 4. Foam edge (Simple border logic)
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    if (wx % 2 === 0) ctx.fillRect(x, y, 2, s); // Just visual variety
 }
 
 function renderWoodenFloor(x, y, s, wx, wy) {
-    // Base wood color with variation for distinct tiles
-    const pattern = seededRandom(wx, wy);
-    const woodBase = pattern > 0.5 ? PALETTE.wood2 : '#7a4a2a';
-    ctx.fillStyle = woodBase;
+    // 1. Base Planks
+    ctx.fillStyle = PALETTE.wood2 || '#8d6e63';
     ctx.fillRect(x, y, s, s);
 
-    // Subtle grid lines (synced with world grass grid)
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    // 2. Plank Separation Lines
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    // Draw 3 horizontal planks per tile
+    const plankH = s / 3;
     ctx.fillRect(x, y, s, 1);
-    ctx.fillRect(x, y, 1, s);
+    ctx.fillRect(x, y + plankH, s, 1);
+    ctx.fillRect(x, y + plankH * 2, s, 1);
 
-    // Wood grain detail (horizontal planks look)
-    ctx.fillStyle = PALETTE.wood3;
-    ctx.globalAlpha = 0.3;
-    ctx.fillRect(x + 2, y + s * 0.3, s - 4, 1);
-    ctx.fillRect(x + 2, y + s * 0.6, s - 4, 1);
-    ctx.globalAlpha = 1.0;
+    // 3. Staggered Vertical Lines (The brick/plank pattern)
+    // Offset every other row
+    const rowOffset = (Math.floor(wy) % 2 === 0) ? 0 : s / 2;
 
-    // Nail heads at corners
-    ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(x + 2, y + 2, 2, 2);
-    ctx.fillRect(x + s - 4, y + 2, 2, 2);
-    ctx.fillRect(x + 2, y + s - 4, 2, 2);
-    ctx.fillRect(x + s - 4, y + s - 4, 2, 2);
+    if (seededRandom(wx, wy) > 0.5) {
+        ctx.fillRect(x + s / 2, y, 1, plankH);
+        ctx.fillRect(x, y + plankH, 1, plankH);
+    } else {
+        ctx.fillRect(x + s * 0.3, y + plankH * 2, 1, plankH);
+    }
+
+    // 4. Nail Heads
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(x + 2, y + plankH / 2, 1, 1);
+    ctx.fillRect(x + s - 2, y + plankH * 1.5, 1, 1);
 }
 
 function renderObjectLayer(tile, sx, sy, wx, wy) {
@@ -154,233 +150,196 @@ function renderObjectLayer(tile, sx, sy, wx, wy) {
     const px = Math.floor(sx);
     const py = Math.floor(sy);
 
+    // Pass specific context to helpers
     switch (tile) {
-        case TILES.TREE:
-            renderTree(px, py, s, wx, wy);
-            break;
-
-        case TILES.BUSH:
-            renderBush(px, py, s, wx, wy);
-            break;
-
-        case TILES.STONE:
-            renderStone(px, py, s, wx, wy);
-            break;
-
-        case TILES.IRON:
-            renderIronOre(px, py, s, wx, wy);
-            break;
-
-        case TILES.WALL:
-            renderWall(px, py, s, wx, wy);
-            break;
-
-        case TILES.CAMPFIRE:
-            renderCampfire(px, py, s);
-            break;
-
-        case TILES.HOUSE:
-            renderHouse(px, py, s);
-            break;
-
-        case TILES.FARM:
-            renderFarm(px, py, s);
-            break;
-
-        case TILES.TOWER:
-            renderTower(px, py, s);
-            break;
-
-        case TILES.CANNON:
-            renderCannon(px, py, s);
-            break;
-
-        case TILES.WORKBENCH:
-            renderWorkbench(px, py, s);
-            break;
-
-        case TILES.CHEST:
-            renderChest(px, py, s);
-            break;
-
-        case TILES.BED:
-            renderBed(px, py, s);
-            break;
-
-        case TILES.SPIKES:
-            renderSpikes(px, py, s);
-            break;
+        case TILES.TREE: renderTree(px, py, s, wx, wy); break;
+        case TILES.BUSH: renderBush(px, py, s, wx, wy); break;
+        case TILES.STONE: renderStone(px, py, s, wx, wy); break;
+        case TILES.IRON: renderIronOre(px, py, s, wx, wy); break;
+        // ... (Other buildings use your previous building code) ...
+        case TILES.WALL: renderWall(px, py, s, wx, wy); break;
+        case TILES.CAMPFIRE: renderCampfire(px, py, s); break;
+        case TILES.HOUSE: renderHouse(px, py, s); break;
+        case TILES.FARM: renderFarm(px, py, s); break;
+        case TILES.TOWER: renderTower(px, py, s); break;
+        case TILES.CANNON: renderCannon(px, py, s); break;
+        case TILES.WORKBENCH: renderWorkbench(px, py, s); break;
+        case TILES.CHEST: renderChest(px, py, s); break;
+        case TILES.BED: renderBed(px, py, s); break;
+        case TILES.SPIKES: renderSpikes(px, py, s); break;
     }
 }
 
 function renderTree(x, y, s, wx, wy) {
-    // Tree shadow
+    // Wind Effect
+    const sway = Math.sin(pixelTime * 2 + wx) * 2;
+
+    // 1. Shadow (Oval at base)
     ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
     ctx.beginPath();
-    ctx.ellipse(x + s / 2 + 3, y + s * 0.9, s * 0.35, s * 0.12, 0, 0, Math.PI * 2);
+    ctx.ellipse(x + s / 2, y + s - 2, s * 0.3, s * 0.15, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Trunk with outline
-    ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(x + s * 0.35, y + s * 0.5, s * 0.3, s * 0.5);
-    ctx.fillStyle = PALETTE.wood1;
-    ctx.fillRect(x + s * 0.37, y + s * 0.52, s * 0.26, s * 0.46);
+    // 2. Trunk
+    const trunkW = s * 0.25;
+    const trunkH = s * 0.4;
+    const trunkX = x + s / 2 - trunkW / 2;
+    const trunkY = y + s - trunkH - 4; // Moved up slightly
 
-    // Trunk highlight
-    ctx.fillStyle = PALETTE.wood2;
-    ctx.fillRect(x + s * 0.4, y + s * 0.55, s * 0.08, s * 0.35);
+    ctx.fillStyle = '#5d4037'; // Dark Wood
+    ctx.fillRect(trunkX + sway * 0.2, trunkY, trunkW, trunkH);
 
-    // Trunk bark detail
-    ctx.fillStyle = PALETTE.wood3;
-    ctx.fillRect(x + s * 0.55, y + s * 0.6, 2, s * 0.15);
-    ctx.fillRect(x + s * 0.45, y + s * 0.75, 2, s * 0.12);
+    // Bark texture
+    ctx.fillStyle = '#3e2723';
+    ctx.fillRect(trunkX + 2 + sway * 0.2, trunkY + 4, 2, 8);
+    ctx.fillRect(trunkX + trunkW - 4 + sway * 0.2, trunkY + 12, 2, 6);
 
-    // Leaves - multiple layers for depth
-    // Wind animation
-    const wind = Math.sin(pixelTime * 1.5 + wx * 0.3) * 2;
+    // 3. Leaves (Clustered Circles for fluffiness)
+    const centerX = x + s / 2 + sway;
+    const centerY = y + s * 0.35;
+    const r = s * 0.35;
 
-    // Back leaves (darker)
-    ctx.fillStyle = PALETTE.outline;
+    // We draw 3 blobs: Top, Left-Bottom, Right-Bottom
+
+    // Draw Outline/Dark Layer first
+    ctx.fillStyle = '#1b5e20'; // Darkest Green
+    drawBlob(ctx, centerX, centerY + 4, r + 2);
+    drawBlob(ctx, centerX - r * 0.6, centerY + r * 0.6, r * 0.7 + 2);
+    drawBlob(ctx, centerX + r * 0.6, centerY + r * 0.6, r * 0.7 + 2);
+
+    // Draw Main Body
+    ctx.fillStyle = PALETTE.leaf1 || '#2e7d32';
+    drawBlob(ctx, centerX, centerY, r);
+    drawBlob(ctx, centerX - r * 0.6, centerY + r * 0.5, r * 0.7);
+    drawBlob(ctx, centerX + r * 0.6, centerY + r * 0.5, r * 0.7);
+
+    // Highlights (Sunlight from top left)
+    ctx.fillStyle = PALETTE.leaf2 || '#4caf50'; // Lighter
+    drawBlob(ctx, centerX - r * 0.3, centerY - r * 0.3, r * 0.4);
+    drawBlob(ctx, centerX - r * 0.8, centerY + r * 0.4, r * 0.3);
+}
+
+// Helper to draw rough circles
+function drawBlob(ctx, x, y, r) {
     ctx.beginPath();
-    ctx.arc(x + s / 2 + wind * 0.5, y + s * 0.35, s * 0.42, 0, Math.PI * 2);
+    ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
-
-    ctx.fillStyle = PALETTE.leaf3;
-    ctx.beginPath();
-    ctx.arc(x + s / 2 + wind * 0.5, y + s * 0.35, s * 0.4, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Middle leaves
-    ctx.fillStyle = PALETTE.leaf1;
-    ctx.beginPath();
-    ctx.arc(x + s / 2 + wind * 0.7, y + s * 0.28, s * 0.32, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Top leaves (lighter)
-    ctx.fillStyle = PALETTE.leaf2;
-    ctx.beginPath();
-    ctx.arc(x + s / 2 + wind, y + s * 0.2, s * 0.22, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Leaf highlights (pixel dots)
-    ctx.fillStyle = '#4ade4a';
-    const highlights = [[0.35, 0.25], [0.55, 0.18], [0.65, 0.32], [0.4, 0.4]];
-    highlights.forEach(([hx, hy]) => {
-        ctx.fillRect(x + s * hx + wind, y + s * hy, 2, 2);
-    });
 }
 
 function renderBush(x, y, s, wx, wy) {
-    const wind = Math.sin(pixelTime * 2 + wx) * 1;
+    const sway = Math.sin(pixelTime * 3 + wx * 2);
 
     // Shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
     ctx.beginPath();
-    ctx.ellipse(x + s / 2, y + s * 0.85, s * 0.35, s * 0.1, 0, 0, Math.PI * 2);
+    ctx.ellipse(x + s / 2, y + s - 4, s * 0.35, s * 0.1, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Outline
-    ctx.fillStyle = PALETTE.outline;
+    // Base Foliage (Irregular shape)
+    ctx.fillStyle = '#2e7d32';
     ctx.beginPath();
-    ctx.arc(x + s / 2 + wind * 0.5, y + s * 0.55, s * 0.38, 0, Math.PI * 2);
+    ctx.arc(x + s / 2 + sway, y + s * 0.6, s * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x + s * 0.3 + sway, y + s * 0.75, s * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x + s * 0.7 + sway, y + s * 0.75, s * 0.25, 0, Math.PI * 2);
     ctx.fill();
 
-    // Main bush body
-    ctx.fillStyle = PALETTE.leaf3;
+    // Highlight
+    ctx.fillStyle = '#4caf50';
     ctx.beginPath();
-    ctx.arc(x + s / 2 + wind * 0.5, y + s * 0.55, s * 0.35, 0, Math.PI * 2);
+    ctx.arc(x + s / 2 + sway - 2, y + s * 0.55, s * 0.15, 0, Math.PI * 2);
     ctx.fill();
 
-    // Highlight areas
-    ctx.fillStyle = PALETTE.leaf1;
-    ctx.beginPath();
-    ctx.arc(x + s * 0.4 + wind, y + s * 0.48, s * 0.18, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = PALETTE.leaf2;
-    ctx.beginPath();
-    ctx.arc(x + s * 0.55 + wind, y + s * 0.45, s * 0.12, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Berry details (occasional)
-    if (seededRandom(wx * 5, wy * 7) > 0.7) {
-        ctx.fillStyle = '#e74c3c';
-        ctx.fillRect(x + s * 0.35, y + s * 0.55, 3, 3);
-        ctx.fillRect(x + s * 0.55, y + s * 0.6, 3, 3);
-        ctx.fillRect(x + s * 0.48, y + s * 0.48, 3, 3);
+    // Berries (Red dots)
+    if (seededRandom(wx, wy) > 0.4) {
+        ctx.fillStyle = '#e53935'; // Red
+        ctx.fillRect(x + s * 0.4 + sway, y + s * 0.6, 4, 4);
+        ctx.fillRect(x + s * 0.6 + sway, y + s * 0.7, 4, 4);
+        ctx.fillRect(x + s * 0.5 + sway, y + s * 0.8, 3, 3);
     }
 }
 
 function renderStone(x, y, s, wx, wy) {
+    const cx = x + s / 2;
+    const cy = y + s / 2 + 5;
+
     // Shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();
-    ctx.ellipse(x + s / 2 + 2, y + s * 0.85, s * 0.38, s * 0.1, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy + s * 0.35, s * 0.4, s * 0.15, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Outline
-    ctx.fillStyle = PALETTE.outline;
+    // Rock Shape (Grey)
+    ctx.fillStyle = PALETTE.stone1 || '#757575';
     ctx.beginPath();
-    ctx.moveTo(x + s * 0.12, y + s * 0.88);
-    ctx.lineTo(x + s * 0.25, y + s * 0.22);
-    ctx.lineTo(x + s * 0.72, y + s * 0.18);
-    ctx.lineTo(x + s * 0.88, y + s * 0.82);
+    ctx.moveTo(cx - s * 0.3, cy + s * 0.3); // Bottom Left
+    ctx.lineTo(cx - s * 0.35, cy - s * 0.1); // Mid Left
+    ctx.lineTo(cx - s * 0.1, cy - s * 0.35); // Top Left
+    ctx.lineTo(cx + s * 0.2, cy - s * 0.3); // Top Right
+    ctx.lineTo(cx + s * 0.35, cy + s * 0.2); // Mid Right
+    ctx.lineTo(cx + s * 0.1, cy + s * 0.35); // Bottom Right
     ctx.closePath();
     ctx.fill();
 
-    // Main stone body
-    ctx.fillStyle = PALETTE.stone1;
+    // Highlight (Top edge)
+    ctx.fillStyle = PALETTE.stone2 || '#9e9e9e';
     ctx.beginPath();
-    ctx.moveTo(x + s * 0.15, y + s * 0.85);
-    ctx.lineTo(x + s * 0.28, y + s * 0.25);
-    ctx.lineTo(x + s * 0.7, y + s * 0.2);
-    ctx.lineTo(x + s * 0.85, y + s * 0.8);
-    ctx.closePath();
+    ctx.moveTo(cx - s * 0.25, cy - s * 0.1);
+    ctx.lineTo(cx - s * 0.1, cy - s * 0.25);
+    ctx.lineTo(cx + s * 0.15, cy - s * 0.2);
+    ctx.lineTo(cx, cy);
     ctx.fill();
 
-    // Highlight
-    ctx.fillStyle = PALETTE.stone2;
-    ctx.beginPath();
-    ctx.moveTo(x + s * 0.3, y + s * 0.3);
-    ctx.lineTo(x + s * 0.4, y + s * 0.25);
-    ctx.lineTo(x + s * 0.55, y + s * 0.35);
-    ctx.lineTo(x + s * 0.45, y + s * 0.45);
-    ctx.closePath();
-    ctx.fill();
-
-    // Cracks
-    ctx.fillStyle = PALETTE.stoneDark;
-    ctx.fillRect(x + s * 0.4, y + s * 0.5, 2, s * 0.2);
-    ctx.fillRect(x + s * 0.55, y + s * 0.6, s * 0.15, 1);
+    // Moss (Bottom)
+    if (seededRandom(wx, wy) > 0.3) {
+        ctx.fillStyle = '#4caf50';
+        ctx.fillRect(cx - s * 0.2, cy + s * 0.2, 4, 4);
+        ctx.fillRect(cx, cy + s * 0.25, 6, 4);
+    }
 }
 
 function renderIronOre(x, y, s, wx, wy) {
-    // Shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.fillRect(x + s * 0.15 + 2, y + s * 0.35 + 2, s * 0.72, s * 0.55);
+    // 1. Base Rock (Darker than normal stone)
+    const cx = x + s / 2;
+    const cy = y + s / 2 + 5;
 
-    // Outline
-    ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(x + s * 0.12, y + s * 0.27, s * 0.76, s * 0.61);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; // Shadow
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + s * 0.35, s * 0.4, s * 0.15, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Stone base
-    ctx.fillStyle = '#4a4a5a';
-    ctx.fillRect(x + s * 0.15, y + s * 0.3, s * 0.7, s * 0.55);
+    ctx.fillStyle = '#546e7a'; // Blue-grey rock
+    ctx.beginPath();
+    ctx.moveTo(cx - s * 0.35, cy + s * 0.3);
+    ctx.lineTo(cx - s * 0.2, cy - s * 0.3);
+    ctx.lineTo(cx + s * 0.3, cy - s * 0.2);
+    ctx.lineTo(cx + s * 0.35, cy + s * 0.25);
+    ctx.closePath();
+    ctx.fill();
 
-    // Iron veins
-    ctx.fillStyle = '#8888aa';
-    ctx.fillRect(x + s * 0.22, y + s * 0.38, s * 0.2, s * 0.18);
-    ctx.fillRect(x + s * 0.52, y + s * 0.52, s * 0.22, s * 0.2);
-    ctx.fillRect(x + s * 0.35, y + s * 0.62, s * 0.18, s * 0.15);
+    // 2. Iron Crystals (Protruding)
+    const crystals = [
+        { ox: -0.1, oy: -0.1, w: 0.15, h: 0.15 },
+        { ox: 0.15, oy: 0.05, w: 0.12, h: 0.12 },
+        { ox: -0.05, oy: 0.15, w: 0.1, h: 0.1 }
+    ];
 
-    // Shiny spots
-    ctx.fillStyle = '#b0b0cc';
-    ctx.fillRect(x + s * 0.25, y + s * 0.4, 3, 3);
-    ctx.fillRect(x + s * 0.58, y + s * 0.55, 3, 3);
+    // Crystal shine animation
+    const shine = Math.abs(Math.sin(pixelTime * 3 + wx));
 
-    // Sparkle animation
-    if (Math.sin(pixelTime * 4 + wx * wy) > 0.7) {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(x + s * 0.45, y + s * 0.45, 2, 2);
-    }
+    crystals.forEach(c => {
+        const px = cx + c.ox * s;
+        const py = cy + c.oy * s;
+
+        // Dark Base of crystal
+        ctx.fillStyle = '#d7ccc8';
+        ctx.fillRect(px, py, s * c.w, s * c.h);
+
+        // Shiny Top
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.4 + shine * 0.4})`;
+        ctx.fillRect(px + 2, py + 2, s * c.w - 4, s * c.h - 4);
+    });
 }
