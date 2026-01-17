@@ -343,21 +343,9 @@ function updatePlayerMovement(dt) {
                     }, 100);
                 }
                 player.stuckTime = 0;
-
-        // Pet taming approach integration
-        if (typeof PetSystem !== 'undefined') {
-            const moveAngle = Math.atan2(moveY, moveX);
-            PetSystem.approachTamingPet(moveAngle);
-        }
             }
         } else {
             player.stuckTime = 0;
-
-        // Pet taming approach integration
-        if (typeof PetSystem !== 'undefined') {
-            const moveAngle = Math.atan2(moveY, moveX);
-            PetSystem.approachTamingPet(moveAngle);
-        }
         }
     }
 }
@@ -811,7 +799,7 @@ function startGame() {
 
     // Spawn initial wildlife
     if (typeof PetSystem !== 'undefined') {
-        PetSystem.spawnNearbyWildAnimals(player.x, player.y, 6);
+        PetSystem.spawnNearbyAnimals(player.x, player.y, 5);
     }
 
     // Start game loop
@@ -880,7 +868,7 @@ function resetGameState() {
     if (typeof activeTowers !== 'undefined') activeTowers.clear();
 
     // Reset New Systems State
-    if (typeof PetSystem !== 'undefined') PetSystem.setState({ pets: [], wildAnimals: [], nextPetId: 1 });
+    if (typeof PetSystem !== 'undefined') PetSystem.reset();
     if (typeof FarmingSystem !== 'undefined') FarmingSystem.setState({ farmTiles: [], livestock: [], processors: [] });
     if (typeof ShelterSystem !== 'undefined') ShelterSystem.setState({ shelters: [], fires: [] });
     if (typeof CookingSystem !== 'undefined') CookingSystem.setState({ activeRecipes: [], nutritionState: null });

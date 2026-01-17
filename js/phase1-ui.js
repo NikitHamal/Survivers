@@ -3,7 +3,7 @@
 // ============================================
 // Toggle functions for the new Phase 1 system menus
 
-// Pet Menu
+// Pet Menu - Now shows wild animals in the area
 let petMenuOpen = false;
 function togglePetMenu() {
     const menu = document.getElementById('petMenu');
@@ -22,85 +22,64 @@ function updatePetMenuUI() {
     if (!list) return;
 
     if (typeof PetSystem === 'undefined') {
-        list.innerHTML = '<p>Pet system not available</p>';
+        list.innerHTML = '<p>Animal system not available</p>';
         return;
     }
 
-    const pets = PetSystem.getAllPets();
-    if (pets.length === 0) {
-        list.innerHTML = '<p>No pets yet. Find and tame wild animals!</p>';
+    const animals = PetSystem.getWildAnimals();
+    if (animals.length === 0) {
+        list.innerHTML = '<p style="color:#888;text-align:center;">No animals nearby.<br>Animals spawn naturally as you explore!</p>';
         return;
     }
 
-    let html = '';
-    for (const pet of pets) {
+    // Group animals by type
+    const grouped = {};
+    for (const animal of animals) {
+        const typeId = animal.type?.id || 'unknown';
+        if (!grouped[typeId]) {
+            grouped[typeId] = { type: animal.type, count: 0, animals: [] };
+        }
+        grouped[typeId].count++;
+        grouped[typeId].animals.push(animal);
+    }
+
+    let html = '<div style="margin-bottom:10px;color:#aaa;font-size:12px;">Animals in the area:</div>';
+    for (const [typeId, data] of Object.entries(grouped)) {
+        const type = data.type;
+        const dropsText = type.drops ? type.drops.map(d => d.item).join(', ') : 'none';
+
         html += `
-            <div class="pet-card" onclick="showPetDetails(${pet.id})">
-                <div class="pet-icon">${pet.type.icon}</div>
+            <div class="pet-card" style="cursor:default;">
+                <div class="pet-icon" style="font-size:24px;">${type.icon || '🐾'}</div>
                 <div class="pet-info">
-                    <div class="pet-name">${pet.type.name} (Lv.${pet.level})</div>
-                    <div class="pet-stats">
-                        <span class="pet-stat">❤️ ${Math.floor(pet.health)}/${pet.getMaxHealth()}</span>
-                        <span class="pet-stat">🍖 ${Math.floor(pet.hunger)}</span>
-                        <span class="pet-stat">😊 ${Math.floor(pet.happiness)}</span>
+                    <div class="pet-name">${type.name || typeId} x${data.count}</div>
+                    <div class="pet-stats" style="color:#888;font-size:11px;">
+                        <span>HP: ${type.baseStats?.health || '?'}</span>
+                        <span>Drops: ${dropsText}</span>
                     </div>
-                    <div class="pet-health-bar"><div class="pet-health-fill" style="width:${(pet.health/pet.getMaxHealth())*100}%"></div></div>
                 </div>
             </div>
         `;
     }
+
+    html += '<div style="margin-top:15px;padding:10px;background:rgba(0,0,0,0.3);border-radius:6px;font-size:11px;color:#888;">';
+    html += '<b>Tip:</b> Click or press Space near animals to attack them and collect resources!';
+    html += '</div>';
+
     list.innerHTML = html;
 }
 
+// These functions are no longer used but kept for compatibility
 function showPetDetails(petId) {
-    const details = document.getElementById('petDetails');
-    if (!details) return;
-
-    if (typeof PetSystem === 'undefined') return;
-
-    const pet = PetSystem.getPet(petId);
-    if (!pet) return;
-
-    details.style.display = 'block';
-    details.innerHTML = `
-        <h4>${pet.type.icon} ${pet.type.name}</h4>
-        <p>Level: ${pet.level} | XP: ${pet.xp}/${pet.xpToLevel}</p>
-        <p>Health: ${Math.floor(pet.health)}/${pet.getMaxHealth()}</p>
-        <p>Damage: ${pet.getDamage()} | Speed: ${pet.getSpeed()}</p>
-        <p>Hunger: ${Math.floor(pet.hunger)}/100</p>
-        <p>Happiness: ${Math.floor(pet.happiness)}/100</p>
-        <p>Trust: ${Math.floor(pet.trust)}/100</p>
-        <p>Loyalty: ${Math.floor(pet.loyalty)}/100</p>
-        <div class="pet-equipment">
-            <div class="equipment-slot" onclick="unequipPetItem(${pet.id}, 'collar')">${pet.equipment.collar?.icon || '📿'}</div>
-            <div class="equipment-slot" onclick="unequipPetItem(${pet.id}, 'saddle')">${pet.equipment.saddle?.icon || '🪑'}</div>
-            <div class="equipment-slot" onclick="unequipPetItem(${pet.id}, 'armor')">${pet.equipment.armor?.icon || '🛡️'}</div>
-        </div>
-        <div class="pet-actions">
-            <button class="pet-action-btn" onclick="petCommand(${pet.id}, 'follow')">Follow</button>
-            <button class="pet-action-btn" onclick="petCommand(${pet.id}, 'stay')">Stay</button>
-            <button class="pet-action-btn" onclick="petCommand(${pet.id}, 'attack')">Attack</button>
-            <button class="pet-action-btn" onclick="petCommand(${pet.id}, 'gather')">Gather</button>
-        </div>
-    `;
+    // No longer applicable - we don't have tamed pets
 }
 
 function unequipPetItem(petId, slot) {
-    if (typeof PetSystem === 'undefined') return;
-    const pet = PetSystem.getPet(petId);
-    if (pet) {
-        pet.unequip(slot);
-        showPetDetails(petId);
-    }
+    // No longer applicable
 }
 
 function petCommand(petId, command) {
-    if (typeof PetSystem === 'undefined') return;
-    const pet = PetSystem.getPet(petId);
-    if (pet) {
-        pet.setState(command);
-        showPetDetails(petId);
-    }
+    // No longer applicable
 }
 
 // Farm Menu
@@ -201,7 +180,7 @@ function updateFarmMenuUI() {
                             <span>${proc.type.name}</span>
                             <span class="processor-status ${proc.isRunning ? 'running' : ''}">${proc.isRunning ? 'Running' : 'Idle'}</span>
                         </div>
-                        ${proc.isRunning ? `<div class="processor-progress"><div class="processor-progress-fill" style="width:${(proc.processProgress/proc.currentProcess?.time||0)*100}%"></div></div>` : ''}
+                        ${proc.isRunning ? `<div class="processor-progress"><div class="processor-progress-fill" style="width:${(proc.processProgress / proc.currentProcess?.time || 0) * 100}%"></div></div>` : ''}
                     </div>
                 `;
             }
@@ -228,7 +207,7 @@ function harvestCrop(tileId) {
             for (const [item, amount] of Object.entries(outputs)) {
                 resources[item] = (resources[item] || 0) + amount;
             }
-            showNotification(`Harvested: ${Object.entries(outputs).map(([k,v]) => `${v} ${k}`).join(', ')}`, []);
+            showNotification(`Harvested: ${Object.entries(outputs).map(([k, v]) => `${v} ${k}`).join(', ')}`, []);
             updateFarmMenuUI();
         }
     }
@@ -314,7 +293,7 @@ function updateShelterMenuUI() {
         } else {
             fireMgmt.innerHTML = fires.map(f => `
                 <div class="fire-status">
-                    ${f.type.icon} ${f.type.name} - ${Math.floor((f.fuel/f.maxFuel)*100)}% fuel
+                    ${f.type.icon} ${f.type.name} - ${Math.floor((f.fuel / f.maxFuel) * 100)}% fuel
                 </div>
             `).join('');
         }
@@ -345,10 +324,10 @@ function updateCookingMenuUI() {
     document.getElementById('nutritionCarbs').textContent = `${nutrition.carbs.current} / ${nutrition.carbs.target}`;
     document.getElementById('nutritionVitamins').textContent = `${nutrition.vitamins.current} / ${nutrition.vitamins.target}`;
 
-    document.getElementById('caloriesFill').style.width = `${Math.min(100, (nutrition.calories.current/nutrition.calories.target)*100)}%`;
-    document.getElementById('proteinFill').style.width = `${Math.min(100, (nutrition.protein.current/nutrition.protein.target)*100)}%`;
-    document.getElementById('carbsFill').style.width = `${Math.min(100, (nutrition.carbs.current/nutrition.carbs.target)*100)}%`;
-    document.getElementById('vitaminsFill').style.width = `${Math.min(100, (nutrition.vitamins.current/nutrition.vitamins.target)*100)}%`;
+    document.getElementById('caloriesFill').style.width = `${Math.min(100, (nutrition.calories.current / nutrition.calories.target) * 100)}%`;
+    document.getElementById('proteinFill').style.width = `${Math.min(100, (nutrition.protein.current / nutrition.protein.target) * 100)}%`;
+    document.getElementById('carbsFill').style.width = `${Math.min(100, (nutrition.carbs.current / nutrition.carbs.target) * 100)}%`;
+    document.getElementById('vitaminsFill').style.width = `${Math.min(100, (nutrition.vitamins.current / nutrition.vitamins.target) * 100)}%`;
 
     const balance = document.getElementById('nutritionBalance');
     balance.textContent = nutrition.balance > 0.8 ? 'Optimal' : nutrition.balance > 0.6 ? 'Good' : nutrition.balance > 0.4 ? 'Poor' : 'Bad';

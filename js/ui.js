@@ -435,29 +435,22 @@ function renderMinimap() {
         }
     });
 
-    // Pets & Animals
+    // Animals
     if (typeof PetSystem !== 'undefined') {
-        // Tamed Pets
-        minimapCtx.fillStyle = '#00ffff';
-        const pets = PetSystem.getAllPets();
-        if (pets) {
-            pets.forEach(p => {
-                const dx = p.x - player.x;
-                const dy = p.y - player.y;
-                if (Math.abs(dx) < range && Math.abs(dy) < range) {
-                    minimapCtx.fillRect(halfSize + dx * mapScale - 1, halfSize + dy * mapScale - 1, 2, 2);
-                }
-            });
-        }
-
-        // Wild Animals
         minimapCtx.fillStyle = '#ffa500';
-        const wild = PetSystem.getWildAnimals();
-        if (wild) {
-            wild.forEach(a => {
+        const animals = PetSystem.getWildAnimals();
+        if (animals) {
+            animals.forEach(a => {
                 const dx = a.x - player.x;
                 const dy = a.y - player.y;
                 if (Math.abs(dx) < range && Math.abs(dy) < range) {
+                    // Different colors for different animal types
+                    const typeId = a.type?.id || 'sheep';
+                    if (typeId === 'slime') {
+                        minimapCtx.fillStyle = '#44ff44';
+                    } else {
+                        minimapCtx.fillStyle = '#ffa500';
+                    }
                     minimapCtx.fillRect(halfSize + dx * mapScale - 1, halfSize + dy * mapScale - 1, 2, 2);
                 }
             });
@@ -662,10 +655,3 @@ function interact() {
     }
 }
 
-function attackAction() {
-    // Set space key as pressed in input state to trigger attack in game loop
-    if (typeof inputState !== 'undefined') {
-        inputState.space = true;
-        // The attack logic in game.js handles the actual hit
-    }
-}

@@ -104,30 +104,30 @@ function debugMaxStats() {
     if (typeof showNotification === 'function') showNotification("Max Level & Stats!");
 }
 
-function debugTameNearby() {
+function debugSpawnAnimals() {
     if (typeof PetSystem !== 'undefined') {
-        const wild = PetSystem.getWildAnimals();
-        let count = 0;
-        for (const animal of [...wild]) {
-            const dist = Math.sqrt((animal.x - player.x) ** 2 + (animal.y - player.y) ** 2);
-            if (dist < 15) {
-                PetSystem.addPet(animal.type.id);
-                // Remove from wild array manually
-                const idx = wild.indexOf(animal);
-                if (idx !== -1) wild.splice(idx, 1);
-                count++;
-            }
-        }
-        if (typeof showNotification === 'function') showNotification(`Debug: ${count} wild animals tamed!`);
+        const count = PetSystem.spawnNearbyAnimals(player.x, player.y, 5);
+        if (typeof showNotification === 'function') showNotification(`Debug: Spawned ${count.length} animals nearby!`);
     }
 }
 
 function debugSpawnPet() {
+    // Now spawns a random animal near the player
     if (typeof PetSystem !== 'undefined') {
-        const types = ['WOLF', 'BEAR', 'TIGER', 'HAWK', 'FOX', 'HORSE', 'CAMEL', 'BOAR', 'BEAVER'];
+        const types = ['SHEEP', 'CHICKEN', 'PIG', 'SLIME'];
         const randomType = types[Math.floor(Math.random() * types.length)];
-        PetSystem.addPet(randomType);
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 3 + Math.random() * 3;
+        const x = player.x + Math.cos(angle) * dist;
+        const y = player.y + Math.sin(angle) * dist;
+        PetSystem.spawnAnimal(randomType, x, y);
+        if (typeof showNotification === 'function') showNotification(`Debug: Spawned a ${randomType.toLowerCase()}!`);
     }
+}
+
+// Alias for backwards compatibility
+function debugTameNearby() {
+    debugSpawnAnimals();
 }
 
 function debugUnlockAll() {
