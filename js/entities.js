@@ -41,7 +41,35 @@ const SURVIVOR_CONFIG = {
     WOODCUTTER_RATE: 0.024,
     MINER_STONE_RATE: 0.018,
     MINER_IRON_CHANCE: 0.3,
-    MEDIC_HEAL_RATE: 0.018
+    MEDIC_HEAL_RATE: 0.018,
+
+    // Role efficiency bonuses (accumulated with experience)
+    SKILL_GAIN_RATE: 0.01,          // Skill points gained per work cycle
+    MAX_SKILL_LEVEL: 10,            // Max skill level per role
+    SKILL_EFFICIENCY_BONUS: 0.08,   // 8% bonus per skill level
+
+    // Role-specific bonuses at max level
+    ROLE_BONUSES: {
+        Woodcutter: { yieldBonus: 1, speedBonus: 0.5 },
+        Miner: { yieldBonus: 1, ironChanceBonus: 0.2 },
+        Farmer: { yieldBonus: 2, growthBonus: 0.3 },
+        Guard: { damageBonus: 5, rangeBonus: 1.5 },
+        Soldier: { damageBonus: 8, armorBonus: 0.2 },
+        Hunter: { damageBonus: 6, critBonus: 0.15 },
+        Medic: { healBonus: 5, rangeBonus: 2 },
+        Builder: { speedBonus: 0.5, costReduction: 0.1 },
+        Scout: { visionBonus: 3, speedBonus: 0.8 }
+    },
+
+    // Night behavior
+    NIGHT_AGGRESSION_BOOST: 1.3,    // Combat roles more aggressive at night
+    NIGHT_WORK_PENALTY: 0.5,        // Workers less efficient at night
+
+    // Morale effects
+    LOW_MORALE_THRESHOLD: 30,
+    LOW_MORALE_PENALTY: 0.5,
+    HIGH_MORALE_THRESHOLD: 80,
+    HIGH_MORALE_BONUS: 1.25
 };
 
 const TOWER_CONFIG = {
@@ -89,16 +117,50 @@ function spawnZombie() {
 
         const health = ZOMBIE_CONFIG.BASE_HEALTH + currentDay * ZOMBIE_CONFIG.HEALTH_PER_DAY;
 
+        // Determine variant based on day and time
+        const variant = getRandomZombieVariant ? getRandomZombieVariant(currentDay, isNight) : 'normal';
+        const variantData = (typeof ZOMBIE_VARIANTS !== 'undefined' && ZOMBIE_VARIANTS[variant])
+            ? ZOMBIE_VARIANTS[variant]
+            : { size: 1.0, speed: 1.0, name: 'Zombie' };
+
+        // Apply variant modifiers to stats
+        const sizeMultiplier = variantData.size || 1.0;
+        const speedMultiplier = variantData.speed || 1.0;
+        const baseSpeed = ZOMBIE_CONFIG.BASE_SPEED + currentDay * ZOMBIE_CONFIG.SPEED_PER_DAY;
+        const baseDamage = ZOMBIE_CONFIG.BASE_DAMAGE + currentDay * ZOMBIE_CONFIG.DAMAGE_PER_DAY;
+
+        // Variant stat adjustments
+        let healthMult = 1.0, damageMult = 1.0;
+        if (variant === 'brute') { healthMult = 2.0; damageMult = 1.5; }
+        else if (variant === 'runner') { healthMult = 0.7; damageMult = 0.8; }
+        else if (variant === 'spitter') { healthMult = 0.9; damageMult = 1.2; }
+        else if (variant === 'crawler') { healthMult = 0.6; damageMult = 0.6; }
+        else if (variant === 'screamer') { healthMult = 0.8; damageMult = 0.5; }
+        else if (variant === 'armored') { healthMult = 1.8; damageMult = 1.0; }
+        else if (variant === 'boss') { healthMult = 5.0; damageMult = 2.5; }
+
+        const finalHealth = Math.floor(health * healthMult * sizeMultiplier);
+
         const newZombie = {
             x: zx,
             y: zy,
-            health: health,
-            maxHealth: health,
-            speed: ZOMBIE_CONFIG.BASE_SPEED + currentDay * ZOMBIE_CONFIG.SPEED_PER_DAY,
-            damage: ZOMBIE_CONFIG.BASE_DAMAGE + currentDay * ZOMBIE_CONFIG.DAMAGE_PER_DAY,
+            health: finalHealth,
+            maxHealth: finalHealth,
+            speed: baseSpeed * speedMultiplier,
+            damage: Math.floor(baseDamage * damageMult),
             attackCooldown: 0,
             frame: 0,
-            animTimer: 0
+            animTimer: Math.random() * 10, // Randomize start animation
+            variant: variant,
+            // Visual properties from variant
+            bodyColor: variantData.bodyColor,
+            skinColor: variantData.skinColor,
+            eyeColor: variantData.eyeColor,
+            // Variant-specific flags for AI
+            canSpit: variant === 'spitter',
+            canScream: variant === 'screamer',
+            isBoss: variant === 'boss',
+            armorReduction: variant === 'armored' ? 0.5 : 0 // 50% damage reduction
         };
 
         // Attach AI
@@ -316,6 +378,98 @@ function updateSurvivors(dt) {
         if (isCombatRole(s.role) || isFollowing) { // Followers also fight self-defense
             updateSurvivorCombat(s, dt);
         }
+
+        // Update morale periodically
+        updateSurvivorMorale(s, dt);
+    }
+}
+
+// Update survivor morale based on various conditions
+function updateSurvivorMorale(s, dt) {
+    if (!s.moraleTimer) s.moraleTimer = 0;
+    s.moraleTimer += dt;
+
+    // Only update morale every 5 seconds to avoid overhead
+    if (s.moraleTimer < 5) return;
+    s.moraleTimer = 0;
+
+    let moraleChange = 0;
+
+    // Base decay
+    moraleChange -= 0.5;
+
+    // Positive factors
+    if (s.health >= s.maxHealth * 0.8) moraleChange += 0.3; // Healthy
+    if (s.state === 'WORKING') moraleChange += 0.2; // Has purpose
+    if (typeof resources !== 'undefined' && resources.food > 20) moraleChange += 0.2; // Food security
+
+    // Check for nearby survivors (social bonus)
+    let nearbySurvivors = 0;
+    for (const other of survivors) {
+        if (other === s || other.isPlayer) continue;
+        const dist = Math.sqrt((other.x - s.x) ** 2 + (other.y - s.y) ** 2);
+        if (dist < 5) nearbySurvivors++;
+    }
+    if (nearbySurvivors > 0 && s.personality !== 'loner') {
+        moraleChange += Math.min(nearbySurvivors * 0.15, 0.5);
+    }
+    if (nearbySurvivors === 0 && s.personality === 'loner') {
+        moraleChange += 0.3; // Loners like solitude
+    }
+
+    // Negative factors
+    if (s.health < s.maxHealth * 0.3) moraleChange -= 1.0; // Badly hurt
+    if (typeof isNight !== 'undefined' && isNight) moraleChange -= 0.3; // Night fear
+    if (typeof resources !== 'undefined' && resources.food < 5) moraleChange -= 0.5; // Hunger fear
+
+    // Check for nearby zombies (fear)
+    if (typeof zombies !== 'undefined') {
+        let nearbyZombies = 0;
+        for (const z of zombies) {
+            const dist = Math.sqrt((z.x - s.x) ** 2 + (z.y - s.y) ** 2);
+            if (dist < 8) nearbyZombies++;
+        }
+        if (nearbyZombies > 0) {
+            const fearPenalty = Math.min(nearbyZombies * 0.3, 1.5);
+            if (s.personality === 'brave') {
+                moraleChange -= fearPenalty * 0.5; // Brave characters less affected
+            } else if (s.personality === 'cautious') {
+                moraleChange -= fearPenalty * 1.5; // Cautious more affected
+            } else {
+                moraleChange -= fearPenalty;
+            }
+        }
+    }
+
+    // Check for shelter bonus
+    if (typeof ShelterSystem !== 'undefined') {
+        const comfort = ShelterSystem.getComfortAt?.(s.x, s.y) || 0;
+        moraleChange += comfort * 0.1;
+    }
+
+    // Apply morale change
+    s.morale = Math.max(0, Math.min(100, s.morale + moraleChange));
+
+    // Low morale effects
+    if (s.morale < 20 && Math.random() < 0.05) {
+        // Chance to become idle (refusing to work)
+        if (s.state === 'WORKING' || s.state === 'MOVING') {
+            s.state = 'IDLE';
+            s.taskTarget = null;
+            s.path = null;
+            if (typeof showNotification === 'function' && Math.random() < 0.2) {
+                showNotification(`${s.name} is demoralized and stopped working.`, []);
+            }
+        }
+    }
+
+    // High morale occasional bonus
+    if (s.morale > 90 && Math.random() < 0.1) {
+        // Chance for inspiration - small skill boost
+        const role = s.role;
+        if (role && role !== 'None' && s.skills?.[role] !== undefined) {
+            gainSkillExperience(s, 0.2);
+        }
     }
 }
 
@@ -342,6 +496,88 @@ function initializeSurvivorProperties(s) {
     if (s.attackCooldown === undefined) s.attackCooldown = 0;
     if (s.maxHealth === undefined) s.maxHealth = 50;
     if (s.state === undefined) s.state = 'IDLE';
+
+    // Skill system - survivors gain experience in their role
+    if (s.skills === undefined) {
+        s.skills = {
+            Woodcutter: 0, Miner: 0, Farmer: 0,
+            Guard: 0, Soldier: 0, Hunter: 0,
+            Medic: 0, Builder: 0, Scout: 0
+        };
+    }
+
+    // Morale system
+    if (s.morale === undefined) s.morale = 70;
+
+    // Work efficiency multiplier (calculated from skills and morale)
+    if (s.efficiency === undefined) s.efficiency = 1.0;
+
+    // Combat stats
+    if (s.critChance === undefined) s.critChance = 0.05;
+    if (s.armorReduction === undefined) s.armorReduction = 0;
+
+    // Personality traits (affect behavior)
+    if (s.personality === undefined) {
+        const traits = ['brave', 'cautious', 'diligent', 'lazy', 'friendly', 'loner'];
+        s.personality = traits[Math.floor(Math.random() * traits.length)];
+    }
+}
+
+// Calculate survivor efficiency based on skills, morale, and time of day
+function calculateSurvivorEfficiency(s) {
+    const role = s.role || 'None';
+    const skillLevel = s.skills?.[role] || 0;
+    const skillBonus = 1 + (skillLevel * SURVIVOR_CONFIG.SKILL_EFFICIENCY_BONUS);
+
+    // Morale effects
+    let moraleMultiplier = 1.0;
+    if (s.morale < SURVIVOR_CONFIG.LOW_MORALE_THRESHOLD) {
+        moraleMultiplier = SURVIVOR_CONFIG.LOW_MORALE_PENALTY;
+    } else if (s.morale > SURVIVOR_CONFIG.HIGH_MORALE_THRESHOLD) {
+        moraleMultiplier = SURVIVOR_CONFIG.HIGH_MORALE_BONUS;
+    }
+
+    // Time of day effects
+    let timeMultiplier = 1.0;
+    if (typeof isNight !== 'undefined' && isNight) {
+        if (isCombatRole(role)) {
+            timeMultiplier = SURVIVOR_CONFIG.NIGHT_AGGRESSION_BOOST;
+        } else if (role !== 'None') {
+            timeMultiplier = SURVIVOR_CONFIG.NIGHT_WORK_PENALTY;
+        }
+    }
+
+    // Personality modifiers
+    let personalityMultiplier = 1.0;
+    if (s.personality === 'diligent') personalityMultiplier = 1.15;
+    else if (s.personality === 'lazy') personalityMultiplier = 0.85;
+
+    s.efficiency = skillBonus * moraleMultiplier * timeMultiplier * personalityMultiplier;
+    return s.efficiency;
+}
+
+// Gain skill experience when performing role tasks
+function gainSkillExperience(s, amount = 1) {
+    const role = s.role;
+    if (!role || role === 'None' || !s.skills) return;
+
+    const currentLevel = s.skills[role] || 0;
+    if (currentLevel >= SURVIVOR_CONFIG.MAX_SKILL_LEVEL) return;
+
+    s.skills[role] = Math.min(
+        SURVIVOR_CONFIG.MAX_SKILL_LEVEL,
+        currentLevel + (SURVIVOR_CONFIG.SKILL_GAIN_RATE * amount)
+    );
+
+    // Level up notification
+    const newLevel = Math.floor(s.skills[role]);
+    const oldLevel = Math.floor(currentLevel);
+    if (newLevel > oldLevel && typeof showNotification === 'function') {
+        showNotification(`${s.name} reached ${role} level ${newLevel}!`, []);
+        if (typeof spawnParticles === 'function') {
+            spawnParticles(s.x, s.y, '#ffd700', 8);
+        }
+    }
 }
 
 function updateSurvivorIdleMode(s, dt) {
@@ -541,38 +777,133 @@ function performTaskWork(s) {
     const tx = Math.floor(s.taskTarget.x);
     const ty = Math.floor(s.taskTarget.y);
 
+    // Calculate efficiency for yield bonuses
+    const efficiency = calculateSurvivorEfficiency(s);
+    const skillLevel = Math.floor(s.skills?.[s.role] || 0);
+    const roleBonus = SURVIVOR_CONFIG.ROLE_BONUSES[s.role] || {};
+
+    // Gain skill experience
+    gainSkillExperience(s, 1);
+
     switch (s.role) {
-        case 'Woodcutter':
-            resources.wood += 2;
-            setTile(tx, ty, TILES.GRASS); // Harvest the tree
-            spawnParticles(s.x, s.y - 0.5, '#deb887', 5);
-            addDamageNumber(s.x, s.y - 0.5, '+2', '#deb887');
+        case 'Woodcutter': {
+            // Base yield + skill bonus
+            const baseYield = 2;
+            const skillYield = Math.floor(skillLevel * (roleBonus.yieldBonus || 0) / SURVIVOR_CONFIG.MAX_SKILL_LEVEL);
+            const totalYield = Math.ceil((baseYield + skillYield) * efficiency);
+
+            resources.wood += totalYield;
+            setTile(tx, ty, TILES.GRASS);
+            spawnParticles(s.x, s.y - 0.5, '#deb887', 5 + skillLevel);
+            addDamageNumber(s.x, s.y - 0.5, `+${totalYield}`, '#deb887');
+
+            // Chance to find bonus items at high skill
+            if (skillLevel >= 5 && Math.random() < 0.1 * efficiency) {
+                resources.food = (resources.food || 0) + 1;
+                addDamageNumber(s.x, s.y - 0.8, '+1 fruit', '#ff6b6b');
+            }
             break;
-        case 'Miner':
+        }
+        case 'Miner': {
             const currentTile = getTile(tx, ty);
             if (currentTile === TILES.STONE || currentTile === TILES.IRON) {
-                resources.stone += 2;
-                if (currentTile === TILES.IRON || Math.random() < 0.4) resources.iron++;
-                setTile(tx, ty, TILES.GRASS); // Harvest the stone/ore
-                spawnParticles(s.x, s.y - 0.5, '#a9a9a9', 5);
-                addDamageNumber(s.x, s.y - 0.5, '+2', '#a9a9a9');
+                const baseStone = 2;
+                const skillYield = Math.floor(skillLevel * (roleBonus.yieldBonus || 0) / SURVIVOR_CONFIG.MAX_SKILL_LEVEL);
+                const totalStone = Math.ceil((baseStone + skillYield) * efficiency);
+
+                resources.stone += totalStone;
+
+                // Iron chance with skill bonus
+                const ironChance = 0.4 + (skillLevel * (roleBonus.ironChanceBonus || 0) / SURVIVOR_CONFIG.MAX_SKILL_LEVEL);
+                if (currentTile === TILES.IRON || Math.random() < ironChance) {
+                    const ironYield = Math.ceil(efficiency);
+                    resources.iron += ironYield;
+                    addDamageNumber(s.x + 0.3, s.y - 0.5, `+${ironYield}`, '#c0c0c0');
+                }
+
+                setTile(tx, ty, TILES.GRASS);
+                spawnParticles(s.x, s.y - 0.5, '#a9a9a9', 5 + skillLevel);
+                addDamageNumber(s.x, s.y - 0.5, `+${totalStone}`, '#a9a9a9');
+
+                // Rare gem find at high skill
+                if (skillLevel >= 7 && Math.random() < 0.05) {
+                    resources.gem = (resources.gem || 0) + 1;
+                    addDamageNumber(s.x, s.y - 1, '+1 gem!', '#ff00ff');
+                    spawnParticles(s.x, s.y, '#ff00ff', 10);
+                }
             }
             break;
-        case 'Farmer':
-            resources.food += 1;
-            // Farms stay but give food
-            spawnParticles(s.x, s.y - 0.5, '#90ee90', 5);
-            addDamageNumber(s.x, s.y - 0.5, '+1', '#90ee90');
+        }
+        case 'Farmer': {
+            const baseYield = 1;
+            const skillYield = Math.floor(skillLevel * (roleBonus.yieldBonus || 0) / SURVIVOR_CONFIG.MAX_SKILL_LEVEL);
+            const totalYield = Math.ceil((baseYield + skillYield) * efficiency);
+
+            resources.food += totalYield;
+            spawnParticles(s.x, s.y - 0.5, '#90ee90', 5 + skillLevel);
+            addDamageNumber(s.x, s.y - 0.5, `+${totalYield}`, '#90ee90');
+
+            // High skill farmers can produce seeds
+            if (skillLevel >= 4 && Math.random() < 0.15) {
+                resources.seed = (resources.seed || 0) + 1;
+                addDamageNumber(s.x + 0.3, s.y - 0.5, '+1 seed', '#8b4513');
+            }
+
+            // Expert farmers boost nearby crop growth
+            if (skillLevel >= 8) {
+                boostNearbyCrops(s.x, s.y, roleBonus.growthBonus || 0.3);
+            }
             break;
-        case 'Medic':
-            // Heal nearby target
+        }
+        case 'Medic': {
+            const baseHeal = 10;
+            const skillHeal = Math.floor(skillLevel * (roleBonus.healBonus || 0) / SURVIVOR_CONFIG.MAX_SKILL_LEVEL);
+            const totalHeal = Math.ceil((baseHeal + skillHeal) * efficiency);
+
             if (s.taskTarget.health !== undefined) {
-                s.taskTarget.health = Math.min(s.taskTarget.maxHealth, s.taskTarget.health + 10);
-                showNotification(`Medic ${s.name} healed someone!`);
+                s.taskTarget.health = Math.min(s.taskTarget.maxHealth, s.taskTarget.health + totalHeal);
+                showNotification(`Medic ${s.name} healed for ${totalHeal}!`);
+                spawnParticles(s.taskTarget.x, s.taskTarget.y, '#00ff00', 5);
             } else if (distSq(s, player) < 4) {
-                player.health = Math.min(player.maxHealth, player.health + 10);
+                player.health = Math.min(player.maxHealth, player.health + totalHeal);
+                addDamageNumber(player.x, player.y - 0.5, `+${totalHeal}`, '#00ff00');
+            }
+
+            // High skill medics can cure debuffs
+            if (skillLevel >= 6 && s.taskTarget?.debuffs) {
+                s.taskTarget.debuffs = [];
+                addDamageNumber(s.taskTarget.x, s.taskTarget.y - 0.8, 'Cured!', '#00ffff');
             }
             break;
+        }
+        case 'Guard':
+        case 'Soldier':
+        case 'Hunter': {
+            // Combat roles gain experience from fighting (handled in combat function)
+            // But if they complete a patrol, they gain a little experience
+            gainSkillExperience(s, 0.5);
+            break;
+        }
+    }
+
+    // Morale boost from successful work
+    s.morale = Math.min(100, (s.morale || 70) + 1);
+}
+
+// Helper function to boost nearby crops
+function boostNearbyCrops(x, y, bonus) {
+    if (typeof FarmingSystem === 'undefined') return;
+
+    const range = 3;
+    for (let dy = -range; dy <= range; dy++) {
+        for (let dx = -range; dx <= range; dx++) {
+            const cropX = Math.floor(x) + dx;
+            const cropY = Math.floor(y) + dy;
+            // FarmingSystem would handle the boost
+            if (typeof FarmingSystem.boostCrop === 'function') {
+                FarmingSystem.boostCrop(cropX, cropY, bonus);
+            }
+        }
     }
 }
 
@@ -590,13 +921,79 @@ function updateSurvivorCombat(s, dt) {
         return;
     }
 
+    // Calculate combat efficiency
+    const efficiency = calculateSurvivorEfficiency(s);
+    const role = s.role || 'None';
+    const skillLevel = Math.floor(s.skills?.[role] || 0);
+    const roleBonus = SURVIVOR_CONFIG.ROLE_BONUSES[role] || {};
+
+    // Calculate combat range with potential skill bonus
+    let combatRange = SURVIVOR_CONFIG.COMBAT_RANGE;
+    if (roleBonus.rangeBonus) {
+        combatRange += (skillLevel / SURVIVOR_CONFIG.MAX_SKILL_LEVEL) * roleBonus.rangeBonus;
+    }
+
+    // Calculate base damage with skill bonus
+    let baseDamage = SURVIVOR_CONFIG.COMBAT_DAMAGE;
+    if (roleBonus.damageBonus) {
+        baseDamage += (skillLevel / SURVIVOR_CONFIG.MAX_SKILL_LEVEL) * roleBonus.damageBonus;
+    }
+
+    // Apply efficiency multiplier
+    baseDamage = Math.floor(baseDamage * efficiency);
+
+    // Calculate critical hit chance
+    let critChance = s.critChance || 0.05;
+    if (roleBonus.critBonus) {
+        critChance += (skillLevel / SURVIVOR_CONFIG.MAX_SKILL_LEVEL) * roleBonus.critBonus;
+    }
+
+    // Find and attack nearest zombie
+    let nearestZombie = null;
+    let nearestDist = combatRange;
+
     for (const z of zombies) {
         const dist = Math.sqrt((z.x - s.x) ** 2 + (z.y - s.y) ** 2);
-        if (dist < SURVIVOR_CONFIG.COMBAT_RANGE) {
-            z.health -= SURVIVOR_CONFIG.COMBAT_DAMAGE;
-            addDamageNumber(z.x, z.y - 0.3, SURVIVOR_CONFIG.COMBAT_DAMAGE, '#00ff00');
-            s.attackCooldown = SURVIVOR_CONFIG.COMBAT_COOLDOWN;
-            break;
+        if (dist < nearestDist) {
+            nearestDist = dist;
+            nearestZombie = z;
+        }
+    }
+
+    if (nearestZombie) {
+        // Check for critical hit
+        const isCrit = Math.random() < critChance;
+        const finalDamage = isCrit ? Math.floor(baseDamage * 2) : baseDamage;
+
+        const actualDamage = applyZombieDamage(nearestZombie, finalDamage);
+
+        // Visual feedback
+        const damageColor = isCrit ? '#ffff00' : '#00ff00';
+        const damageText = isCrit ? `${actualDamage}!` : actualDamage;
+        addDamageNumber(nearestZombie.x, nearestZombie.y - 0.3, damageText, damageColor);
+
+        if (isCrit && typeof spawnParticles === 'function') {
+            spawnParticles(nearestZombie.x, nearestZombie.y, '#ffff00', 6);
+        }
+
+        // Gain combat skill experience
+        if (isCombatRole(role)) {
+            gainSkillExperience(s, 0.5);
+        }
+
+        // Calculate cooldown (faster with skill)
+        let cooldown = SURVIVOR_CONFIG.COMBAT_COOLDOWN;
+        if (roleBonus.speedBonus) {
+            cooldown *= (1 - (skillLevel / SURVIVOR_CONFIG.MAX_SKILL_LEVEL) * roleBonus.speedBonus * 0.3);
+        }
+        s.attackCooldown = Math.max(0.2, cooldown);
+
+        // Face the enemy
+        s.direction = nearestZombie.x > s.x ? 0 : 2;
+
+        // Brave personality: occasional double attack
+        if (s.personality === 'brave' && Math.random() < 0.1) {
+            s.attackCooldown *= 0.5;
         }
     }
 }
@@ -691,9 +1088,13 @@ function updateProjectiles(dt) {
     projectiles = projectiles.filter(p => {
         p.x += p.vx * dt;
         p.y += p.vy * dt;
-        p.life -= dt;
 
-        if (p.life <= 0) return false;
+        // Handle lifetime (some use 'life', some use 'lifetime')
+        if (p.life !== undefined) p.life -= dt;
+        if (p.lifetime !== undefined) p.lifetime -= dt;
+
+        const lifeRemaining = p.life ?? p.lifetime ?? 1;
+        if (lifeRemaining <= 0) return false;
 
         const maxDist = 100;
         if (Math.abs(p.x - player.x) > maxDist || Math.abs(p.y - player.y) > maxDist) {
@@ -702,12 +1103,87 @@ function updateProjectiles(dt) {
 
         const tile = getTile(p.x, p.y);
         if (isSolid(tile) && tile !== TILES.WATER && tile !== TILES.TOWER && tile !== TILES.CANNON) {
-            spawnParticles(p.x, p.y, '#888888', 3);
+            spawnParticles(p.x, p.y, p.color || '#888888', 3);
             return false;
         }
 
+        // Check if this is an enemy projectile (from zombies)
+        if (p.type === 'acid' || p.owner?.ai) {
+            return !checkEnemyProjectileCollision(p);
+        }
+
+        // Friendly projectile - check zombie collision
         return !checkProjectileZombieCollision(p);
     });
+}
+
+// Check enemy projectile (acid spit, etc.) collision with player and survivors
+function checkEnemyProjectileCollision(p) {
+    const hitRadius = 0.5 + (p.radius || 0.2);
+    const hitRadiusSq = hitRadius * hitRadius;
+
+    // Check player collision
+    if (typeof player !== 'undefined' && !window.godMode) {
+        const dx = player.x - p.x;
+        const dy = player.y - p.y;
+        const distSq = dx * dx + dy * dy;
+
+        if (distSq < hitRadiusSq) {
+            const damage = p.damage || 10;
+            player.health -= damage;
+
+            if (typeof spawnParticles === 'function') {
+                spawnParticles(player.x, player.y, p.color || '#7fff00', 6);
+            }
+            if (typeof addDamageNumber === 'function') {
+                addDamageNumber(player.x, player.y - 0.5, damage, p.color || '#7fff00');
+            }
+            if (typeof triggerScreenShake === 'function') {
+                triggerScreenShake(3);
+            }
+
+            // Acid leaves a lingering effect (optional - slow/DoT)
+            if (p.type === 'acid') {
+                // Apply acid debuff visual
+                if (typeof spawnParticles === 'function') {
+                    for (let i = 0; i < 3; i++) {
+                        setTimeout(() => {
+                            if (typeof spawnParticles === 'function') {
+                                spawnParticles(player.x, player.y, '#7fff00', 2);
+                            }
+                        }, i * 200);
+                    }
+                }
+            }
+            return true;
+        }
+    }
+
+    // Check survivor collision
+    if (typeof survivors !== 'undefined') {
+        for (const s of survivors) {
+            if (s.isPlayer || s.health <= 0) continue;
+
+            const dx = s.x - p.x;
+            const dy = s.y - p.y;
+            const distSq = dx * dx + dy * dy;
+
+            if (distSq < hitRadiusSq) {
+                const damage = p.damage || 10;
+                s.health -= damage;
+
+                if (typeof spawnParticles === 'function') {
+                    spawnParticles(s.x, s.y, p.color || '#7fff00', 5);
+                }
+                if (typeof addDamageNumber === 'function') {
+                    addDamageNumber(s.x, s.y - 0.5, damage, p.color || '#7fff00');
+                }
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 function checkProjectileZombieCollision(p) {
@@ -720,9 +1196,9 @@ function checkProjectileZombieCollision(p) {
         const distSq = dx * dx + dy * dy;
 
         if (distSq < hitRadiusSq) {
-            z.health -= p.damage;
+            const damage = applyZombieDamage(z, p.damage);
             spawnParticles(z.x, z.y, '#ff8844', 4);
-            addDamageNumber(z.x, z.y - 0.5, p.damage, '#ffff00');
+            addDamageNumber(z.x, z.y - 0.5, damage, '#ffff00');
 
             if (p.isCannon) {
                 applySplashDamage(p.x, p.y, z, p.damage);
@@ -742,14 +1218,22 @@ function applySplashDamage(x, y, hitZombie, baseDamage) {
         const dx = z.x - x;
         const dy = z.y - y;
         if (dx * dx + dy * dy < splashRadiusSq) {
-            z.health -= splashDamage;
-            addDamageNumber(z.x, z.y - 0.3, splashDamage, '#ffaa00');
+            const actualDamage = applyZombieDamage(z, splashDamage);
+            addDamageNumber(z.x, z.y - 0.3, actualDamage, '#ffaa00');
         }
     }
 }
 
 function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
+}
+
+// Apply damage to zombie with armor reduction
+function applyZombieDamage(zombie, baseDamage) {
+    const reduction = zombie.armorReduction || 0;
+    const finalDamage = Math.max(1, Math.floor(baseDamage * (1 - reduction)));
+    zombie.health -= finalDamage;
+    return finalDamage;
 }
 
 function checkLevelUp() {
@@ -781,3 +1265,176 @@ function validateDeltaTime(dt) {
     }
     return Math.min(dt, 0.1);
 }
+
+// ============================================
+// SURVIVOR UTILITY FUNCTIONS
+// ============================================
+
+// Get survivor stats for UI display
+function getSurvivorStats(s) {
+    if (!s || s.isPlayer) return null;
+
+    const role = s.role || 'None';
+    const skillLevel = Math.floor(s.skills?.[role] || 0);
+    const skillProgress = ((s.skills?.[role] || 0) % 1) * 100;
+    const efficiency = calculateSurvivorEfficiency(s);
+
+    return {
+        name: s.name || 'Survivor',
+        role: role,
+        health: s.health,
+        maxHealth: s.maxHealth,
+        morale: Math.floor(s.morale || 70),
+        personality: s.personality || 'unknown',
+        skillLevel: skillLevel,
+        skillProgress: skillProgress.toFixed(0),
+        efficiency: (efficiency * 100).toFixed(0),
+        state: s.state || 'IDLE',
+        isFollowing: s.isFollowing || false,
+        allSkills: s.skills || {}
+    };
+}
+
+// Get team-wide bonuses from all survivors
+function getTeamBonuses() {
+    const bonuses = {
+        totalWorkers: 0,
+        totalCombat: 0,
+        avgMorale: 0,
+        woodBonus: 0,
+        stoneBonus: 0,
+        foodBonus: 0,
+        combatDamageBonus: 0,
+        healingBonus: 0,
+        visionBonus: 0
+    };
+
+    if (!Array.isArray(survivors)) return bonuses;
+
+    let totalMorale = 0;
+    let survivorCount = 0;
+
+    for (const s of survivors) {
+        if (s.isPlayer) continue;
+        survivorCount++;
+        totalMorale += s.morale || 70;
+
+        const role = s.role;
+        const skillLevel = s.skills?.[role] || 0;
+
+        if (isCombatRole(role)) {
+            bonuses.totalCombat++;
+            bonuses.combatDamageBonus += skillLevel * 0.5;
+        } else if (role !== 'None') {
+            bonuses.totalWorkers++;
+        }
+
+        // Role-specific team bonuses
+        switch (role) {
+            case 'Woodcutter':
+                bonuses.woodBonus += 0.05 + skillLevel * 0.01;
+                break;
+            case 'Miner':
+                bonuses.stoneBonus += 0.05 + skillLevel * 0.01;
+                break;
+            case 'Farmer':
+                bonuses.foodBonus += 0.05 + skillLevel * 0.01;
+                break;
+            case 'Medic':
+                bonuses.healingBonus += 0.1 + skillLevel * 0.02;
+                break;
+            case 'Scout':
+                bonuses.visionBonus += 1 + skillLevel * 0.3;
+                break;
+        }
+    }
+
+    bonuses.avgMorale = survivorCount > 0 ? Math.floor(totalMorale / survivorCount) : 0;
+
+    return bonuses;
+}
+
+// Get formatted skill display for a survivor
+function getSkillDisplay(s) {
+    if (!s || !s.skills) return [];
+
+    const skillList = [];
+    for (const [skill, level] of Object.entries(s.skills)) {
+        if (level > 0) {
+            skillList.push({
+                name: skill,
+                level: Math.floor(level),
+                progress: ((level % 1) * 100).toFixed(0),
+                isCurrentRole: skill === s.role
+            });
+        }
+    }
+
+    // Sort by level, then by current role
+    skillList.sort((a, b) => {
+        if (a.isCurrentRole !== b.isCurrentRole) return b.isCurrentRole ? 1 : -1;
+        return b.level - a.level;
+    });
+
+    return skillList;
+}
+
+// Check if any survivor has a specific role
+function hasRoleInTeam(role) {
+    if (!Array.isArray(survivors)) return false;
+    return survivors.some(s => !s.isPlayer && s.role === role);
+}
+
+// Get count of survivors by role
+function getRoleCounts() {
+    const counts = {};
+    if (!Array.isArray(survivors)) return counts;
+
+    for (const s of survivors) {
+        if (s.isPlayer) continue;
+        const role = s.role || 'None';
+        counts[role] = (counts[role] || 0) + 1;
+    }
+    return counts;
+}
+
+// Apply team morale boost (from events, buildings, etc.)
+function boostTeamMorale(amount, duration = 0) {
+    if (!Array.isArray(survivors)) return;
+
+    for (const s of survivors) {
+        if (s.isPlayer) continue;
+        s.morale = Math.min(100, (s.morale || 70) + amount);
+    }
+
+    if (typeof showNotification === 'function' && amount > 5) {
+        showNotification(`Team morale ${amount > 0 ? 'boosted' : 'dropped'} by ${Math.abs(amount)}!`, []);
+    }
+}
+
+// Get best survivor for a specific role
+function getBestSurvivorForRole(role) {
+    if (!Array.isArray(survivors)) return null;
+
+    let best = null;
+    let bestLevel = -1;
+
+    for (const s of survivors) {
+        if (s.isPlayer || s.health <= 0) continue;
+        const level = s.skills?.[role] || 0;
+        if (level > bestLevel) {
+            bestLevel = level;
+            best = s;
+        }
+    }
+    return best;
+}
+
+// Export functions for global access
+window.getSurvivorStats = getSurvivorStats;
+window.getTeamBonuses = getTeamBonuses;
+window.getSkillDisplay = getSkillDisplay;
+window.hasRoleInTeam = hasRoleInTeam;
+window.getRoleCounts = getRoleCounts;
+window.boostTeamMorale = boostTeamMorale;
+window.getBestSurvivorForRole = getBestSurvivorForRole;

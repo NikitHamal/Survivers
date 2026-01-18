@@ -9,7 +9,11 @@ function renderGroundLayer(tile, sx, sy, wx, wy) {
     const buildingTiles = [
         TILES.HOUSE, TILES.CHEST, TILES.WORKBENCH, TILES.BED,
         TILES.TOWER, TILES.CANNON, TILES.SPIKES, TILES.WALL,
-        TILES.WALL_BROKEN, TILES.CAMPFIRE, TILES.FARM, TILES.HOUSE_BASE
+        TILES.WALL_BROKEN, TILES.CAMPFIRE, TILES.FARM, TILES.HOUSE_BASE,
+        // New buildings
+        TILES.ARMORY, TILES.HOSPITAL, TILES.BREWERY, TILES.WELL,
+        TILES.STABLE, TILES.MINE, TILES.BARRICADE, TILES.WATCHTOWER,
+        TILES.STORAGE, TILES.ALTAR, TILES.FORGE, TILES.GARDEN
     ];
 
     // Check if there's a building here and get its stored background tile
@@ -162,23 +166,42 @@ function renderObjectLayer(tile, sx, sy, wx, wy) {
     const px = Math.floor(sx);
     const py = Math.floor(sy);
 
-    // Pass specific context to helpers
+    // Get building level for upgradeable structures
+    let level = 1;
+    if (typeof BuildingUpgradeSystem !== 'undefined') {
+        level = BuildingUpgradeSystem.getBuildingLevel(wx, wy);
+    }
+
+    // Pass specific context to helpers - buildings now receive level for visual upgrades
     switch (tile) {
         case TILES.TREE: renderTree(px, py, s, wx, wy); break;
         case TILES.BUSH: renderBush(px, py, s, wx, wy); break;
         case TILES.STONE: renderStone(px, py, s, wx, wy); break;
         case TILES.IRON: renderIronOre(px, py, s, wx, wy); break;
-        // ... (Other buildings use your previous building code) ...
-        case TILES.WALL: renderWall(px, py, s, wx, wy); break;
-        case TILES.CAMPFIRE: renderCampfire(px, py, s); break;
-        case TILES.HOUSE: renderHouse(px, py, s); break;
-        case TILES.FARM: renderFarm(px, py, s); break;
-        case TILES.TOWER: renderTower(px, py, s); break;
-        case TILES.CANNON: renderCannon(px, py, s); break;
-        case TILES.WORKBENCH: renderWorkbench(px, py, s); break;
-        case TILES.CHEST: renderChest(px, py, s); break;
-        case TILES.BED: renderBed(px, py, s); break;
-        case TILES.SPIKES: renderSpikes(px, py, s); break;
+        // Buildings with 5 upgrade levels
+        case TILES.WALL: renderWall(px, py, s, wx, wy, level); break;
+        case TILES.CAMPFIRE: renderCampfire(px, py, s, wx, wy, level); break;
+        case TILES.HOUSE: renderHouse(px, py, s, wx, wy, level); break;
+        case TILES.FARM: renderFarm(px, py, s, wx, wy, level); break;
+        case TILES.TOWER: renderTower(px, py, s, wx, wy, level); break;
+        case TILES.CANNON: renderCannon(px, py, s, wx, wy, level); break;
+        case TILES.WORKBENCH: renderWorkbench(px, py, s, wx, wy, level); break;
+        case TILES.CHEST: renderChest(px, py, s, wx, wy, level); break;
+        case TILES.BED: renderBed(px, py, s, wx, wy, level); break;
+        case TILES.SPIKES: renderSpikes(px, py, s, wx, wy, level); break;
+        // New buildings from buildings-extra.js
+        case TILES.ARMORY: renderArmory(px, py, s, wx, wy, level); break;
+        case TILES.HOSPITAL: renderHospital(px, py, s, wx, wy, level); break;
+        case TILES.BREWERY: renderBrewery(px, py, s, wx, wy, level); break;
+        case TILES.WELL: renderWellBuilding(px, py, s, wx, wy, level); break;
+        case TILES.STABLE: renderStable(px, py, s, wx, wy, level); break;
+        case TILES.MINE: renderMine(px, py, s, wx, wy, level); break;
+        case TILES.BARRICADE: renderBarricade(px, py, s, wx, wy, level); break;
+        case TILES.WATCHTOWER: renderWatchtower(px, py, s, wx, wy, level); break;
+        case TILES.STORAGE: renderStorage(px, py, s, wx, wy, level); break;
+        case TILES.ALTAR: renderAltar(px, py, s, wx, wy, level); break;
+        case TILES.FORGE: renderForge(px, py, s, wx, wy, level); break;
+        case TILES.GARDEN: renderGarden(px, py, s, wx, wy, level); break;
     }
 }
 
