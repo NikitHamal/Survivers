@@ -57,6 +57,9 @@ let buildMode = false;
 let selectedBuilding = null;
 let buildPreviewX = 0, buildPreviewY = 0;
 
+// Building Selection State
+let selectedBuildingData = null; // { x, y, tile, building } - currently selected building for radial menu
+
 // Seeded random for world gen
 let seed = Date.now() % 100000;
 

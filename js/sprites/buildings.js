@@ -7,7 +7,7 @@ function seededRandom(x, y) {
 }
 
 // Enhanced Wall with weathering and depth
-function renderWall(x, y, s, wx, wy) {
+function renderWall(x, y, s, wx, wy, level = 1) {
     const pattern = seededRandom(wx, wy);
     const pattern2 = seededRandom(wx + 100, wy + 100);
 
@@ -16,11 +16,16 @@ function renderWall(x, y, s, wx, wy) {
     ctx.fillRect(x + 2, y + 2, s, s);
 
     // Outline
-    ctx.fillStyle = PALETTE.outline;
+    ctx.fillStyle = level > 1 ? (level > 2 ? '#ffd700' : '#bdc3c7') : PALETTE.outline;
     ctx.fillRect(x - 1, y - 1, s + 2, s + 2);
 
     // Main wall base with variation
-    const wallColors = ['#6a6a6a', '#707070', '#656565', '#727272'];
+    const wallColors = level === 1
+        ? ['#6a6a6a', '#707070', '#656565', '#727272'] // Stone
+        : (level === 2
+            ? ['#7f8c8d', '#95a5a6', '#707b7c', '#839192'] // Iron/Steel
+            : ['#2c3e50', '#34495e', '#212f3d', '#283747']); // Obsidian/Dark Steel
+
     ctx.fillStyle = wallColors[Math.floor(pattern * 4)];
     ctx.fillRect(x, y, s, s);
 
@@ -36,28 +41,43 @@ function renderWall(x, y, s, wx, wy) {
     ctx.fillRect(x + s * 0.75, y + s * 0.33, 2, s * 0.33);
     ctx.fillRect(x + s * 0.5, y + s * 0.66, 2, s * 0.34);
 
-    // Stone texture highlights
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-    ctx.fillRect(x + 3, y + 3, s * 0.4, 2);
-    ctx.fillRect(x + s * 0.55, y + s * 0.36, s * 0.35, 2);
-    ctx.fillRect(x + 3, y + s * 0.69, s * 0.2, 2);
+    // Level-specific highlights
+    if (level > 1) {
+        // Metallic sheen
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.fillRect(x + 2, y + 2, s - 4, 2);
+        ctx.fillRect(x + 2, y + 2, 2, s - 4);
 
-    // Weathering and cracks
-    if (pattern > 0.6) {
+        if (level > 2) {
+            // Gold trim/runes
+            ctx.fillStyle = 'rgba(241, 196, 15, 0.5)';
+            ctx.fillRect(x + s * 0.4, y + s * 0.1, 2, s * 0.8);
+            ctx.fillRect(x + s * 0.1, y + s * 0.4, s * 0.8, 2);
+        }
+    } else {
+        // Stone texture highlights
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.fillRect(x + 3, y + 3, s * 0.4, 2);
+        ctx.fillRect(x + s * 0.55, y + s * 0.36, s * 0.35, 2);
+        ctx.fillRect(x + 3, y + s * 0.69, s * 0.2, 2);
+    }
+
+    // Weathering and cracks (less common on higher levels)
+    if (pattern > (0.6 + (level - 1) * 0.1)) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
         ctx.fillRect(x + s * 0.2, y + s * 0.1, 1, s * 0.15);
         ctx.fillRect(x + s * 0.21, y + s * 0.25, 1, s * 0.08);
     }
 
     // Moss patches (occasional)
-    if (pattern2 > 0.85) {
+    if (pattern2 > 0.85 && level === 1) {
         ctx.fillStyle = 'rgba(60, 90, 50, 0.4)';
         ctx.fillRect(x + s * 0.7, y + s * 0.8, 4, 3);
         ctx.fillRect(x + s * 0.75, y + s * 0.75, 3, 3);
     }
 
     // Top edge highlight
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.fillStyle = level > 2 ? 'rgba(255, 215, 0, 0.3)' : 'rgba(255, 255, 255, 0.1)';
     ctx.fillRect(x, y, s, 1);
 
     // Bottom edge shadow
@@ -245,7 +265,7 @@ function drawFlame(ctx, cx, bottomY, width, height, offset) {
 }
 
 // Enhanced House with chimney, better details
-function renderHouse(x, y, s) {
+function renderHouse(x, y, s, level = 1) {
     const s2 = s * 2;
     const time = pixelTime || Date.now() / 1000;
 
@@ -260,56 +280,31 @@ function renderHouse(x, y, s) {
     ctx.fillRect(x + 6, y + s2 * 0.28 + 6, s2, s2 * 0.72);
 
     // Main building outline
-    ctx.fillStyle = PALETTE.outline;
+    ctx.fillStyle = level > 1 ? (level > 2 ? '#ffd700' : '#bdc3c7') : PALETTE.outline;
     ctx.fillRect(x - 2, y + s2 * 0.25, s2 + 4, s2 * 0.77);
 
     // Main building body
     const wallGradient = ctx.createLinearGradient(x, 0, x + s2, 0);
-    wallGradient.addColorStop(0, '#8a7a6a');
-    wallGradient.addColorStop(0.5, '#9a8a7a');
-    wallGradient.addColorStop(1, '#857565');
+    if (level === 1) {
+        wallGradient.addColorStop(0, '#8a7a6a');
+        wallGradient.addColorStop(1, '#857565');
+    } else if (level === 2) {
+        wallGradient.addColorStop(0, '#7f8c8d');
+        wallGradient.addColorStop(1, '#4b5758');
+    } else {
+        wallGradient.addColorStop(0, '#2c3e50');
+        wallGradient.addColorStop(1, '#1b2631');
+    }
     ctx.fillStyle = wallGradient;
     ctx.fillRect(x, y + s2 * 0.28, s2, s2 * 0.72);
-
-    // Wall planks
-    ctx.fillStyle = '#7a6a5a';
-    for (let i = 0; i < 6; i++) {
-        const plankY = y + s2 * 0.32 + i * s2 * 0.11;
-        ctx.fillRect(x + 2, plankY, s2 - 4, 1);
-    }
-
-    // Plank highlights
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-    for (let i = 0; i < 6; i++) {
-        const plankY = y + s2 * 0.33 + i * s2 * 0.11;
-        ctx.fillRect(x + 2, plankY, s2 - 4, 1);
-    }
 
     // Wall texture details
     ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
     ctx.fillRect(x + s2 * 0.1, y + s2 * 0.4, s2 * 0.15, s2 * 0.5);
     ctx.fillRect(x + s2 * 0.75, y + s2 * 0.35, s2 * 0.15, s2 * 0.55);
 
-    // Roof shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.beginPath();
-    ctx.moveTo(x - 8, y + s2 * 0.32);
-    ctx.lineTo(x + s2 / 2, y);
-    ctx.lineTo(x + s2 + 8, y + s2 * 0.32);
-    ctx.closePath();
-    ctx.fill();
-
-    // Roof outline
-    ctx.fillStyle = PALETTE.outline;
-    ctx.beginPath();
-    ctx.moveTo(x - 12, y + s2 * 0.34);
-    ctx.lineTo(x + s2 / 2, y - 10);
-    ctx.lineTo(x + s2 + 12, y + s2 * 0.34);
-    ctx.closePath();
-    ctx.fill();
-
-    // Roof main
-    ctx.fillStyle = '#7a4030';
+    // Roof
+    ctx.fillStyle = level === 3 ? '#212f3d' : (level === 2 ? '#34495e' : '#7a4030');
     ctx.beginPath();
     ctx.moveTo(x - 8, y + s2 * 0.3);
     ctx.lineTo(x + s2 / 2, y - 4);
@@ -317,64 +312,17 @@ function renderHouse(x, y, s) {
     ctx.closePath();
     ctx.fill();
 
-    // Roof tiles pattern
-    ctx.fillStyle = '#6a3525';
-    for (let row = 0; row < 3; row++) {
-        const rowY = y + s2 * 0.05 + row * s2 * 0.085;
-        const rowWidth = s2 * (0.4 + row * 0.25);
-        const startX = x + s2 / 2 - rowWidth / 2;
-        for (let i = 0; i < 4 + row * 2; i++) {
-            ctx.fillRect(startX + i * (rowWidth / (4 + row * 2)), rowY, 1, s2 * 0.08);
-        }
-    }
-
-    // Roof highlight
-    ctx.fillStyle = '#8a5040';
-    ctx.beginPath();
-    ctx.moveTo(x + s2 / 2, y - 2);
-    ctx.lineTo(x + s2 / 2 + 4, y + s2 * 0.08);
-    ctx.lineTo(x + s2 / 2, y + s2 * 0.08);
-    ctx.closePath();
-    ctx.fill();
-
-    // Chimney
-    ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(x + s2 * 0.7 - 2, y - 2, s2 * 0.16 + 4, s2 * 0.2);
-    ctx.fillStyle = '#5a4a4a';
-    ctx.fillRect(x + s2 * 0.7, y, s2 * 0.16, s2 * 0.18);
-    ctx.fillStyle = '#6a5a5a';
-    ctx.fillRect(x + s2 * 0.7, y, s2 * 0.16, s2 * 0.04);
-
     // Chimney smoke
     ctx.globalAlpha = 0.2;
     for (let i = 0; i < 3; i++) {
         const smokeY = y - 8 - (time * 15 + i * 12) % 30;
         const smokeX = x + s2 * 0.78 + Math.sin(time * 2 + i) * 3;
-        ctx.fillStyle = '#aaaaaa';
+        ctx.fillStyle = level === 3 ? '#3498db' : '#aaaaaa';
         ctx.beginPath();
         ctx.arc(smokeX, smokeY, 4 + i * 2, 0, Math.PI * 2);
         ctx.fill();
     }
     ctx.globalAlpha = 1;
-
-    // Door outline
-    ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(x + s2 * 0.38, y + s2 * 0.52, s2 * 0.28, s2 * 0.48);
-
-    // Door
-    ctx.fillStyle = '#4a3020';
-    ctx.fillRect(x + s2 * 0.4, y + s2 * 0.54, s2 * 0.24, s2 * 0.46);
-
-    // Door panels
-    ctx.fillStyle = '#3a2515';
-    ctx.fillRect(x + s2 * 0.42, y + s2 * 0.58, s2 * 0.08, s2 * 0.15);
-    ctx.fillRect(x + s2 * 0.54, y + s2 * 0.58, s2 * 0.08, s2 * 0.15);
-    ctx.fillRect(x + s2 * 0.42, y + s2 * 0.78, s2 * 0.08, s2 * 0.15);
-    ctx.fillRect(x + s2 * 0.54, y + s2 * 0.78, s2 * 0.08, s2 * 0.15);
-
-    // Door handle
-    ctx.fillStyle = '#aa8844';
-    ctx.fillRect(x + s2 * 0.58, y + s2 * 0.74, s2 * 0.03, s2 * 0.06);
 
     // Windows
     const winSize = s2 * 0.18;
@@ -384,47 +332,24 @@ function renderHouse(x, y, s) {
     ];
 
     windowPositions.forEach(({ wx, lit }) => {
-        // Window frame outline
         ctx.fillStyle = PALETTE.outline;
-        ctx.fillRect(wx - 3, y + s2 * 0.38 - 3, winSize + 6, winSize + 6);
-
-        // Window frame
-        ctx.fillStyle = '#5a4a3a';
         ctx.fillRect(wx - 2, y + s2 * 0.38 - 2, winSize + 4, winSize + 4);
-
-        // Window glass
         if (lit) {
-            const glowGrad = ctx.createRadialGradient(
-                wx + winSize / 2, y + s2 * 0.38 + winSize / 2, 0,
-                wx + winSize / 2, y + s2 * 0.38 + winSize / 2, winSize
-            );
-            glowGrad.addColorStop(0, '#ffeeaa');
-            glowGrad.addColorStop(1, '#ddaa44');
-            ctx.fillStyle = glowGrad;
+            ctx.fillStyle = level === 3 ? '#3498db' : (level === 2 ? '#00d2ff' : '#ffeeaa');
+            if (level > 1) {
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = level === 3 ? '#3498db' : '#00d2ff';
+            }
         } else {
-            ctx.fillStyle = '#6699bb';
+            ctx.fillStyle = '#1a1a1a';
         }
         ctx.fillRect(wx, y + s2 * 0.38, winSize, winSize);
-
-        // Window cross frame
-        ctx.fillStyle = '#3a2a1a';
-        ctx.fillRect(wx + winSize / 2 - 1.5, y + s2 * 0.38, 3, winSize);
-        ctx.fillRect(wx, y + s2 * 0.38 + winSize / 2 - 1.5, winSize, 3);
-
-        // Window reflection
-        if (!lit) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.fillRect(wx + 2, y + s2 * 0.4, winSize * 0.3, winSize * 0.2);
-        }
+        ctx.shadowBlur = 0;
     });
 
     // Foundation stones
-    ctx.fillStyle = '#5a5a5a';
+    ctx.fillStyle = level === 3 ? '#d4af37' : '#5a5a5a';
     ctx.fillRect(x, y + s2 * 0.92, s2, s2 * 0.08);
-    ctx.fillStyle = '#4a4a4a';
-    for (let i = 0; i < 6; i++) {
-        ctx.fillRect(x + i * s2 / 6 + 2, y + s2 * 0.92, 1, s2 * 0.08);
-    }
 }
 
 // Enhanced Farm with water, more crops, fence
@@ -515,7 +440,7 @@ function renderFarm(x, y, s) {
 }
 
 // Enhanced Tower with flag and better stonework
-function renderTower(x, y, s) {
+function renderTower(x, y, s, level = 1) {
     const time = pixelTime || Date.now() / 1000;
 
     // Ground shadow
@@ -529,15 +454,21 @@ function renderTower(x, y, s) {
     ctx.fillRect(x + s * 0.15 + 5, y + s * 0.05 + 5, s * 0.75, s * 0.95);
 
     // Outline
-    ctx.fillStyle = PALETTE.outline;
+    ctx.fillStyle = level > 1 ? (level > 2 ? '#ffd700' : '#bdc3c7') : PALETTE.outline;
     ctx.fillRect(x + s * 0.1, y + s * 0.02, s * 0.8, s);
 
     // Main tower body gradient
     const towerGrad = ctx.createLinearGradient(x + s * 0.1, 0, x + s * 0.9, 0);
-    towerGrad.addColorStop(0, '#606070');
-    towerGrad.addColorStop(0.3, '#707080');
-    towerGrad.addColorStop(0.7, '#707080');
-    towerGrad.addColorStop(1, '#555565');
+    if (level === 1) {
+        towerGrad.addColorStop(0, '#606070');
+        towerGrad.addColorStop(1, '#555565');
+    } else if (level === 2) {
+        towerGrad.addColorStop(0, '#7f8c8d');
+        towerGrad.addColorStop(1, '#4b5758');
+    } else {
+        towerGrad.addColorStop(0, '#2c3e50');
+        towerGrad.addColorStop(1, '#1b2631');
+    }
     ctx.fillStyle = towerGrad;
     ctx.fillRect(x + s * 0.13, y + s * 0.08, s * 0.74, s * 0.92);
 
@@ -550,64 +481,47 @@ function renderTower(x, y, s) {
             const brickW = s * 0.2;
             const brickH = s * 0.14;
 
-            // Brick shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillStyle = level > 2 ? 'rgba(241, 196, 15, 0.1)' : 'rgba(0, 0, 0, 0.15)';
             ctx.fillRect(brickX, brickY + brickH - 2, brickW, 2);
             ctx.fillRect(brickX + brickW - 2, brickY, 2, brickH);
 
-            // Brick highlight
             ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
             ctx.fillRect(brickX, brickY, brickW, 2);
-            ctx.fillRect(brickX, brickY, 2, brickH);
         }
     }
 
-    // Arrow slits
-    const slitPositions = [
-        { sx: x + s * 0.3, sy: y + s * 0.35 },
-        { sx: x + s * 0.6, sy: y + s * 0.55 }
-    ];
+    // Arrow slits (multiple slits for higher levels)
+    const slitsCount = level;
+    for (let i = 0; i < slitsCount; i++) {
+        const sx = x + s * (0.2 + (i * 0.2) % 0.6);
+        const sy = y + s * (0.3 + (i * 0.2) % 0.4);
+        ctx.fillStyle = level > 2 ? '#f1c40f' : '#1a1a2a';
+        ctx.fillRect(sx, sy, s * 0.08, s * 0.18);
+        if (level > 2) {
+            ctx.shadowBlur = 5;
+            ctx.shadowColor = '#f1c40f';
+            ctx.fillRect(sx + 1, sy + 1, s * 0.05, s * 0.14);
+            ctx.shadowBlur = 0;
+        }
+    }
 
-    slitPositions.forEach(({ sx, sy }) => {
-        ctx.fillStyle = '#3a3a4a';
-        ctx.fillRect(sx, sy, s * 0.1, s * 0.2);
-        ctx.fillStyle = '#1a1a2a';
-        ctx.fillRect(sx + 2, sy + 2, s * 0.06, s * 0.16);
-    });
-
-    // Battlements with detail
+    // Battlements
     const battleWidth = s * 0.2;
-    const battlePositions = [
-        { bx: x + s * 0.06, by: y - s * 0.02 },
-        { bx: x + s * 0.4, by: y - s * 0.05 },
-        { bx: x + s * 0.74, by: y - s * 0.02 }
-    ];
-
-    battlePositions.forEach(({ bx, by }, i) => {
-        // Battlement shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.fillRect(bx + 2, by + 2, battleWidth, s * 0.15);
-
-        // Battlement outline
+    const count = 3;
+    for (let i = 0; i < count; i++) {
+        const bx = x + s * (0.06 + i * 0.34);
+        const by = y - s * (i === 1 ? 0.05 : 0.02);
         ctx.fillStyle = PALETTE.outline;
         ctx.fillRect(bx - 2, by - 2, battleWidth + 4, s * 0.17);
-
-        // Battlement body
-        ctx.fillStyle = i === 1 ? '#8a8a9a' : '#7a7a8a';
+        ctx.fillStyle = level > 2 ? '#d4af37' : (level > 1 ? '#95a5a6' : '#7a7a8a');
         ctx.fillRect(bx, by, battleWidth, s * 0.13);
+    }
 
-        // Battlement highlight
-        ctx.fillStyle = '#9a9aaa';
-        ctx.fillRect(bx, by, battleWidth, 2);
-    });
-
-    // Flag pole on center battlement
+    // Flag
     ctx.fillStyle = '#4a3a2a';
     ctx.fillRect(x + s * 0.49, y - s * 0.35, 3, s * 0.35);
-
-    // Flag with wave animation
     const flagWave = Math.sin(time * 4) * 2;
-    ctx.fillStyle = '#cc3333';
+    ctx.fillStyle = level === 3 ? '#f1c40f' : (level === 2 ? '#3498db' : '#cc3333');
     ctx.beginPath();
     ctx.moveTo(x + s * 0.52, y - s * 0.33);
     ctx.quadraticCurveTo(x + s * 0.65 + flagWave, y - s * 0.28, x + s * 0.72, y - s * 0.25 + flagWave * 0.3);
@@ -616,19 +530,13 @@ function renderTower(x, y, s) {
     ctx.closePath();
     ctx.fill();
 
-    // Flag emblem
-    ctx.fillStyle = '#ffcc00';
-    ctx.fillRect(x + s * 0.58, y - s * 0.27, 4, 4);
-
     // Base stones
-    ctx.fillStyle = '#5a5a6a';
+    ctx.fillStyle = level > 2 ? '#34495e' : '#5a5a6a';
     ctx.fillRect(x + s * 0.08, y + s * 0.85, s * 0.84, s * 0.15);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-    ctx.fillRect(x + s * 0.08, y + s * 0.93, s * 0.84, s * 0.07);
 }
 
 // Enhanced Cannon with more detail and smoke
-function renderCannon(x, y, s) {
+function renderCannon(x, y, s, level = 1) {
     const time = pixelTime || Date.now() / 1000;
 
     // Ground shadow
@@ -637,128 +545,69 @@ function renderCannon(x, y, s) {
     ctx.ellipse(x + s / 2, y + s * 0.92, s * 0.45, s * 0.1, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Platform shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-    ctx.fillRect(x + s * 0.08 + 3, y + s * 0.58 + 3, s * 0.84, s * 0.4);
-
     // Platform outline and body
-    ctx.fillStyle = PALETTE.outline;
+    ctx.fillStyle = level > 2 ? '#d4af37' : PALETTE.outline;
     ctx.fillRect(x + s * 0.06, y + s * 0.55, s * 0.88, s * 0.44);
-    ctx.fillStyle = '#6a5a4a';
+    ctx.fillStyle = level === 1 ? '#6a5a4a' : (level === 2 ? '#454e52' : '#2c3e50');
     ctx.fillRect(x + s * 0.08, y + s * 0.58, s * 0.84, s * 0.38);
 
-    // Platform wood grain
-    ctx.fillStyle = '#5a4a3a';
-    ctx.fillRect(x + s * 0.15, y + s * 0.65, s * 0.7, 2);
-    ctx.fillRect(x + s * 0.15, y + s * 0.78, s * 0.7, 2);
-    ctx.fillStyle = '#7a6a5a';
-    ctx.fillRect(x + s * 0.15, y + s * 0.62, s * 0.7, 1);
-
-    // Wheels with spokes
+    // Wheels
     const wheelPositions = [x + s * 0.22, x + s * 0.78];
     wheelPositions.forEach(wx => {
-        // Wheel shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.beginPath();
-        ctx.arc(wx + 2, y + s * 0.82 + 2, s * 0.14, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Wheel outline
         ctx.fillStyle = PALETTE.outline;
         ctx.beginPath();
         ctx.arc(wx, y + s * 0.82, s * 0.15, 0, Math.PI * 2);
         ctx.fill();
-
-        // Wheel body
-        ctx.fillStyle = '#5a4a3a';
+        ctx.fillStyle = level > 1 ? '#7f8c8d' : '#5a4a3a';
         ctx.beginPath();
         ctx.arc(wx, y + s * 0.82, s * 0.12, 0, Math.PI * 2);
         ctx.fill();
-
-        // Wheel rim
-        ctx.fillStyle = '#4a3a2a';
-        ctx.beginPath();
-        ctx.arc(wx, y + s * 0.82, s * 0.1, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Wheel spokes
-        ctx.fillStyle = '#6a5a4a';
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
-            ctx.fillRect(
-                wx - 1 + Math.cos(angle) * s * 0.02,
-                y + s * 0.82 - 1 + Math.sin(angle) * s * 0.02,
-                Math.cos(angle) * s * 0.08,
-                Math.sin(angle) * s * 0.08 || 2
-            );
-        }
-
-        // Wheel hub
-        ctx.fillStyle = '#3a3a3a';
-        ctx.beginPath();
-        ctx.arc(wx, y + s * 0.82, s * 0.03, 0, Math.PI * 2);
-        ctx.fill();
     });
 
-    // Cannon barrel shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.fillRect(x + s * 0.25 + 3, y + s * 0.2 + 3, s * 0.5, s * 0.38);
-
-    // Cannon barrel outline
+    // Cannon barrel
     ctx.fillStyle = PALETTE.outline;
     ctx.fillRect(x + s * 0.23, y + s * 0.18, s * 0.54, s * 0.42);
-
-    // Cannon barrel body
     const barrelGrad = ctx.createLinearGradient(x, y + s * 0.2, x, y + s * 0.58);
-    barrelGrad.addColorStop(0, '#5a5a5a');
-    barrelGrad.addColorStop(0.3, '#4a4a4a');
-    barrelGrad.addColorStop(0.7, '#3a3a3a');
-    barrelGrad.addColorStop(1, '#4a4a4a');
+    if (level === 1) {
+        barrelGrad.addColorStop(0, '#5a5a5a');
+        barrelGrad.addColorStop(1, '#3a3a3a');
+    } else if (level === 2) {
+        barrelGrad.addColorStop(0, '#7f8c8d');
+        barrelGrad.addColorStop(1, '#2c3e50');
+    } else {
+        barrelGrad.addColorStop(0, '#2c3e50');
+        barrelGrad.addColorStop(1, '#000000');
+    }
     ctx.fillStyle = barrelGrad;
     ctx.fillRect(x + s * 0.26, y + s * 0.22, s * 0.48, s * 0.36);
 
-    // Barrel bands
-    ctx.fillStyle = '#3a3a3a';
-    ctx.fillRect(x + s * 0.26, y + s * 0.26, s * 0.48, 3);
-    ctx.fillRect(x + s * 0.26, y + s * 0.48, s * 0.48, 3);
-
-    // Barrel highlight
-    ctx.fillStyle = '#6a6a6a';
-    ctx.fillRect(x + s * 0.28, y + s * 0.24, s * 0.44, 2);
-
     // Muzzle
-    ctx.fillStyle = PALETTE.outline;
+    ctx.fillStyle = level > 2 ? '#f1c40f' : PALETTE.outline;
     ctx.fillRect(x + s * 0.36, y + s * 0.06, s * 0.28, s * 0.2);
-    ctx.fillStyle = '#4a4a4a';
-    ctx.fillRect(x + s * 0.38, y + s * 0.08, s * 0.24, s * 0.16);
 
-    // Muzzle opening
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(x + s * 0.42, y + s * 0.02, s * 0.16, s * 0.1);
+    if (level > 2) {
+        // Energy glow
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#f1c40f';
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(x + s * 0.42, y + s * 0.02, s * 0.16, s * 0.1);
+        ctx.shadowBlur = 0;
+    } else {
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(x + s * 0.42, y + s * 0.02, s * 0.16, s * 0.1);
+    }
 
-    // Smoke wisps (subtle animation)
+    // Smoke wisps
     ctx.globalAlpha = 0.15;
     for (let i = 0; i < 2; i++) {
         const smokeOffset = (time * 20 + i * 15) % 20;
-        const smokeX = x + s * 0.5 + Math.sin(time + i) * 4;
         const smokeY = y - smokeOffset;
-        ctx.fillStyle = '#888888';
+        ctx.fillStyle = level === 3 ? '#f1c40f' : '#888888';
         ctx.beginPath();
-        ctx.arc(smokeX, smokeY, 3 + i * 2, 0, Math.PI * 2);
+        ctx.arc(x + s * 0.5 + Math.sin(time + i) * 4, smokeY, 3 + i * 2, 0, Math.PI * 2);
         ctx.fill();
     }
     ctx.globalAlpha = 1;
-
-    // Cannonballs stack
-    ctx.fillStyle = '#2a2a2a';
-    ctx.beginPath();
-    ctx.arc(x + s * 0.85, y + s * 0.7, s * 0.06, 0, Math.PI * 2);
-    ctx.arc(x + s * 0.92, y + s * 0.75, s * 0.05, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#3a3a3a';
-    ctx.beginPath();
-    ctx.arc(x + s * 0.85, y + s * 0.7, s * 0.04, 0, Math.PI * 2);
-    ctx.fill();
 }
 
 // Enhanced Workbench with more tools and drawers

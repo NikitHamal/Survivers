@@ -215,8 +215,12 @@ function render(alpha = 1) {
     // Post-processing effects
     renderPostProcessing();
 
+    // Render selected building UI (radial menu, range, selection glow)
+    renderSelectedBuildingUI(camX, camY);
+
     // Minimap
     renderMinimap();
+
 
     // Debug info
     let debugText = `X: ${player.x.toFixed(2)} Y: ${player.y.toFixed(2)}`;
@@ -391,4 +395,255 @@ function renderDebugCollision(camX, camY) {
     ctx.stroke();
 
     ctx.globalAlpha = 1;
+}
+
+// ============= BUILDING SELECTION UI =============
+function renderSelectedBuildingUI(camX, camY) {
+    if (!selectedBuildingData) return;
+
+    const { x, y, tile, building, type } = selectedBuildingData;
+    const s = TILE_SIZE * SCALE;
+
+    // Determine building size (houses are 2x2)
+    const isHouse = tile === TILES.HOUSE;
+    const size = isHouse ? s * 2 : s;
+
+    const screenX = x * s - camX;
+    const screenY = y * s - camY;
+    const centerX = screenX + size / 2;
+    const centerY = screenY + size / 2;
+
+    // ========== 1. RANGE CIRCLE (for applicable buildings) ==========
+    let range = 0;
+    let rangeColor = 'rgba(255, 200, 50, 0.15)';
+    let rangeBorderColor = 'rgba(255, 200, 50, 0.6)';
+
+    if (tile === TILES.TOWER) {
+        range = 6; // Tower range in tiles
+        rangeColor = 'rgba(52, 152, 219, 0.12)';
+        rangeBorderColor = 'rgba(52, 152, 219, 0.5)';
+    } else if (tile === TILES.CANNON) {
+        range = 8; // Cannon range in tiles
+        rangeColor = 'rgba(231, 76, 60, 0.12)';
+        rangeBorderColor = 'rgba(231, 76, 60, 0.5)';
+    } else if (tile === TILES.CAMPFIRE) {
+        range = 3; // Campfire heal range
+        rangeColor = 'rgba(241, 196, 15, 0.15)';
+        rangeBorderColor = 'rgba(241, 196, 15, 0.6)';
+    }
+
+    if (range > 0) {
+        const rangePixels = range * s;
+
+        // Fill
+        ctx.fillStyle = rangeColor;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, rangePixels, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Border (dashed)
+        ctx.strokeStyle = rangeBorderColor;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 4]);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, rangePixels, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    // ========== 2. SELECTION GLOW ==========
+    const pulse = Math.sin(pixelTime * 4) * 0.15 + 0.85;
+
+    // Outer glow
+    ctx.shadowBlur = 15 * pulse;
+    ctx.shadowColor = '#ffd700';
+    ctx.strokeStyle = `rgba(255, 215, 0, ${0.6 * pulse})`;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(screenX - 2, screenY - 2, size + 4, size + 4);
+    ctx.shadowBlur = 0;
+
+    // Corner brackets for selection
+    const bracketSize = 8;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+
+    // Top-left
+    ctx.beginPath();
+    ctx.moveTo(screenX - 4, screenY + bracketSize);
+    ctx.lineTo(screenX - 4, screenY - 4);
+    ctx.lineTo(screenX + bracketSize, screenY - 4);
+    ctx.stroke();
+
+    // Top-right
+    ctx.beginPath();
+    ctx.moveTo(screenX + size - bracketSize, screenY - 4);
+    ctx.lineTo(screenX + size + 4, screenY - 4);
+    ctx.lineTo(screenX + size + 4, screenY + bracketSize);
+    ctx.stroke();
+
+    // Bottom-left
+    ctx.beginPath();
+    ctx.moveTo(screenX - 4, screenY + size - bracketSize);
+    ctx.lineTo(screenX - 4, screenY + size + 4);
+    ctx.lineTo(screenX + bracketSize, screenY + size + 4);
+    ctx.stroke();
+
+    // Bottom-right
+    ctx.beginPath();
+    ctx.moveTo(screenX + size - bracketSize, screenY + size + 4);
+    ctx.lineTo(screenX + size + 4, screenY + size + 4);
+    ctx.lineTo(screenX + size + 4, screenY + size - bracketSize);
+    ctx.stroke();
+
+    // ========== 3. RADIAL ACTION MENU ==========
+    const actions = [
+        { id: 'upgrade', icon: '⬆️', label: 'Upgrade', angle: -90, color: '#2ecc71' },
+        { id: 'move', icon: '✋', label: 'Move', angle: 0, color: '#3498db' },
+        { id: 'remove', icon: '🗑️', label: 'Remove', angle: 90, color: '#e74c3c' },
+        { id: 'info', icon: 'ℹ️', label: 'Info', angle: 180, color: '#9b59b6' }
+    ];
+
+    const menuRadius = size + 35;
+    const iconSize = 28;
+
+    actions.forEach(action => {
+        const angleRad = (action.angle * Math.PI) / 180;
+        const iconX = centerX + Math.cos(angleRad) * menuRadius;
+        const iconY = centerY + Math.sin(angleRad) * menuRadius;
+
+        // Store position for click detection
+        action.screenX = iconX;
+        action.screenY = iconY;
+        action.radius = iconSize / 2 + 6;
+
+        // Background circle
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.beginPath();
+        ctx.arc(iconX, iconY, iconSize / 2 + 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Border
+        ctx.strokeStyle = action.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(iconX, iconY, iconSize / 2 + 6, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Icon
+        ctx.font = `${iconSize}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(action.icon, iconX, iconY);
+    });
+
+    // Store actions for click handling
+    window._buildingActions = actions;
+    window._buildingActionCenter = { x: centerX, y: centerY };
+}
+
+// Handle radial menu clicks
+function handleRadialMenuClick(screenX, screenY) {
+    if (!selectedBuildingData || !window._buildingActions) return false;
+
+    for (const action of window._buildingActions) {
+        const dx = screenX - action.screenX;
+        const dy = screenY - action.screenY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist <= action.radius) {
+            executeRadialAction(action.id);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function executeRadialAction(actionId) {
+    if (!selectedBuildingData) return;
+
+    const { x, y, tile, building } = selectedBuildingData;
+
+    switch (actionId) {
+        case 'upgrade':
+            if (typeof BuildingUpgradeSystem !== 'undefined') {
+                BuildingUpgradeSystem.showUpgradeUI(x, y);
+            }
+            break;
+
+        case 'move':
+            // Start dragging this building
+            const buildingType = BUILDINGS.find(b => b.tile === tile);
+            if (buildingType) {
+                isDraggingBuilding = true;
+                draggedBuilding = {
+                    x: x,
+                    y: y,
+                    originalX: x,
+                    originalY: y,
+                    type: buildingType,
+                    building: building
+                };
+                dragHoverTile = { x: x, y: y };
+                selectedBuildingData = null;
+            }
+            break;
+
+        case 'remove':
+            // Remove building with confirmation
+            if (typeof showNotification === 'function') {
+                showNotification(
+                    `🗑️ Remove this building? You'll get 50% resources back.`,
+                    [
+                        { text: 'Remove', action: () => removeBuilding(x, y) },
+                        { text: 'Cancel', action: () => { } }
+                    ]
+                );
+            }
+            break;
+
+        case 'info':
+            // Show building info panel
+            if (typeof BuildingUpgradeSystem !== 'undefined') {
+                BuildingUpgradeSystem.showUpgradeUI(x, y);
+            }
+            break;
+    }
+}
+
+function removeBuilding(x, y) {
+    const tile = getTile(x, y);
+    const buildingDef = BUILDINGS.find(b => b.tile === tile);
+
+    if (buildingDef) {
+        // Refund 50% resources
+        for (const [res, amt] of Object.entries(buildingDef.cost)) {
+            resources[res] = (resources[res] || 0) + Math.floor(amt * 0.5);
+        }
+
+        // Remove from world
+        setTile(x, y, TILES.FLOOR);
+
+        // Remove from buildings array
+        const idx = buildings.findIndex(b => b.x === x && b.y === y);
+        if (idx !== -1) buildings.splice(idx, 1);
+
+        // Handle 2x2 buildings (houses)
+        if (tile === TILES.HOUSE) {
+            setTile(x + 1, y, TILES.FLOOR);
+            setTile(x, y + 1, TILES.FLOOR);
+            setTile(x + 1, y + 1, TILES.FLOOR);
+        }
+
+        if (typeof showNotification === 'function') {
+            showNotification(`🗑️ Building removed. Resources refunded!`, []);
+        }
+
+        if (typeof spawnParticles === 'function') {
+            spawnParticles(x + 0.5, y + 0.5, '#888888', 15);
+        }
+    }
+
+    selectedBuildingData = null;
 }

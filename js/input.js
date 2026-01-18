@@ -42,6 +42,7 @@ function handleKeyPress(e) {
             if (document.getElementById('minimap')) document.getElementById('minimap').classList.remove('expanded');
             gameState.paused = false;
             buildMode = false;
+            selectedBuildingData = null; // Deselect building
             break;
         case 'Digit1': case 'Digit2': case 'Digit3': case 'Digit4': case 'Digit5':
             selectInventorySlot(parseInt(e.code.slice(-1)) - 1);
@@ -180,17 +181,36 @@ function handleMouseUp(e) {
 
     // Normal Click Logic (Short duration)
     if (clickDuration < 300) {
-        // Build mode takes priority
-        if (buildMode && selectedBuilding) {
-            if (canBuild(tileX, tileY)) {
-                placeBuild(tileX, tileY);
-            }
-            return;
-        }
+        // Only trigger movement/interaction on left click (button 0)
+        if (e.button === 0) {
+            // Check if clicking on radial menu action
+            if (selectedBuildingData && typeof handleRadialMenuClick === 'function') {
+                const rect = canvas.getBoundingClientRect();
+                const screenX = e.clientX - rect.left;
+                const screenY = e.clientY - rect.top;
 
-        // Standard Interaction
-        handleClickInteraction(clickX, clickY, tileX, tileY);
+                if (handleRadialMenuClick(screenX, screenY)) {
+                    return; // Handled by radial menu
+                }
+
+                // Clicking outside radial menu deselects building
+                selectedBuildingData = null;
+                return;
+            }
+
+            // Build mode takes priority
+            if (buildMode && selectedBuilding) {
+                if (canBuild(tileX, tileY)) {
+                    placeBuild(tileX, tileY);
+                }
+                return;
+            }
+
+            // Standard Interaction
+            handleClickInteraction(clickX, clickY, tileX, tileY);
+        }
     }
+
 
     // Cleanup simple drag attempts that didn't become drags
     draggedBuilding = null;
@@ -285,22 +305,40 @@ function handleRightClick(e) {
     const rect = canvas.getBoundingClientRect();
     const mouseX = (e.clientX - rect.left + camera.x) / SCALE / TILE_SIZE;
     const mouseY = (e.clientY - rect.top + camera.y) / SCALE / TILE_SIZE;
-    const tileX = Math.floor(mouseX);
-    const tileY = Math.floor(mouseY);
-    const tile = getTile(tileX, tileY);
+    let tileX = Math.floor(mouseX);
+    let tileY = Math.floor(mouseY);
+    let tile = getTile(tileX, tileY);
 
-    // Check if building interaction (Upgrade)
+    // House Base Check: Find root house tile
+    if (tile === TILES.HOUSE_BASE) {
+        if (getTile(tileX - 1, tileY) === TILES.HOUSE) tileX -= 1;
+        else if (getTile(tileX, tileY - 1) === TILES.HOUSE) tileY -= 1;
+        else if (getTile(tileX - 1, tileY - 1) === TILES.HOUSE) { tileX -= 1; tileY -= 1; }
+        tile = getTile(tileX, tileY);
+    }
+
+    // Check if this is a building
     if (typeof BuildingUpgradeSystem !== 'undefined') {
         const buildingType = BuildingUpgradeSystem.getBuildingType(tile);
         if (buildingType) {
-            BuildingUpgradeSystem.showUpgradeUI(tileX, tileY);
+            // Select this building for radial menu
+            const building = buildings.find(b => b.x === tileX && b.y === tileY);
+            selectedBuildingData = {
+                x: tileX,
+                y: tileY,
+                tile: tile,
+                building: building,
+                type: buildingType
+            };
             return;
         }
     }
 
-    // Right-click cancels movement if no building
+    // Right-click on empty space deselects building
+    selectedBuildingData = null;
     cancelPlayerPath();
 }
+
 
 function setPlayerMoveTarget(worldX, worldY) {
     // Clear any existing path first

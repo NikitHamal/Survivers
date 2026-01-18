@@ -680,6 +680,9 @@ const BuildingUpgradeSystem = (function () {
             );
         }
 
+        // Force UI update to show progress bar and cancel button
+        updateUI();
+
         return true;
     }
 
@@ -708,6 +711,9 @@ const BuildingUpgradeSystem = (function () {
                 []
             );
         }
+
+        // Force UI update to show upgrade button again
+        updateUI();
 
         return true;
     }
@@ -763,6 +769,11 @@ const BuildingUpgradeSystem = (function () {
 
         if (typeof spawnParticles === 'function') {
             spawnParticles(upgrade.x, upgrade.y, '#ffd700', 20);
+        }
+
+        // Force UI update if this building is currently selected
+        if (selectedBuildingPos && selectedBuildingPos.x === upgrade.x && selectedBuildingPos.y === upgrade.y) {
+            updateUI();
         }
     }
 
@@ -952,8 +963,8 @@ const BuildingUpgradeSystem = (function () {
         // Update active upgrades
         updateUpgrades(dt);
 
-        // Refresh UI if dialog is open
-        if (selectedBuildingPos) updateUI();
+        // Refresh dynamic UI elements (progress bars)
+        updateDynamicUI();
 
         // Process special building effects
         for (const building of buildings) {
@@ -985,78 +996,6 @@ const BuildingUpgradeSystem = (function () {
     }
 
     // ============= UI HELPERS =============
-    function getUpgradeProgress(x, y) {
-        const key = `${x},${y}`;
-        const upgrade = activeUpgrades.find(u => u.key === key);
-        if (!upgrade) return null;
-
-        return {
-            progress: upgrade.progress,
-            totalTime: upgrade.totalTime,
-            percent: (upgrade.progress / upgrade.totalTime) * 100,
-            remaining: upgrade.totalTime - upgrade.progress,
-            targetLevel: upgrade.targetLevel
-        };
-    }
-
-    function showUpgradeUI(x, y) {
-        const data = getBuildingData(x, y);
-        if (!data) return;
-
-        const building = buildings.find(b => b.x === x && b.y === y);
-        const upgradeProgress = getUpgradeProgress(x, y);
-
-        let content = `
-            <strong>${data.upgrade.icon} ${data.upgrade.name}</strong><br>
-            <small>Level ${data.level}/${data.maxLevel}</small><br>
-            <small>Health: ${Math.floor(building?.health || 0)}/${data.upgrade.health}</small>
-        `;
-
-        if (upgradeProgress) {
-            content += `<br><small>Upgrading: ${Math.floor(upgradeProgress.percent)}%</small>`;
-        }
-
-        const buttons = [];
-
-        if (data.canUpgrade && !upgradeProgress) {
-            const nextUpgrade = data.nextUpgrade;
-            const costStr = Object.entries(nextUpgrade.cost)
-                .map(([r, a]) => `${r}: ${a}`)
-                .join(', ');
-
-            buttons.push({
-                text: `Upgrade (${costStr})`,
-                action: () => startUpgrade(x, y),
-                class: 'accept'
-            });
-        }
-
-        if (upgradeProgress) {
-            buttons.push({
-                text: 'Cancel Upgrade',
-                action: () => cancelUpgrade(x, y),
-                class: 'reject'
-            });
-        }
-
-        const repairCheck = canRepairBuilding(x, y);
-        if (repairCheck.canRepair) {
-            const costStr = Object.entries(repairCheck.cost)
-                .map(([r, a]) => `${r}: ${a}`)
-                .join(', ');
-            buttons.push({
-                text: `Repair (${costStr})`,
-                action: () => repairBuilding(x, y),
-                class: 'accept'
-            });
-        }
-
-        if (typeof showNotification === 'function') {
-            showNotification(content, buttons);
-        }
-    }
-
-    // ============= UI HELPERS =============
     let selectedBuildingPos = null; // {x, y}
 
     function getUpgradeProgress(x, y) {
@@ -1074,12 +1013,17 @@ const BuildingUpgradeSystem = (function () {
     }
 
     function showUpgradeUI(x, y) {
+        // Validate building exists
+        const data = getBuildingData(x, y);
+        if (!data) return;
+
         selectedBuildingPos = { x, y };
         updateUI();
 
         const dialog = document.getElementById('upgradeDialog');
         if (dialog) {
             dialog.style.display = 'block';
+            dialog.classList.add('active');
         }
     }
 
@@ -1088,6 +1032,29 @@ const BuildingUpgradeSystem = (function () {
         const dialog = document.getElementById('upgradeDialog');
         if (dialog) {
             dialog.style.display = 'none';
+            dialog.classList.remove('active');
+        }
+    }
+
+    function updateDynamicUI() {
+        if (!selectedBuildingPos) return;
+
+        const upgradeProgress = getUpgradeProgress(selectedBuildingPos.x, selectedBuildingPos.y);
+
+        // Update Progress Bar
+        const progressContainer = document.getElementById('upgradeProgressBarContainer');
+        const progressFill = document.getElementById('upgradeProgressFill');
+        const timeLeft = document.getElementById('upgradeTimeLeft');
+
+        if (upgradeProgress && progressContainer) {
+            progressContainer.style.display = 'block';
+            if (progressFill) progressFill.style.width = `${upgradeProgress.percent}%`;
+            if (timeLeft) timeLeft.textContent = `${upgradeProgress.remaining.toFixed(1)}s`;
+        } else if (progressContainer) {
+            if (progressContainer.style.display === 'block') {
+                progressContainer.style.display = 'none';
+                updateUI(); // Refresh buttons if upgrade just finished
+            }
         }
     }
 
@@ -1097,7 +1064,6 @@ const BuildingUpgradeSystem = (function () {
         const { x, y } = selectedBuildingPos;
         const data = getBuildingData(x, y);
 
-        // If building is gone or invalid, close UI
         if (!data) {
             closeUpgradeUI();
             return;
@@ -1110,83 +1076,121 @@ const BuildingUpgradeSystem = (function () {
         const contentEl = document.getElementById('upgradeContent');
         if (contentEl) {
             let html = `
-                ${data.upgrade.icon} <strong>${data.upgrade.name}</strong>
-                <div>Level ${data.level} / ${data.maxLevel}</div>
-                <div>Health: ${Math.floor(building?.health || 0)} / ${data.upgrade.health}</div>
-            `;
+                <div class="upgrade-header">
+                    <span class="upgrade-icon-large">${data.upgrade.icon}</span>
+                    <div class="upgrade-title-group">
+                        <div class="upgrade-name">${data.upgrade.name}</div>
+                        <div class="upgrade-level-badge">Tier ${data.level} / ${data.maxLevel}</div>
+                    </div>
+                </div>
+                
+                <div class="upgrade-stats-panel">
+                    <div class="stat-row">
+                        <span><i class="material-icons">favorite</i> Health</span>
+                        <span class="stat-value">${Math.floor(building?.health || 0)} / ${data.upgrade.health}</span>
+                    </div>
+                `;
 
             if (data.upgrade.description) {
-                html += `<div style="font-style: italic; margin-top: 5px; color: #aaa;">${data.upgrade.description}</div>`;
+                html += `<div class="upgrade-description">${data.upgrade.description}</div>`;
             }
 
-            // Show stats
             if (data.upgrade.stats) {
-                html += `<div style="margin-top: 10px; font-size: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">`;
+                html += `<div class="upgrade-stats-grid">`;
                 for (const [key, val] of Object.entries(data.upgrade.stats)) {
-                    html += `<div style="text-align: left;"><span style="color:#888;">${key}:</span> <span style="color:#eee;">${val}</span></div>`;
+                    html += `
+                        <div class="stat-pill">
+                            <span class="pill-label">${key}</span>
+                            <span class="pill-value">${val}</span>
+                        </div>`;
                 }
                 html += `</div>`;
             }
 
+            if (data.canUpgrade && !upgradeProgress) {
+                const next = data.nextUpgrade;
+                html += `
+                    <div class="upgrade-preview">
+                        <div class="preview-header"><i class="material-icons">trending_up</i> Next Level: ${next.name}</div>
+                        <div class="preview-description">${next.description || ''}</div>
+                `;
+
+                if (next.stats) {
+                    html += `<div class="upgrade-stats-grid">`;
+                    for (const [key, val] of Object.entries(next.stats)) {
+                        const currentVal = data.upgrade.stats ? data.upgrade.stats[key] : null;
+                        const isBoost = currentVal !== null && val > currentVal;
+
+                        html += `
+                            <div class="stat-pill ${isBoost ? 'boost' : ''}">
+                                <span class="pill-label">${key}</span>
+                                <span class="pill-value">${val}${isBoost ? ' ↑' : ''}</span>
+                            </div>`;
+                    }
+                    html += `</div>`;
+                }
+                html += `</div>`;
+            }
+
+            html += `</div>`;
             contentEl.innerHTML = html;
         }
 
-        // Update Progress Bar
-        const progressContainer = document.getElementById('upgradeProgressBarContainer');
-        const progressFill = document.getElementById('upgradeProgressFill');
-        const timeLeft = document.getElementById('upgradeTimeLeft');
+        updateDynamicUI();
 
-        if (upgradeProgress && progressContainer) {
-            progressContainer.style.display = 'block';
-            if (progressFill) progressFill.style.width = `${upgradeProgress.percent}%`;
-            if (timeLeft) timeLeft.textContent = `${upgradeProgress.remaining.toFixed(1)}s`;
-        } else if (progressContainer) {
-            progressContainer.style.display = 'none';
-        }
-
-        // Update Buttons (only if not upgrading, or if cancel is needed)
         const actionsEl = document.getElementById('upgradeActions');
         if (actionsEl) {
-            // Rebuild buttons only if needed (simplified: always rebuild for reactive state usually, 
-            // but for performance we might check. For now, rebuild is safe for this scale).
-            actionsEl.innerHTML = ''; // Clear
+            actionsEl.innerHTML = '';
 
             if (data.canUpgrade && !upgradeProgress) {
                 const nextUpgrade = data.nextUpgrade;
-                const costStr = Object.entries(nextUpgrade.cost)
-                    .map(([r, a]) => `${a} ${r}`) // swapped for reading "10 wood"
-                    .join(', ');
+                let costHtml = '';
+                for (const [res, amt] of Object.entries(nextUpgrade.cost)) {
+                    const hasEnough = (resources[res] || 0) >= amt;
+                    costHtml += `<span class="cost-tag ${hasEnough ? '' : 'insufficient'}">${amt} ${res}</span>`;
+                }
 
                 const btn = document.createElement('button');
-                btn.className = 'upgrade-btn accept';
-                btn.innerHTML = `<i class="material-icons">arrow_upward</i> Upgrade <span style="font-size: 11px; opacity: 0.8;">(${costStr})</span>`;
+                btn.className = 'upgrade-btn-premium accept';
+                btn.innerHTML = `
+                    <div class="btn-main-text"><i class="material-icons">rocket_launch</i> UPGRADE</div>
+                    <div class="btn-sub-text">${costHtml}</div>
+                `;
                 btn.onclick = () => {
-                    startUpgrade(x, y);
-                    updateUI(); // Refresh immediately
+                    if (startUpgrade(x, y)) {
+                        if (typeof spawnParticles === 'function') spawnParticles(x, y, '#ffd700', 10);
+                    }
                 };
                 actionsEl.appendChild(btn);
             }
 
             if (upgradeProgress) {
                 const btn = document.createElement('button');
-                btn.className = 'upgrade-btn reject';
-                btn.innerHTML = `<i class="material-icons">cancel</i> Cancel`;
+                btn.className = 'upgrade-btn-premium reject';
+                btn.innerHTML = `
+                    <div class="btn-main-text"><i class="material-icons">block</i> CANCEL</div>
+                    <div class="btn-sub-text">Refund 50% resources</div>
+                `;
                 btn.onclick = () => {
                     cancelUpgrade(x, y);
-                    updateUI();
                 };
                 actionsEl.appendChild(btn);
             }
 
             const repairCheck = canRepairBuilding(x, y);
             if (repairCheck.canRepair && !upgradeProgress) {
-                const costStr = Object.entries(repairCheck.cost)
-                    .map(([r, a]) => `${a} ${r}`)
-                    .join(', ');
+                let costHtml = '';
+                for (const [res, amt] of Object.entries(repairCheck.cost)) {
+                    const hasEnough = (resources[res] || 0) >= amt;
+                    costHtml += `<span class="cost-tag ${hasEnough ? '' : 'insufficient'}">${amt} ${res}</span>`;
+                }
 
                 const btn = document.createElement('button');
-                btn.className = 'upgrade-btn accept';
-                btn.innerHTML = `<i class="material-icons">build</i> Repair <div style="font-size: 10px;">(${costStr})</div>`;
+                btn.className = 'upgrade-btn-premium';
+                btn.innerHTML = `
+                    <div class="btn-main-text"><i class="material-icons">build</i> REPAIR</div>
+                    <div class="btn-sub-text">${costHtml}</div>
+                `;
                 btn.onclick = () => {
                     repairBuilding(x, y);
                     updateUI();
@@ -1201,13 +1205,11 @@ const BuildingUpgradeSystem = (function () {
         const oldKey = `${oldX},${oldY}`;
         const level = buildingLevels.get(oldKey);
 
-        // Move level data
         if (level) {
             buildingLevels.delete(oldKey);
             setBuildingLevel(newX, newY, level);
         }
 
-        // Update active upgrade if any
         const upgrade = activeUpgrades.find(u => u.key === oldKey);
         if (upgrade) {
             upgrade.x = newX;
@@ -1215,13 +1217,11 @@ const BuildingUpgradeSystem = (function () {
             upgrade.key = `${newX},${newY}`;
         }
 
-        // Ensure the new building object in the world tracking has the correct level
         const newBuilding = buildings.find(b => b.x === newX && b.y === newY);
         if (newBuilding && level) {
             newBuilding.level = level;
         }
 
-        // If UI was open for this building, update position
         if (selectedBuildingPos && selectedBuildingPos.x === oldX && selectedBuildingPos.y === oldY) {
             selectedBuildingPos = { x: newX, y: newY };
             updateUI();
@@ -1246,78 +1246,41 @@ const BuildingUpgradeSystem = (function () {
 
     function setState(state) {
         if (!state) return;
-
         buildingLevels = new Map(state.buildingLevels || []);
-
         activeUpgrades = (state.activeUpgrades || []).map(u => {
-            const tile = getTile(u.x, u.y);
-            // If tile is floor (moved?), try to find building in buildings array? 
-            // For now assume tile type is correct or persisted elsewhere.
-            // Actually getTile might be just data. 
-            // We need to re-link the type.
-            const building = buildings.find(b => b.x === u.x && b.y === u.y);
-            // Best effort to find type from buildings array or tile
-            let type = null;
-            if (building) {
-                // get type from tile at location
-                const t = getTile(u.x, u.y);
-                type = getBuildingType(t);
-            }
-
-            // Fallback if needed, but safe to assume it works if world loaded first
-            if (!type) {
-                // Try to guess from active upgrade data if we stored it? We didn't.
-                // We re-derive from world.
-                const t = getTile(u.x, u.y);
-                type = getBuildingType(t);
-            }
-
+            const t = getTile(u.x, u.y);
+            const type = getBuildingType(t);
             return {
                 ...u,
                 buildingType: type,
-                startTime: Date.now() // Reset start time reference for smoothness if needed, but progress is saved
+                startTime: Date.now()
             };
         }).filter(u => u.buildingType);
     }
 
     // ============= PUBLIC API =============
     return {
-        // Constants
         BUILDING_TYPES,
         CONFIG,
-
-        // Queries
         getBuildingType,
         getBuildingLevel,
         getBuildingData,
         getBuildingStats,
         getTowerStats,
         getCannonStats,
-        getActiveUpgrades: () => activeUpgrades, // Exposed for renderer
-
-        // Upgrades
+        getActiveUpgrades: () => activeUpgrades,
         canUpgradeBuilding,
         startUpgrade,
         cancelUpgrade,
         getUpgradeProgress,
-
-        // Repair
         canRepairBuilding,
         calculateRepairCost,
         repairBuilding,
-
-        // Movement
         moveBuilding,
-
-        // Updates
         update,
-
-        // UI
         showUpgradeUI,
         closeUpgradeUI,
         updateUI,
-
-        // State
         getState,
         setState,
         setBuildingLevel
