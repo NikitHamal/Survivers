@@ -36,7 +36,7 @@ const PetSystem = (function () {
             name: 'Sheep',
             icon: '🐑',
             baseStats: { health: 30, speed: 2.5 },
-            size: 0.85,
+            size: 0.9,
             drops: [
                 { item: 'wool', min: 1, max: 3, chance: 1.0 },
                 { item: 'meat', min: 1, max: 2, chance: 0.8 }
@@ -52,7 +52,7 @@ const PetSystem = (function () {
             name: 'Chicken',
             icon: '🐔',
             baseStats: { health: 15, speed: 3.5 },
-            size: 0.55,
+            size: 0.75,
             drops: [
                 { item: 'feather', min: 1, max: 3, chance: 1.0 },
                 { item: 'meat', min: 1, max: 1, chance: 0.7 }
@@ -68,7 +68,7 @@ const PetSystem = (function () {
             name: 'Pig',
             icon: '🐷',
             baseStats: { health: 40, speed: 2.0 },
-            size: 0.72,
+            size: 0.85,
             drops: [
                 { item: 'pork', min: 2, max: 4, chance: 1.0 },
                 { item: 'leather', min: 0, max: 1, chance: 0.3 }
@@ -84,7 +84,7 @@ const PetSystem = (function () {
             name: 'Slime',
             icon: '🟢',
             baseStats: { health: 25, speed: 1.5 },
-            size: 1.5,
+            size: 1.35,
             drops: [
                 { item: 'slimeball', min: 1, max: 3, chance: 1.0 }
             ],

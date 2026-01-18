@@ -17,6 +17,14 @@ const ANIMAL_PALETTE = {
     }
 };
 
+const ANIMAL_ASSET_SCALE = {
+    sheep: 1.1,
+    chicken: 1.05,
+    rooster: 1.05,
+    pig: 1.15,
+    slime: 1.5
+};
+
 // Main render function - called from pet-system.js
 window.renderAnimalSprite = function (ctx, animal, cam) {
     const s = TILE_SIZE * SCALE;
@@ -34,16 +42,16 @@ window.renderAnimalSprite = function (ctx, animal, cam) {
         ctx.globalAlpha = 0.5 + Math.sin(animal.hitTimer * 30) * 0.3;
     }
 
-    const typeId = animal.type?.id || animal.typeId || 'sheep';
+    const typeId = (animal.type?.id || animal.typeId || 'sheep').toLowerCase();
 
     // Try to use AssetManager
-    let spriteKey = typeId.toLowerCase();
+    let spriteKey = typeId;
     if (spriteKey === 'chicken') spriteKey = 'rooster'; // Default chicken to rooster for now
 
     const img = typeof AssetManager !== 'undefined' ? AssetManager.get(spriteKey) : null;
 
     if (img && img.complete && img.naturalWidth > 0) {
-        renderAnimatedAnimalSprite(ctx, animal, img, screenX, screenY, s);
+        renderAnimatedAnimalSprite(ctx, animal, img, screenX, screenY, s, spriteKey);
     } else {
         // Fallback to procedural
         switch (typeId) {
@@ -72,11 +80,12 @@ window.renderAnimalSprite = function (ctx, animal, cam) {
     ctx.restore();
 };
 
-function renderAnimatedAnimalSprite(ctx, animal, img, sx, sy, s) {
+function renderAnimatedAnimalSprite(ctx, animal, img, sx, sy, s, spriteKey) {
     const isSlime = animal.type?.id === 'slime';
     const size = animal.size || 1.0;
-    // Visually scale slimes significantly
-    const drawSize = s * size * (isSlime ? 2.2 : 1.5);
+    const baseScale = isSlime ? 1.6 : 1.2;
+    const scale = ANIMAL_ASSET_SCALE[spriteKey] || ANIMAL_ASSET_SCALE[animal.type?.id] || 1.0;
+    const drawSize = s * size * baseScale * scale;
 
     // Dynamic detection of rows and cols
     // Assumption: Frames are roughly square or the sheet uses standard rows (1, 4, or 8)
@@ -110,15 +119,29 @@ function renderAnimatedAnimalSprite(ctx, animal, img, sx, sy, s) {
     const frameCount = cols;
     // Faster, snappier animations for slimes
     const animSpeed = isSlime ? 12 : 8;
-    const frame = Math.floor((animal.animTimer || 0) * animSpeed) % frameCount;
+    const frame = animal.isMoving
+        ? Math.floor((animal.animTimer || 0) * animSpeed) % frameCount
+        : 0;
 
     const sourceX = frame * frameW;
     const sourceY = row * frameH;
 
     // Grounded placement
-    const dx = sx - drawSize / 2;
-    // Lower grounding for slimes to make them look more "squashed" on the grass
-    const dy = sy - drawSize * (isSlime ? 0.75 : 0.85);
+    const centerX = sx + s * 0.5;
+    const groundY = sy + s * 0.82;
+    const bounceHeight = isSlime ? (animal.bounceHeight || 0) * s : 0;
+    const drawY = groundY - drawSize * (isSlime ? 0.72 : 0.9) - bounceHeight;
+    const dx = Math.round(centerX - drawSize / 2);
+    const dy = Math.round(drawY);
+
+    // Ground shadow to anchor the sprite
+    const shadowScale = isSlime ? Math.max(0.3, 1 - bounceHeight / (s * 0.6)) : 1;
+    const shadowW = drawSize * (isSlime ? 0.28 : 0.24) * shadowScale;
+    const shadowH = shadowW * 0.35;
+    ctx.fillStyle = `rgba(0, 0, 0, ${0.22 * shadowScale})`;
+    ctx.beginPath();
+    ctx.ellipse(Math.round(centerX), Math.round(groundY), shadowW, shadowH, 0, 0, Math.PI * 2);
+    ctx.fill();
 
     if (sourceY + frameH <= img.height && sourceX + frameW <= img.width) {
         ctx.drawImage(

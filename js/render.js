@@ -91,6 +91,7 @@ function render(alpha = 1) {
     // Render entity shadows first
     entities.forEach(e => {
         if (e.type === 'tree') return; // Trees have their own shadows
+        if (e.type === 'animal') return; // Animals render their own grounded shadows
         const s = TILE_SIZE * SCALE;
         const sx = (e.x - 0.5) * s - camX;
         const sy = (e.y - 0.5) * s - camY;
