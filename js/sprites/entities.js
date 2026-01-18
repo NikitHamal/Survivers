@@ -2,109 +2,218 @@
 
 function renderPlayerEnhanced(renderX, renderY, camX, camY) {
     const s = TILE_SIZE * SCALE;
-    const sx = (renderX - 0.5) * s - camX;
-    // Grounding: (renderY - 0.6) instead of -0.9 to bring the feet to the shadow
-    const sy = (renderY - 0.6) * s - camY;
+    // Ground point of the tile
+    const sx = renderX * s - camX;
+    const sy = (renderY + 0.5) * s - camY;
 
     // Hit flash
     if (player.hitTimer > 0) {
         ctx.globalAlpha = 0.5 + Math.sin(player.hitTimer * 30) * 0.3;
     }
 
-    // 2. Dust Puff (if moving)
+    // Dust Puff
     if (player.isMoving && Math.random() < 0.1) {
         spawnParticles(player.x, player.y + 0.3, 'dust', 1, 'dust', { speed: 0.5, size: 1.5 });
     }
 
-    const bobY = player.isMoving ? Math.sin(player.animTimer * 2) * 2 : 0;
-    const armSwing = player.isMoving ? Math.sin(player.animTimer * 2) * s * 0.08 : 0;
-    const legSwing = player.isMoving ? Math.sin(player.animTimer * 2) * s * 0.06 : 0;
+    // Determine state
+    let state = 'i'; // idle
+    let cols = 12;
+    if (player.attackCooldown > 0.05) {
+        state = 'a'; // attack
+        cols = 8;
+    } else if (player.isMoving) {
+        state = 'w'; // walk
+        cols = 6;
+    }
 
-    // Directional offsets for eyes/face
-    let faceOffX = 0;
-    if (player.direction === 0) faceOffX = s * 0.1; // Facing Right
-    if (player.direction === 2) faceOffX = -s * 0.1; // Facing Left
-
-    // ======= BODY =======
-    // Body outline
-    ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(sx + s * 0.26, sy + s * 0.38 + bobY, s * 0.48, s * 0.44);
-
-    // Body
-    ctx.fillStyle = '#4488ff';
-    ctx.fillRect(sx + s * 0.28, sy + s * 0.4 + bobY, s * 0.44, s * 0.4);
-
-    // Shirt detail
-    ctx.fillStyle = '#5599ff';
-    ctx.fillRect(sx + s * 0.32 + faceOffX * 0.5, sy + s * 0.45 + bobY, s * 0.36, s * 0.12);
-
-    // ======= ARMS =======
-    // Left arm outline
-    ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(sx + s * 0.15, sy + s * 0.4 + bobY + armSwing, s * 0.16, s * 0.28);
-    // Left arm
-    ctx.fillStyle = PALETTE.skin1;
-    ctx.fillRect(sx + s * 0.17, sy + s * 0.42 + bobY + armSwing, s * 0.12, s * 0.24);
-
-    // Right arm outline
-    ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(sx + s * 0.69, sy + s * 0.4 + bobY - armSwing, s * 0.16, s * 0.28);
-    // Right arm
-    ctx.fillStyle = PALETTE.skin1;
-    ctx.fillRect(sx + s * 0.71, sy + s * 0.42 + bobY - armSwing, s * 0.12, s * 0.24);
-
-    // ======= HEAD =======
-    // Head outline
-    ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(sx + s * 0.30, sy + s * 0.15 + bobY, s * 0.40, s * 0.32);
-
-    // Head
-    ctx.fillStyle = PALETTE.skin1;
-    ctx.fillRect(sx + s * 0.32, sy + s * 0.18 + bobY, s * 0.36, s * 0.28);
-
-    // ======= HAIR =======
-    // Hair outline
-    ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(sx + s * 0.28, sy + s * 0.08 + bobY, s * 0.44, s * 0.18);
-
-    // Hair
-    ctx.fillStyle = '#5a4030';
-    ctx.fillRect(sx + s * 0.30, sy + s * 0.1 + bobY, s * 0.40, s * 0.14);
-
-    // ======= EYES =======
-    if (player.direction !== 3) { // Not facing away (Up)
-        ctx.fillStyle = '#222';
-        if (player.direction === 0 || player.direction === 2) {
-            // Facing Left or Right - render one eye shifted
-            const eyeX = player.direction === 0 ? sx + s * 0.54 : sx + s * 0.4;
-            ctx.fillRect(eyeX, sy + s * 0.26 + bobY, s * 0.06, s * 0.08);
-        } else {
-            // Facing Down - render both eyes
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(sx + s * 0.36, sy + s * 0.26 + bobY, s * 0.1, s * 0.08);
-            ctx.fillRect(sx + s * 0.54, sy + s * 0.26 + bobY, s * 0.1, s * 0.08);
-            ctx.fillStyle = '#222';
-            ctx.fillRect(sx + s * 0.39, sy + s * 0.27 + bobY, s * 0.05, s * 0.06);
-            ctx.fillRect(sx + s * 0.56, sy + s * 0.27 + bobY, s * 0.05, s * 0.06);
+    // Only show sword if equipped
+    let hasSword = false;
+    if (typeof EquipmentSystem !== 'undefined') {
+        const weapon = EquipmentSystem.getEquippedItem('weapon');
+        if (weapon && (weapon.id.includes('sword') || weapon.id.includes('blade') || weapon.id.includes('cleaver'))) {
+            hasSword = true;
         }
     }
 
-    // ======= LEGS =======
-    // Left leg outline
-    ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(sx + s * 0.30, sy + s * 0.76 + legSwing, s * 0.17, s * 0.22);
-    // Left leg
-    ctx.fillStyle = '#3355aa';
-    ctx.fillRect(sx + s * 0.32, sy + s * 0.78 + legSwing, s * 0.13, s * 0.18);
+    // Render layers
+    const scale = 2.6; // Reduced again as requested
+    const drawSize = s * scale;
+    const rows = 4;
 
-    // Right leg outline
-    ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(sx + s * 0.53, sy + s * 0.76 - legSwing, s * 0.17, s * 0.22);
-    // Right leg
-    ctx.fillStyle = '#3355aa';
-    ctx.fillRect(sx + s * 0.55, sy + s * 0.78 - legSwing, s * 0.13, s * 0.18);
+    const parts = ['body', 'head'];
+    if (hasSword) parts.unshift('swordback'); // Behind
+    if (hasSword) parts.push('sword'); // In front
+
+    const animSpeed = (cols === 12) ? 14 : 10;
+    // For attack, we want consistent frame advancement based on cooldown
+    let frame = 0;
+    if (state === 'a') {
+        // Attack is roughly 0.4s long. Map [0.4, 0] to [0, 7]
+        const progress = Math.min(1, Math.max(0, (0.4 - player.attackCooldown) / 0.4));
+        frame = Math.floor(progress * cols) % cols;
+    } else {
+        frame = Math.floor((player.animTimer || 0) * animSpeed) % cols;
+    }
+
+    let dir = player.direction; // 0=Right, 1=Down, 2=Left, 3=Up
+    let row = 0;
+    if (dir === 1) row = 0;        // Down
+    else if (dir === 2) row = 1;   // Left
+    else if (dir === 0) row = 2;   // Right
+    else if (dir === 3) row = 3;   // Up
+
+    parts.forEach(part => {
+        const key = `p_${part}_${state}`;
+        const img = AssetManager.get(key);
+        if (img && img.complete && img.naturalWidth > 0) {
+            const frameW = img.width / cols;
+            const frameH = img.height / rows;
+            const sourceX = frame * frameW;
+            const sourceY = row * frameH;
+
+            // Anchoring at feet: Bottom center of frame is at (sx, sy)
+            const dx = sx - drawSize / 2;
+            const dy = sy - drawSize * 0.85; // Adjusted to ground precisely on the tile
+
+            ctx.drawImage(img, sourceX, sourceY, frameW, frameH, dx, dy, drawSize, drawSize);
+        }
+    });
+
+    // Procedural Fallback if no parts loaded
+    if (!AssetManager.get('p_body_i')) {
+        renderProceduralPlayer(sx, sy, s);
+    }
 
     ctx.globalAlpha = 1;
+}
+
+function renderProceduralPlayer(sx, sy, s) {
+    const bobY = player.isMoving ? Math.sin(player.animTimer * 12) * 2 : 0;
+    const armSwing = player.isMoving ? Math.sin(player.animTimer * 12) * s * 0.08 : 0;
+    const legSwing = player.isMoving ? Math.sin(player.animTimer * 12) * s * 0.06 : 0;
+
+    const fsx = sx - s / 2;
+    const fsy = sy - s * 0.9;
+
+    let faceOffX = 0;
+    if (player.direction === 0) faceOffX = s * 0.1;
+    if (player.direction === 2) faceOffX = -s * 0.1;
+
+    ctx.fillStyle = PALETTE.outline;
+    ctx.fillRect(fsx + s * 0.26, fsy + s * 0.38 + bobY, s * 0.48, s * 0.44);
+    ctx.fillStyle = '#4488ff';
+    ctx.fillRect(fsx + s * 0.28, fsy + s * 0.4 + bobY, s * 0.44, s * 0.4);
+    ctx.fillStyle = '#5599ff';
+    ctx.fillRect(fsx + s * 0.32 + faceOffX * 0.5, fsy + s * 0.45 + bobY, s * 0.36, s * 0.12);
+
+    ctx.fillStyle = PALETTE.outline;
+    ctx.fillRect(fsx + s * 0.15, fsy + s * 0.4 + bobY + armSwing, s * 0.16, s * 0.28);
+    ctx.fillStyle = PALETTE.skin1;
+    ctx.fillRect(fsx + s * 0.17, fsy + s * 0.42 + bobY + armSwing, s * 0.12, s * 0.24);
+
+    ctx.fillStyle = PALETTE.outline;
+    ctx.fillRect(fsx + s * 0.69, fsy + s * 0.4 + bobY - armSwing, s * 0.16, s * 0.28);
+    ctx.fillStyle = PALETTE.skin1;
+    ctx.fillRect(fsx + s * 0.71, fsy + s * 0.42 + bobY - armSwing, s * 0.12, s * 0.24);
+
+    ctx.fillStyle = PALETTE.outline;
+    ctx.fillRect(fsx + s * 0.30, fsy + s * 0.15 + bobY, s * 0.40, s * 0.32);
+    ctx.fillStyle = PALETTE.skin1;
+    ctx.fillRect(fsx + s * 0.32, fsy + s * 0.18 + bobY, s * 0.36, s * 0.28);
+
+    ctx.fillStyle = PALETTE.outline;
+    ctx.fillRect(fsx + s * 0.28, fsy + s * 0.08 + bobY, s * 0.44, s * 0.18);
+    ctx.fillStyle = '#5a4030';
+    ctx.fillRect(fsx + s * 0.30, fsy + s * 0.1 + bobY, s * 0.40, s * 0.14);
+
+    if (player.direction !== 3) {
+        ctx.fillStyle = '#222';
+        if (player.direction === 0 || player.direction === 2) {
+            const eyeX = player.direction === 0 ? fsx + s * 0.54 : fsx + s * 0.4;
+            ctx.fillRect(eyeX, fsy + s * 0.26 + bobY, s * 0.06, s * 0.08);
+        } else {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(fsx + s * 0.36, fsy + s * 0.26 + bobY, s * 0.1, s * 0.08);
+            ctx.fillRect(fsx + s * 0.54, fsy + s * 0.26 + bobY, s * 0.1, s * 0.08);
+            ctx.fillStyle = '#222';
+            ctx.fillRect(fsx + s * 0.39, fsy + s * 0.27 + bobY, s * 0.05, s * 0.06);
+            ctx.fillRect(fsx + s * 0.56, fsy + s * 0.27 + bobY, s * 0.05, s * 0.06);
+        }
+    }
+
+    ctx.fillStyle = PALETTE.outline;
+    ctx.fillRect(fsx + s * 0.30, fsy + s * 0.76 + legSwing, s * 0.17, s * 0.22);
+    ctx.fillStyle = '#3355aa';
+    ctx.fillRect(fsx + s * 0.32, fsy + s * 0.78 + legSwing, s * 0.13, s * 0.18);
+    ctx.fillStyle = PALETTE.outline;
+    ctx.fillRect(fsx + s * 0.53, fsy + s * 0.76 - legSwing, s * 0.17, s * 0.22);
+    ctx.fillStyle = '#3355aa';
+    ctx.fillRect(fsx + s * 0.55, fsy + s * 0.78 - legSwing, s * 0.13, s * 0.18);
+}
+
+function renderSimpleDirectionalSprite(ctx, entity, img, sx, sy, s, scale = 1.0, cols = 6) {
+    const drawSize = s * scale;
+    const rows = 4;
+    const frameW = img.width / cols;
+    const frameH = img.height / rows;
+
+    let dir = entity.direction; // 0=Right, 1=Down, 2=Left, 3=Up
+    let row = 0;
+    if (dir === 1) row = 0;        // Down
+    else if (dir === 2) row = 1;   // Left
+    else if (dir === 0) row = 2;   // Right
+    else if (dir === 3) row = 3;   // Up
+
+    const frameCount = cols;
+    const animSpeed = (cols > 10) ? 12 : 8; // Faster animation for high frame count sheets
+    const frame = Math.floor((entity.animTimer || 0) * animSpeed) % frameCount;
+
+    const sourceX = frame * frameW;
+    const sourceY = row * frameH;
+
+    const dx = sx - drawSize / 2;
+    const dy = sy - drawSize * 0.82; // Adjusted for better grounding
+
+    if (sourceY + frameH <= img.height && sourceX + frameW <= img.width) {
+        ctx.drawImage(img, sourceX, sourceY, frameW, frameH, dx, dy, drawSize, drawSize);
+    } else {
+        ctx.drawImage(img, 0, 0, frameW, frameH, dx, dy, drawSize, drawSize);
+    }
+}
+
+function renderAnimatedEntitySprite(ctx, entity, img, sx, sy, s, scale = 1.0) {
+    const drawSize = s * scale;
+    const cols = 6;
+    const rows = img.height > img.width ? 8 : 4;
+    const frameW = img.width / cols;
+    const frameH = img.height / rows;
+
+    let dir = entity.direction; // 0=Right, 1=Down, 2=Left, 3=Up
+    let row = 0;
+    if (dir === 1) row = 0;        // Down
+    else if (dir === 2) row = 1;   // Left
+    else if (dir === 0) row = 2;   // Right
+    else if (dir === 3) row = 3;   // Up
+
+    if (entity.isMoving && rows >= 8) {
+        row += 4;
+    }
+
+    const frameCount = cols;
+    const frame = Math.floor((entity.animTimer || 0) * 8) % frameCount;
+
+    const sourceX = frame * frameW;
+    const sourceY = row * frameH;
+
+    const dx = sx - drawSize / 2;
+    const dy = sy - drawSize * 0.85;
+
+    if (sourceY + frameH <= img.height && sourceX + frameW <= img.width) {
+        ctx.drawImage(img, sourceX, sourceY, frameW, frameH, dx, dy, drawSize, drawSize);
+    } else {
+        ctx.drawImage(img, 0, 0, frameW, frameH, dx, dy, drawSize, drawSize);
+    }
 }
 
 function renderSurvivorEnhanced(survivor, renderX, renderY, camX, camY) {
@@ -288,91 +397,77 @@ function renderSurvivorEnhanced(survivor, renderX, renderY, camX, camY) {
 
 function renderZombieEnhanced(z, renderX, renderY, camX, camY) {
     const s = TILE_SIZE * SCALE;
-    const sx = (renderX - 0.5) * s - camX;
-    const sy = (renderY - 0.6) * s - camY;
+    // Ground point of the tile
+    const sx = renderX * s - camX;
+    const sy = (renderY + 0.5) * s - camY;
 
     if (sx < -s * 2 || sx > canvas.width + s || sy < -s * 2 || sy > canvas.height + s) return;
 
-    const bob = Math.sin(z.animTimer * 3) * 1.5;
-    const shamble = Math.sin(z.animTimer * 2) * 2;
-    const armReach = Math.sin(z.animTimer * 4) * s * 0.08;
-
-    // 2. Glowing Red Eyes Glow (Atmospheric)
+    // Glowing Red Eyes Glow
     if (isNight) {
-        const eyeGlow = ctx.createRadialGradient(sx + s * 0.5, sy + s * 0.3, 0, sx + s * 0.5, sy + s * 0.3, s * 0.4);
-        eyeGlow.addColorStop(0, 'rgba(255, 0, 0, 0.3)');
+        const eyeGlow = ctx.createRadialGradient(sx, sy - s * 0.4, 0, sx, sy - s * 0.4, s * 0.4);
+        eyeGlow.addColorStop(0, 'rgba(255, 0, 0, 0.4)');
         eyeGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
         ctx.fillStyle = eyeGlow;
-        ctx.fillRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.6);
+        ctx.fillRect(sx - s * 0.5, sy - s * 0.8, s, s);
     }
 
-    // ======= BODY =======
-    // Body outline
-    ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(sx + s * 0.20, sy + s * 0.33 + bob, s * 0.60, s * 0.50);
+    // Procedural Rendering
+    const bob = Math.sin(z.animTimer * 12) * 1.5;
+    const shamble = Math.sin(z.animTimer * 8) * 2;
+    const armReach = Math.sin(z.animTimer * 8) * s * 0.08;
 
-    // Body
+    const fsx = sx - s / 2;
+    const fsy = sy - s * 0.9;
+
+    ctx.fillStyle = PALETTE.outline;
+    ctx.fillRect(fsx + s * 0.20, fsy + s * 0.33 + bob, s * 0.60, s * 0.50);
     ctx.fillStyle = PALETTE.zombie2;
-    ctx.fillRect(sx + s * 0.22, sy + s * 0.35 + bob, s * 0.56, s * 0.46);
+    ctx.fillRect(fsx + s * 0.22, fsy + s * 0.35 + bob, s * 0.56, s * 0.46);
 
-    // ======= ARMS (reaching forward) =======
-    // Left arm
     ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(sx + s * 0.02 + armReach, sy + s * 0.36 + bob, s * 0.22, s * 0.14);
+    ctx.fillRect(fsx + s * 0.02 + armReach, fsy + s * 0.36 + bob, s * 0.22, s * 0.14);
     ctx.fillStyle = PALETTE.zombie1;
-    ctx.fillRect(sx + s * 0.04 + armReach, sy + s * 0.38 + bob, s * 0.18, s * 0.10);
+    ctx.fillRect(fsx + s * 0.04 + armReach, fsy + s * 0.38 + bob, s * 0.18, s * 0.10);
 
-    // Right arm
     ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(sx + s * 0.76 - armReach, sy + s * 0.40 + bob, s * 0.22, s * 0.14);
+    ctx.fillRect(fsx + s * 0.76 - armReach, fsy + s * 0.40 + bob, s * 0.22, s * 0.14);
     ctx.fillStyle = PALETTE.zombie1;
-    ctx.fillRect(sx + s * 0.78 - armReach, sy + s * 0.42 + bob, s * 0.18, s * 0.10);
+    ctx.fillRect(fsx + s * 0.78 - armReach, fsy + s * 0.42 + bob, s * 0.18, s * 0.10);
 
-    // ======= HEAD =======
-    // Head outline
     ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(sx + s * 0.26, sy + s * 0.10 + bob, s * 0.48, s * 0.32);
-
-    // Head
+    ctx.fillRect(fsx + s * 0.26, fsy + s * 0.10 + bob, s * 0.48, s * 0.32);
     ctx.fillStyle = PALETTE.zombie1;
-    ctx.fillRect(sx + s * 0.28, sy + s * 0.12 + bob, s * 0.44, s * 0.28);
+    ctx.fillRect(fsx + s * 0.28, fsy + s * 0.12 + bob, s * 0.44, s * 0.28);
 
-    // ======= EYES (glowing red) =======
     ctx.fillStyle = PALETTE.zombieEye;
-    ctx.fillRect(sx + s * 0.33, sy + s * 0.20 + bob, s * 0.12, s * 0.08);
-    ctx.fillRect(sx + s * 0.55, sy + s * 0.20 + bob, s * 0.12, s * 0.08);
+    ctx.fillRect(fsx + s * 0.33, fsy + s * 0.20 + bob, s * 0.12, s * 0.08);
+    ctx.fillRect(fsx + s * 0.55, fsy + s * 0.20 + bob, s * 0.12, s * 0.08);
 
-    // ======= LEGS =======
-    // Left leg
     ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(sx + s * 0.28 + shamble * 0.5, sy + s * 0.78, s * 0.18, s * 0.22);
+    ctx.fillRect(fsx + s * 0.28 + shamble * 0.5, fsy + s * 0.78, s * 0.18, s * 0.22);
     ctx.fillStyle = PALETTE.zombie2;
-    ctx.fillRect(sx + s * 0.30 + shamble * 0.5, sy + s * 0.80, s * 0.14, s * 0.18);
+    ctx.fillRect(fsx + s * 0.30 + shamble * 0.5, fsy + s * 0.80, s * 0.14, s * 0.18);
 
-    // Right leg
     ctx.fillStyle = PALETTE.outline;
-    ctx.fillRect(sx + s * 0.54 - shamble * 0.5, sy + s * 0.78, s * 0.18, s * 0.22);
+    ctx.fillRect(fsx + s * 0.54 - shamble * 0.5, fsy + s * 0.78, s * 0.18, s * 0.22);
     ctx.fillStyle = PALETTE.zombie2;
-    ctx.fillRect(sx + s * 0.56 - shamble * 0.5, sy + s * 0.80, s * 0.14, s * 0.18);
+    ctx.fillRect(fsx + s * 0.56 - shamble * 0.5, fsy + s * 0.80, s * 0.14, s * 0.18);
 
     // ======= HEALTH BAR =======
     if (z.health < z.maxHealth) {
         const barWidth = s * 0.8;
         const healthPercent = z.health / z.maxHealth;
 
-        // Background
         ctx.fillStyle = PALETTE.outline;
         ctx.fillRect(sx + s * 0.1 - 1, sy - 6, barWidth + 2, 7);
-
         ctx.fillStyle = '#333';
         ctx.fillRect(sx + s * 0.1, sy - 5, barWidth, 5);
 
-        // Health gradient
         const healthColor = healthPercent > 0.5 ? '#44dd44' : healthPercent > 0.25 ? '#dddd44' : '#dd4444';
         ctx.fillStyle = healthColor;
         ctx.fillRect(sx + s * 0.1, sy - 5, barWidth * healthPercent, 5);
 
-        // Shine
         ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.fillRect(sx + s * 0.1, sy - 5, barWidth * healthPercent, 2);
     }

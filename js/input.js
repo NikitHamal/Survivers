@@ -199,13 +199,30 @@ function handleMouseUp(e) {
 
 function handleClickInteraction(clickX, clickY, tileX, tileY) {
     // Calculate distance to click
-    const tile = getTile(tileX, tileY);
     const dist = Math.sqrt((clickX - player.x) ** 2 + (clickY - player.y) ** 2);
 
     // If close enough and harvestable, harvest
-    if (dist < 2.5) {
-        if (isHarvestable(tile)) {
-            harvestTile(tileX, tileY, tile);
+    if (dist < 3.5) { // Increased distance slightly for large trees
+        // Check clicked tile
+        let targetTile = getTile(tileX, tileY);
+        let targetX = tileX;
+        let targetY = tileY;
+
+        // If clicked tile isn't harvestable, check if it's the canopy of a tree below
+        if (!isHarvestable(targetTile)) {
+            for (let dy = 1; dy <= 3; dy++) {
+                const checkTile = getTile(tileX, tileY + dy);
+                if (checkTile === TILES.TREE) {
+                    targetTile = checkTile;
+                    targetX = tileX;
+                    targetY = tileY + dy;
+                    break;
+                }
+            }
+        }
+
+        if (isHarvestable(targetTile)) {
+            harvestTile(targetX, targetY, targetTile);
             return;
         }
     }

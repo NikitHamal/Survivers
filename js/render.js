@@ -33,18 +33,37 @@ function render(alpha = 1) {
         }
     }
 
-    // Render objects layer
+    // Render ground layer first
     for (let y = startTileY; y <= endTileY; y++) {
         for (let x = startTileX; x <= endTileX; x++) {
             const tile = getTile(x, y);
             const sx = x * TILE_SIZE * SCALE - camX;
             const sy = y * TILE_SIZE * SCALE - camY;
-            renderObjectLayer(tile, sx, sy, x, y);
+            renderGroundLayer(tile, sx, sy, x, y);
         }
     }
 
     // Collect all entities for Y-sorting
     const entities = [];
+
+    // Add trees from visible tiles to Y-sort list
+    for (let y = startTileY; y <= endTileY; y++) {
+        for (let x = startTileX; x <= endTileX; x++) {
+            const tile = getTile(x, y);
+            if (tile === TILES.TREE) {
+                entities.push({
+                    type: 'tree',
+                    x: x,
+                    y: y,
+                    sortY: y + 1 // Sort from base
+                });
+            } else {
+                const sx = x * TILE_SIZE * SCALE - camX;
+                const sy = y * TILE_SIZE * SCALE - camY;
+                renderObjectLayer(tile, sx, sy, x, y);
+            }
+        }
+    }
 
     survivors.forEach(s => {
         const rx = lerp(s.prevX ?? s.x, s.x, alpha);
@@ -58,10 +77,20 @@ function render(alpha = 1) {
         entities.push({ type: 'zombie', data: z, x: rx, y: ry, sortY: ry });
     });
 
+    // Add animals to Y-sort
+    if (typeof PetSystem !== 'undefined') {
+        PetSystem.getWildAnimals().forEach(a => {
+            const rx = lerp(a.prevX ?? a.x, a.x, alpha);
+            const ry = lerp(a.prevY ?? a.y, a.y, alpha);
+            entities.push({ type: 'animal', data: a, x: rx, y: ry, sortY: ry });
+        });
+    }
+
     entities.sort((a, b) => a.sortY - b.sortY);
 
     // Render entity shadows first
     entities.forEach(e => {
+        if (e.type === 'tree') return; // Trees have their own shadows
         const s = TILE_SIZE * SCALE;
         const sx = (e.x - 0.5) * s - camX;
         const sy = (e.y - 0.5) * s - camY;
@@ -70,6 +99,10 @@ function render(alpha = 1) {
 
     // Render entities
     entities.forEach(e => {
+        const s = TILE_SIZE * SCALE;
+        const sx = e.x * s - camX;
+        const sy = e.y * s - camY;
+
         if (e.type === 'survivor') {
             if (e.data.isPlayer) {
                 renderPlayerEnhanced(e.x, e.y, camX, camY);
@@ -78,6 +111,10 @@ function render(alpha = 1) {
             }
         } else if (e.type === 'zombie') {
             renderZombieEnhanced(e.data, e.x, e.y, camX, camY);
+        } else if (e.type === 'animal') {
+            renderAnimalSprite(ctx, e.data, { x: camX, y: camY }, alpha);
+        } else if (e.type === 'tree') {
+            renderTree(Math.floor(sx), Math.floor(sy), s, e.x, e.y);
         }
     });
 
@@ -131,10 +168,6 @@ function render(alpha = 1) {
         HordeSystem.drawHordeUI(ctx);
     }
 
-    // Phase 1 New Systems Rendering
-    if (typeof PetSystem !== 'undefined') {
-        PetSystem.renderPets(ctx);
-    }
     if (typeof ShelterSystem !== 'undefined') {
         ShelterSystem.renderShelters(ctx);
     }

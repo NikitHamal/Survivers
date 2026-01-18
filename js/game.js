@@ -141,6 +141,7 @@ function fixedUpdate(dt) {
     // Player movement and actions
     updatePlayerMovement(dt);
     updatePlayerCooldowns(dt);
+    if (player) player.animTimer = (player.animTimer || 0) + dt;
 
     // Entity updates
     updateZombies(dt);
@@ -743,50 +744,58 @@ function resize() {
 
 // ============= GAME START/STOP =============
 function startGame() {
-    const startScreen = document.getElementById('startScreen');
-    if (startScreen) {
-        startScreen.style.display = 'none';
+    const startBtn = document.getElementById('startBtn');
+    if (startBtn) {
+        startBtn.disabled = true;
+        startBtn.textContent = '⌛ LOADING ASSETS...';
     }
 
-    // Reset game state
-    resetGameState();
+    AssetManager.load(() => {
+        const startScreen = document.getElementById('startScreen');
+        if (startScreen) {
+            startScreen.style.display = 'none';
+        }
 
-    // Generate world
-    seed = Date.now() % 100000;
-    chunks.clear();
-    generateStartingBase();
+        // Reset game state
+        resetGameState();
 
-    // Initialize player survivor entry
-    survivors = [{
-        id: 0,
-        name: 'You (Leader)',
-        role: 'Leader',
-        x: player.x,
-        y: player.y,
-        health: player.maxHealth,
-        maxHealth: player.maxHealth,
-        isPlayer: true
-    }];
+        // Generate world
+        seed = Date.now() % 100000;
+        chunks.clear();
+        generateStartingBase();
 
-    // Update UI
-    if (typeof updateSurvivorList === 'function') {
-        updateSurvivorList();
-    }
+        // Initialize player survivor entry
+        survivors = [{
+            id: 0,
+            name: 'You (Leader)',
+            role: 'Leader',
+            x: player.x,
+            y: player.y,
+            health: player.maxHealth,
+            maxHealth: player.maxHealth,
+            isPlayer: true
+        }];
 
-    // Spawn initial wildlife
-    if (typeof PetSystem !== 'undefined') {
-        PetSystem.spawnNearbyAnimals(player.x, player.y, 5);
-    }
+        // Update UI
+        if (typeof updateSurvivorList === 'function') {
+            updateSurvivorList();
+        }
 
-    // Start game loop
-    gameState.running = true;
-    gameState.paused = false;
-    timing.lastFrameTime = performance.now();
-    timing.accumulator = 0;
+        // Spawn initial wildlife
+        if (typeof PetSystem !== 'undefined') {
+            PetSystem.spawnNearbyAnimals(player.x, player.y, 5);
+        }
 
-    animationFrameId = requestAnimationFrame(gameLoop);
+        // Start game loop
+        gameState.running = true;
+        gameState.paused = false;
+        timing.lastFrameTime = performance.now();
+        timing.accumulator = 0;
 
-    console.log('Game started');
+        animationFrameId = requestAnimationFrame(gameLoop);
+
+        console.log('Game started with assets loaded');
+    });
 }
 
 function resetGameState() {

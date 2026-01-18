@@ -36,21 +36,32 @@ window.renderAnimalSprite = function (ctx, animal, cam) {
 
     const typeId = animal.type?.id || animal.typeId || 'sheep';
 
-    switch (typeId) {
-        case 'sheep':
-            renderSheepSprite(ctx, animal, screenX, screenY, s);
-            break;
-        case 'chicken':
-            renderChickenSprite(ctx, animal, screenX, screenY, s);
-            break;
-        case 'pig':
-            renderPigSprite(ctx, animal, screenX, screenY, s);
-            break;
-        case 'slime':
-            renderSlimeSprite(ctx, animal, screenX, screenY, s);
-            break;
-        default:
-            renderSheepSprite(ctx, animal, screenX, screenY, s);
+    // Try to use AssetManager
+    let spriteKey = typeId.toLowerCase();
+    if (spriteKey === 'chicken') spriteKey = 'rooster'; // Default chicken to rooster for now
+
+    const img = typeof AssetManager !== 'undefined' ? AssetManager.get(spriteKey) : null;
+
+    if (img && img.complete && img.naturalWidth > 0) {
+        renderAnimatedAnimalSprite(ctx, animal, img, screenX, screenY, s);
+    } else {
+        // Fallback to procedural
+        switch (typeId) {
+            case 'sheep':
+                renderSheepSprite(ctx, animal, screenX, screenY, s);
+                break;
+            case 'chicken':
+                renderChickenSprite(ctx, animal, screenX, screenY, s);
+                break;
+            case 'pig':
+                renderPigSprite(ctx, animal, screenX, screenY, s);
+                break;
+            case 'slime':
+                renderSlimeSprite(ctx, animal, screenX, screenY, s);
+                break;
+            default:
+                renderSheepSprite(ctx, animal, screenX, screenY, s);
+        }
     }
 
     // Health bar if damaged
@@ -60,6 +71,65 @@ window.renderAnimalSprite = function (ctx, animal, cam) {
 
     ctx.restore();
 };
+
+function renderAnimatedAnimalSprite(ctx, animal, img, sx, sy, s) {
+    const isSlime = animal.type?.id === 'slime';
+    const size = animal.size || 1.0;
+    // Visually scale slimes significantly
+    const drawSize = s * size * (isSlime ? 2.2 : 1.5);
+
+    // Dynamic detection of rows and cols
+    // Assumption: Frames are roughly square or the sheet uses standard rows (1, 4, or 8)
+    let rows = 4;
+    if (img.height > img.width) rows = 8;
+    else if (img.height < img.width / 4) rows = 1;
+
+    const frameH = img.height / rows;
+    const cols = Math.round(img.width / frameH);
+    const frameW = img.width / cols;
+
+    let dir = animal.direction;
+    if (dir === undefined || dir === null) dir = 1;
+
+    // Mapping: 0=Right, 1=Down, 2=Left, 3=Up
+    // Target Rows: 0=Down, 1=Left, 2=Right, 3=Up
+    let row = 0;
+    if (dir === 1) row = 0;        // Down
+    else if (dir === 2) row = 1;   // Left
+    else if (dir === 0) row = 2;   // Right
+    else if (dir === 3) row = 3;   // Up
+
+    // If moving, offset by 4 rows IF we have enough rows
+    if (animal.isMoving && rows >= 8) {
+        row += 4;
+    }
+
+    // Special case for single-row sheets or forced rows
+    if (rows === 1) row = 0;
+
+    const frameCount = cols;
+    // Faster, snappier animations for slimes
+    const animSpeed = isSlime ? 12 : 8;
+    const frame = Math.floor((animal.animTimer || 0) * animSpeed) % frameCount;
+
+    const sourceX = frame * frameW;
+    const sourceY = row * frameH;
+
+    // Grounded placement
+    const dx = sx - drawSize / 2;
+    // Lower grounding for slimes to make them look more "squashed" on the grass
+    const dy = sy - drawSize * (isSlime ? 0.75 : 0.85);
+
+    if (sourceY + frameH <= img.height && sourceX + frameW <= img.width) {
+        ctx.drawImage(
+            img,
+            sourceX, sourceY, frameW, frameH,
+            dx, dy, drawSize, drawSize
+        );
+    } else {
+        ctx.drawImage(img, 0, 0, frameW, frameH, dx, dy, drawSize, drawSize);
+    }
+}
 
 // ============= SHEEP SPRITE =============
 function renderSheepSprite(ctx, animal, sx, sy, s) {

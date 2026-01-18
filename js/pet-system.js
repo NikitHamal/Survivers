@@ -36,7 +36,7 @@ const PetSystem = (function () {
             name: 'Sheep',
             icon: '🐑',
             baseStats: { health: 30, speed: 2.5 },
-            size: 0.7,
+            size: 0.85,
             drops: [
                 { item: 'wool', min: 1, max: 3, chance: 1.0 },
                 { item: 'meat', min: 1, max: 2, chance: 0.8 }
@@ -52,7 +52,7 @@ const PetSystem = (function () {
             name: 'Chicken',
             icon: '🐔',
             baseStats: { health: 15, speed: 3.5 },
-            size: 0.4,
+            size: 0.55,
             drops: [
                 { item: 'feather', min: 1, max: 3, chance: 1.0 },
                 { item: 'meat', min: 1, max: 1, chance: 0.7 }
@@ -68,7 +68,7 @@ const PetSystem = (function () {
             name: 'Pig',
             icon: '🐷',
             baseStats: { health: 40, speed: 2.0 },
-            size: 0.65,
+            size: 0.72,
             drops: [
                 { item: 'pork', min: 2, max: 4, chance: 1.0 },
                 { item: 'leather', min: 0, max: 1, chance: 0.3 }
@@ -84,7 +84,7 @@ const PetSystem = (function () {
             name: 'Slime',
             icon: '🟢',
             baseStats: { health: 25, speed: 1.5 },
-            size: 0.5,
+            size: 1.5,
             drops: [
                 { item: 'slimeball', min: 1, max: 3, chance: 1.0 }
             ],
@@ -118,6 +118,8 @@ const PetSystem = (function () {
             this.type = type;
             this.x = x;
             this.y = y;
+            this.prevX = x;
+            this.prevY = y;
 
             // Stats
             this.health = type.baseStats.health;
@@ -128,7 +130,7 @@ const PetSystem = (function () {
             // Movement state
             this.vx = 0;
             this.vy = 0;
-            this.direction = Math.random() > 0.5 ? 1 : -1;
+            this.direction = 1; // Default Down
             this.isMoving = false;
 
             // AI State
@@ -169,6 +171,9 @@ const PetSystem = (function () {
 
         update(dt) {
             if (!this.isValid) return;
+
+            this.prevX = this.x;
+            this.prevY = this.y;
 
             this.animTimer += dt;
             this.hitTimer = Math.max(0, this.hitTimer - dt);
@@ -326,7 +331,12 @@ const PetSystem = (function () {
             if (!this.isPositionBlocked(fleeX, fleeY)) {
                 this.x = fleeX;
                 this.y = fleeY;
-                this.direction = dx > 0 ? 1 : -1;
+
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    this.direction = dx > 0 ? 0 : 2;
+                } else {
+                    this.direction = dy > 0 ? 1 : 3;
+                }
             }
             this.isMoving = true;
         }
@@ -346,7 +356,30 @@ const PetSystem = (function () {
             if (!this.isPositionBlocked(newX, newY)) {
                 this.x = newX;
                 this.y = newY;
-                this.direction = dx > 0 ? 1 : -1;
+
+                // Update direction (4-way) with hysteresis to prevent flicker
+                const absDx = Math.abs(dx);
+                const absDy = Math.abs(dy);
+
+                // Only change axis preference if clearly dominant (avoid diagonal flicker)
+                // If currently horizontal (0 or 2), start with horizontal buffer
+                // If currently vertical (1 or 3), start with vertical buffer
+                const isHorz = (this.direction === 0 || this.direction === 2);
+                const buffer = 0.2; // 20% buffer
+
+                if (isHorz) {
+                    if (absDy > absDx * (1 + buffer)) {
+                        this.direction = dy > 0 ? 1 : 3;
+                    } else if (dx !== 0) {
+                        this.direction = dx > 0 ? 0 : 2;
+                    }
+                } else {
+                    if (absDx > absDy * (1 + buffer)) {
+                        this.direction = dx > 0 ? 0 : 2;
+                    } else if (dy !== 0) {
+                        this.direction = dy > 0 ? 1 : 3;
+                    }
+                }
             }
         }
 

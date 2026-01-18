@@ -183,52 +183,81 @@ function renderObjectLayer(tile, sx, sy, wx, wy) {
 }
 
 function renderTree(x, y, s, wx, wy) {
-    // Wind Effect
-    const sway = Math.sin(pixelTime * 2 + wx) * 2;
+    // Try to use AssetManager
+    const variety = Math.floor(seededRandom(wx, wy) * 3) + 1; // 1, 2, or 3
+    const img = typeof AssetManager !== 'undefined' ? AssetManager.get(`tree${variety}`) : null;
 
-    // 1. Shadow (Oval at base)
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-    ctx.beginPath();
-    ctx.ellipse(x + s / 2, y + s - 2, s * 0.3, s * 0.15, 0, 0, Math.PI * 2);
-    ctx.fill();
+    if (img && img.complete && img.naturalWidth > 0) {
+        // Wind Effect - Sway Rotation
+        const swayAngle = Math.sin(pixelTime * 1.5 + wx) * 0.05; // Subtle rotation
 
-    // 2. Trunk
-    const trunkW = s * 0.25;
-    const trunkH = s * 0.4;
-    const trunkX = x + s / 2 - trunkW / 2;
-    const trunkY = y + s - trunkH - 4; // Moved up slightly
+        // 1. Shadow (Oval at base)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.beginPath();
+        ctx.ellipse(x + s / 2, y + s - 2, s * 0.5, s * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-    ctx.fillStyle = '#5d4037'; // Dark Wood
-    ctx.fillRect(trunkX + sway * 0.2, trunkY, trunkW, trunkH);
+        // 2. Draw Image
+        const drawW = s * 3.0;
+        const drawH = s * 4.0;
 
-    // Bark texture
-    ctx.fillStyle = '#3e2723';
-    ctx.fillRect(trunkX + 2 + sway * 0.2, trunkY + 4, 2, 8);
-    ctx.fillRect(trunkX + trunkW - 4 + sway * 0.2, trunkY + 12, 2, 6);
+        const anchorX = x + s / 2;
+        const anchorY = y + s - 2;
 
-    // 3. Leaves (Clustered Circles for fluffiness)
-    const centerX = x + s / 2 + sway;
-    const centerY = y + s * 0.35;
-    const r = s * 0.35;
+        ctx.save();
+        ctx.translate(anchorX, anchorY);
+        ctx.rotate(swayAngle);
+        ctx.drawImage(img, -drawW / 2, -drawH + s * 0.8, drawW, drawH);
+        ctx.restore();
+    } else {
+        const swayAngle = Math.sin(pixelTime * 1.5 + wx) * 0.05;
 
-    // We draw 3 blobs: Top, Left-Bottom, Right-Bottom
+        // 1. Shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.beginPath();
+        ctx.ellipse(x + s / 2, y + s - 2, s * 0.4, s * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-    // Draw Outline/Dark Layer first
-    ctx.fillStyle = '#1b5e20'; // Darkest Green
-    drawBlob(ctx, centerX, centerY + 4, r + 2);
-    drawBlob(ctx, centerX - r * 0.6, centerY + r * 0.6, r * 0.7 + 2);
-    drawBlob(ctx, centerX + r * 0.6, centerY + r * 0.6, r * 0.7 + 2);
+        // Save context for rotation
+        ctx.save();
+        ctx.translate(x + s / 2, y + s);
+        ctx.rotate(swayAngle);
+        ctx.translate(-(x + s / 2), -(y + s));
 
-    // Draw Main Body
-    ctx.fillStyle = PALETTE.leaf1 || '#2e7d32';
-    drawBlob(ctx, centerX, centerY, r);
-    drawBlob(ctx, centerX - r * 0.6, centerY + r * 0.5, r * 0.7);
-    drawBlob(ctx, centerX + r * 0.6, centerY + r * 0.5, r * 0.7);
+        // 2. Trunk
+        const trunkW = s * 0.4;
+        const trunkH = s * 0.6;
+        const trunkX = x + s / 2 - trunkW / 2;
+        const trunkY = y + s - trunkH;
 
-    // Highlights (Sunlight from top left)
-    ctx.fillStyle = PALETTE.leaf2 || '#4caf50'; // Lighter
-    drawBlob(ctx, centerX - r * 0.3, centerY - r * 0.3, r * 0.4);
-    drawBlob(ctx, centerX - r * 0.8, centerY + r * 0.4, r * 0.3);
+        ctx.fillStyle = '#5d4037'; // Dark Wood
+        ctx.fillRect(trunkX, trunkY, trunkW, trunkH);
+
+        // Bark texture
+        ctx.fillStyle = '#3e2723';
+        ctx.fillRect(trunkX + 4, trunkY + 8, 4, 12);
+
+        // 3. Leaves (Big Clumps)
+        const centerX = x + s / 2;
+        const centerY = y + s * 0.2;
+        const r = s * 0.6;
+
+        ctx.fillStyle = '#1b5e20'; // Darkest Green (Outline)
+        drawBlob(ctx, centerX, centerY + 8, r + 4);
+        drawBlob(ctx, centerX - r * 0.7, centerY + r * 0.7, r * 0.8 + 4);
+        drawBlob(ctx, centerX + r * 0.7, centerY + r * 0.7, r * 0.8 + 4);
+
+        ctx.fillStyle = PALETTE.leaf1 || '#2e7d32'; // Main Body
+        drawBlob(ctx, centerX, centerY, r);
+        drawBlob(ctx, centerX - r * 0.7, centerY + r * 0.6, r * 0.8);
+        drawBlob(ctx, centerX + r * 0.7, centerY + r * 0.6, r * 0.8);
+
+        ctx.fillStyle = PALETTE.leaf2 || '#4caf50'; // Highlights
+        drawBlob(ctx, centerX - r * 0.3, centerY - r * 0.4, r * 0.4);
+        drawBlob(ctx, centerX - r * 0.9, centerY + r * 0.5, r * 0.3);
+
+        ctx.restore();
+    }
 }
 
 // Helper to draw rough circles
@@ -239,119 +268,173 @@ function drawBlob(ctx, x, y, r) {
 }
 
 function renderBush(x, y, s, wx, wy) {
-    const sway = Math.sin(pixelTime * 3 + wx * 2);
+    const variety = Math.floor(seededRandom(wx, wy) * 3) + 1;
+    const img = typeof AssetManager !== 'undefined' ? AssetManager.get(`bush${variety}`) : null;
 
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.beginPath();
-    ctx.ellipse(x + s / 2, y + s - 4, s * 0.35, s * 0.1, 0, 0, Math.PI * 2);
-    ctx.fill();
+    if (img && img.complete && img.naturalWidth > 0) {
+        const sway = Math.sin(pixelTime * 2 + wx) * 2;
+        const drawW = s * 1.2;
+        const drawH = s * 1.0;
 
-    // Base Foliage (Irregular shape)
-    ctx.fillStyle = '#2e7d32';
-    ctx.beginPath();
-    ctx.arc(x + s / 2 + sway, y + s * 0.6, s * 0.35, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(x + s * 0.3 + sway, y + s * 0.75, s * 0.25, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(x + s * 0.7 + sway, y + s * 0.75, s * 0.25, 0, Math.PI * 2);
-    ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(x + s / 2, y + s - 4, s * 0.4, s * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-    // Highlight
-    ctx.fillStyle = '#4caf50';
-    ctx.beginPath();
-    ctx.arc(x + s / 2 + sway - 2, y + s * 0.55, s * 0.15, 0, Math.PI * 2);
-    ctx.fill();
+        ctx.drawImage(img, x + (s - drawW) / 2 + sway, y + s - drawH, drawW, drawH);
+    } else {
+        const sway = Math.sin(pixelTime * 3 + wx * 2);
 
-    // Berries (Red dots)
-    if (seededRandom(wx, wy) > 0.4) {
-        ctx.fillStyle = '#e53935'; // Red
-        ctx.fillRect(x + s * 0.4 + sway, y + s * 0.6, 4, 4);
-        ctx.fillRect(x + s * 0.6 + sway, y + s * 0.7, 4, 4);
-        ctx.fillRect(x + s * 0.5 + sway, y + s * 0.8, 3, 3);
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(x + s / 2, y + s - 4, s * 0.35, s * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Base Foliage (Irregular shape)
+        ctx.fillStyle = '#2e7d32';
+        ctx.beginPath();
+        ctx.arc(x + s / 2 + sway, y + s * 0.6, s * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + s * 0.3 + sway, y + s * 0.75, s * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + s * 0.7 + sway, y + s * 0.75, s * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Highlight
+        ctx.fillStyle = '#4caf50';
+        ctx.beginPath();
+        ctx.arc(x + s / 2 + sway - 2, y + s * 0.55, s * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Berries (Red dots)
+        if (seededRandom(wx, wy) > 0.4) {
+            ctx.fillStyle = '#e53935'; // Red
+            ctx.fillRect(x + s * 0.4 + sway, y + s * 0.6, 4, 4);
+            ctx.fillRect(x + s * 0.6 + sway, y + s * 0.7, 4, 4);
+            ctx.fillRect(x + s * 0.5 + sway, y + s * 0.8, 3, 3);
+        }
     }
 }
 
 function renderStone(x, y, s, wx, wy) {
-    const cx = x + s / 2;
-    const cy = y + s / 2 + 5;
+    const variety = Math.floor(seededRandom(wx, wy) * 2) + 1;
+    const img = typeof AssetManager !== 'undefined' ? AssetManager.get(`rock${variety}`) : null;
 
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.beginPath();
-    ctx.ellipse(cx, cy + s * 0.35, s * 0.4, s * 0.15, 0, 0, Math.PI * 2);
-    ctx.fill();
+    if (img && img.complete && img.naturalWidth > 0) {
+        const drawW = s * 1.1;
+        const drawH = s * 0.9;
 
-    // Rock Shape (Grey)
-    ctx.fillStyle = PALETTE.stone1 || '#757575';
-    ctx.beginPath();
-    ctx.moveTo(cx - s * 0.3, cy + s * 0.3); // Bottom Left
-    ctx.lineTo(cx - s * 0.35, cy - s * 0.1); // Mid Left
-    ctx.lineTo(cx - s * 0.1, cy - s * 0.35); // Top Left
-    ctx.lineTo(cx + s * 0.2, cy - s * 0.3); // Top Right
-    ctx.lineTo(cx + s * 0.35, cy + s * 0.2); // Mid Right
-    ctx.lineTo(cx + s * 0.1, cy + s * 0.35); // Bottom Right
-    ctx.closePath();
-    ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(x + s / 2, y + s - 4, s * 0.45, s * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-    // Highlight (Top edge)
-    ctx.fillStyle = PALETTE.stone2 || '#9e9e9e';
-    ctx.beginPath();
-    ctx.moveTo(cx - s * 0.25, cy - s * 0.1);
-    ctx.lineTo(cx - s * 0.1, cy - s * 0.25);
-    ctx.lineTo(cx + s * 0.15, cy - s * 0.2);
-    ctx.lineTo(cx, cy);
-    ctx.fill();
+        ctx.drawImage(img, x + (s - drawW) / 2, y + s - drawH, drawW, drawH);
+    } else {
+        const cx = x + s / 2;
+        const cy = y + s / 2 + 5;
 
-    // Moss (Bottom)
-    if (seededRandom(wx, wy) > 0.3) {
-        ctx.fillStyle = '#4caf50';
-        ctx.fillRect(cx - s * 0.2, cy + s * 0.2, 4, 4);
-        ctx.fillRect(cx, cy + s * 0.25, 6, 4);
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + s * 0.35, s * 0.4, s * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Rock Shape (Grey)
+        ctx.fillStyle = PALETTE.stone1 || '#757575';
+        ctx.beginPath();
+        ctx.moveTo(cx - s * 0.3, cy + s * 0.3); // Bottom Left
+        ctx.lineTo(cx - s * 0.35, cy - s * 0.1); // Mid Left
+        ctx.lineTo(cx - s * 0.1, cy - s * 0.35); // Top Left
+        ctx.lineTo(cx + s * 0.2, cy - s * 0.3); // Top Right
+        ctx.lineTo(cx + s * 0.35, cy + s * 0.2); // Mid Right
+        ctx.lineTo(cx + s * 0.1, cy + s * 0.35); // Bottom Right
+        ctx.closePath();
+        ctx.fill();
+
+        // Highlight (Top edge)
+        ctx.fillStyle = PALETTE.stone2 || '#9e9e9e';
+        ctx.beginPath();
+        ctx.moveTo(cx - s * 0.25, cy - s * 0.1);
+        ctx.lineTo(cx - s * 0.1, cy - s * 0.25);
+        ctx.lineTo(cx + s * 0.15, cy - s * 0.2);
+        ctx.lineTo(cx, cy);
+        ctx.fill();
+
+        // Moss (Bottom)
+        if (seededRandom(wx, wy) > 0.3) {
+            ctx.fillStyle = '#4caf50';
+            ctx.fillRect(cx - s * 0.2, cy + s * 0.2, 4, 4);
+            ctx.fillRect(cx, cy + s * 0.25, 6, 4);
+        }
     }
 }
 
 function renderIronOre(x, y, s, wx, wy) {
-    // 1. Base Rock (Darker than normal stone)
-    const cx = x + s / 2;
-    const cy = y + s / 2 + 5;
+    const isBlue = seededRandom(wx, wy) > 0.5;
+    const imgKey = isBlue ? 'crystal_blue' : 'crystal_green';
+    const img = typeof AssetManager !== 'undefined' ? AssetManager.get(imgKey) : null;
 
-    ctx.fillStyle = 'rgba(0,0,0,0.3)'; // Shadow
-    ctx.beginPath();
-    ctx.ellipse(cx, cy + s * 0.35, s * 0.4, s * 0.15, 0, 0, Math.PI * 2);
-    ctx.fill();
+    if (img && img.complete && img.naturalWidth > 0) {
+        const drawW = s * 0.9;
+        const drawH = s * 1.1;
 
-    ctx.fillStyle = '#546e7a'; // Blue-grey rock
-    ctx.beginPath();
-    ctx.moveTo(cx - s * 0.35, cy + s * 0.3);
-    ctx.lineTo(cx - s * 0.2, cy - s * 0.3);
-    ctx.lineTo(cx + s * 0.3, cy - s * 0.2);
-    ctx.lineTo(cx + s * 0.35, cy + s * 0.25);
-    ctx.closePath();
-    ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(x + s / 2, y + s - 4, s * 0.4, s * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-    // 2. Iron Crystals (Protruding)
-    const crystals = [
-        { ox: -0.1, oy: -0.1, w: 0.15, h: 0.15 },
-        { ox: 0.15, oy: 0.05, w: 0.12, h: 0.12 },
-        { ox: -0.05, oy: 0.15, w: 0.1, h: 0.1 }
-    ];
+        const shine = Math.abs(Math.sin(pixelTime * 2 + wx)) * 0.2;
+        ctx.save();
+        if (shine > 0.1) {
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = isBlue ? '#2196f3' : '#4caf50';
+        }
+        ctx.drawImage(img, x + (s - drawW) / 2, y + s - drawH, drawW, drawH);
+        ctx.restore();
+    } else {
+        // 1. Base Rock (Darker than normal stone)
+        const cx = x + s / 2;
+        const cy = y + s / 2 + 5;
 
-    // Crystal shine animation
-    const shine = Math.abs(Math.sin(pixelTime * 3 + wx));
+        ctx.fillStyle = 'rgba(0,0,0,0.3)'; // Shadow
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + s * 0.35, s * 0.4, s * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-    crystals.forEach(c => {
-        const px = cx + c.ox * s;
-        const py = cy + c.oy * s;
+        ctx.fillStyle = '#546e7a'; // Blue-grey rock
+        ctx.beginPath();
+        ctx.moveTo(cx - s * 0.35, cy + s * 0.3);
+        ctx.lineTo(cx - s * 0.2, cy - s * 0.3);
+        ctx.lineTo(cx + s * 0.3, cy - s * 0.2);
+        ctx.lineTo(cx + s * 0.35, cy + s * 0.25);
+        ctx.closePath();
+        ctx.fill();
 
-        // Dark Base of crystal
-        ctx.fillStyle = '#d7ccc8';
-        ctx.fillRect(px, py, s * c.w, s * c.h);
+        // 2. Iron Crystals (Protruding)
+        const crystals = [
+            { ox: -0.1, oy: -0.1, w: 0.15, h: 0.15 },
+            { ox: 0.15, oy: 0.05, w: 0.12, h: 0.12 },
+            { ox: -0.05, oy: 0.15, w: 0.1, h: 0.1 }
+        ];
 
-        // Shiny Top
-        ctx.fillStyle = `rgba(255, 255, 255, ${0.4 + shine * 0.4})`;
-        ctx.fillRect(px + 2, py + 2, s * c.w - 4, s * c.h - 4);
-    });
+        // Crystal shine animation
+        const shine = Math.abs(Math.sin(pixelTime * 3 + wx));
+
+        crystals.forEach(c => {
+            const px = cx + c.ox * s;
+            const py = cy + c.oy * s;
+
+            // Dark Base of crystal
+            ctx.fillStyle = '#d7ccc8';
+            ctx.fillRect(px, py, s * c.w, s * c.h);
+
+            // Shiny Top
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.4 + shine * 0.4})`;
+            ctx.fillRect(px + 2, py + 2, s * c.w - 4, s * c.h - 4);
+        });
+    }
 }
