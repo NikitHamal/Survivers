@@ -89,16 +89,27 @@ function spawnZombie() {
 
         const health = ZOMBIE_CONFIG.BASE_HEALTH + currentDay * ZOMBIE_CONFIG.HEALTH_PER_DAY;
 
+        // Determine zombie type - skeletons appear more at night and higher days
+        const skeletonChance = isNight ? 0.4 : 0.15;
+        const isSkeleton = Math.random() < (skeletonChance + currentDay * 0.02);
+
+        // Skeletons are faster but have less health
+        const typeMultipliers = isSkeleton
+            ? { health: 0.7, speed: 1.3, damage: 0.9 }
+            : { health: 1.0, speed: 1.0, damage: 1.0 };
+
         const newZombie = {
             x: zx,
             y: zy,
-            health: health,
-            maxHealth: health,
-            speed: ZOMBIE_CONFIG.BASE_SPEED + currentDay * ZOMBIE_CONFIG.SPEED_PER_DAY,
-            damage: ZOMBIE_CONFIG.BASE_DAMAGE + currentDay * ZOMBIE_CONFIG.DAMAGE_PER_DAY,
+            health: health * typeMultipliers.health,
+            maxHealth: health * typeMultipliers.health,
+            speed: (ZOMBIE_CONFIG.BASE_SPEED + currentDay * ZOMBIE_CONFIG.SPEED_PER_DAY) * typeMultipliers.speed,
+            damage: (ZOMBIE_CONFIG.BASE_DAMAGE + currentDay * ZOMBIE_CONFIG.DAMAGE_PER_DAY) * typeMultipliers.damage,
             attackCooldown: 0,
             frame: 0,
-            animTimer: 0
+            animTimer: 0,
+            type: isSkeleton ? 'skeleton' : 'zombie',
+            direction: Math.floor(Math.random() * 4) // Initial random direction
         };
 
         // Attach AI

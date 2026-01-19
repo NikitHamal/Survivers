@@ -29,7 +29,11 @@ setInterval(() => {
                         skinColor: ['#ffd4a8', '#e8b888', '#c89868', '#8d5524', '#523418'][Math.floor(Math.random() * 5)],
                         hairColor: ['#222', '#5a4030', '#e6cea8', '#882222', '#555'][Math.floor(Math.random() * 5)],
                         clothingColor: ['#5599ff', '#ff5555', '#55ff55', '#ffff55', '#ff55ff', '#55ffff'][Math.floor(Math.random() * 6)],
-                        isFollowing: false
+                        isFollowing: false,
+                        // Animation properties for sprite rendering
+                        direction: Math.floor(Math.random() * 4),
+                        animTimer: 0,
+                        isMoving: false
                     });
                     updateSurvivorList();
                 }

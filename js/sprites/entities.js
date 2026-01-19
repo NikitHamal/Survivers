@@ -1,5 +1,67 @@
 // ============= ENTITY SPRITES =============
 
+// Helper function to get sprite offset based on survivor role
+function getSurvivorSpriteOffset(role) {
+    // The soldier sprite sheet has multiple character variants
+    // We map roles to different columns/offsets
+    const offsets = {
+        'Soldier': 0,
+        'Guard': 0,
+        'Builder': 3,
+        'Farmer': 3,
+        'Woodcutter': 6,
+        'Miner': 6,
+        'Hunter': 0,
+        'Medic': 3,
+        'None': 0,
+        'Leader': 0
+    };
+    return offsets[role] || 0;
+}
+
+// Helper function to render survivor UI (health bar and role badge)
+function renderSurvivorUI(survivor, sx, sy, s) {
+    const colors = {
+        'Soldier': { main: '#aa4444', light: '#cc5555' },
+        'Guard': { main: '#6666aa', light: '#8888cc' },
+        'Builder': { main: '#aa8844', light: '#ccaa66' },
+        'Farmer': { main: '#44aa44', light: '#66cc66' },
+        'Woodcutter': { main: '#8a5a2a', light: '#aa7a4a' },
+        'Miner': { main: '#666666', light: '#888888' },
+        'Hunter': { main: '#668844', light: '#88aa66' },
+        'Medic': { main: '#aa88cc', light: '#ccaaee' },
+        'None': { main: '#888888', light: '#aaaaaa' },
+        'Leader': { main: '#aaaaaa', light: '#ffffff' }
+    };
+
+    const clColors = colors[survivor.role] || colors['None'];
+
+    // Health bar
+    const barWidth = s * 0.7;
+    const healthPercent = Math.max(0, (survivor.health || 0) / (survivor.maxHealth || 100));
+    const hpColor = healthPercent > 0.5 ? '#4ade4a' : healthPercent > 0.25 ? '#facc15' : '#f87171';
+
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(sx + s * 0.15, sy - 12, barWidth, 5);
+    ctx.fillStyle = hpColor;
+    ctx.fillRect(sx + s * 0.15, sy - 12, barWidth * healthPercent, 5);
+
+    // Role badge
+    ctx.fillStyle = PALETTE.outline;
+    ctx.beginPath();
+    ctx.arc(sx + s * 0.85, sy + s * 0.82, s * 0.11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = clColors.main;
+    ctx.beginPath();
+    ctx.arc(sx + s * 0.85, sy + s * 0.82, s * 0.09, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${Math.floor(s * 0.11)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(survivor.role ? survivor.role[0] : '?', sx + s * 0.85, sy + s * 0.82);
+}
+
 function renderPlayerEnhanced(renderX, renderY, camX, camY) {
     const s = TILE_SIZE * SCALE;
     // Ground point of the tile
@@ -223,6 +285,65 @@ function renderSurvivorEnhanced(survivor, renderX, renderY, camX, camY) {
 
     if (sx < -s || sx > canvas.width + s || sy < -s || sy > canvas.height + s) return;
 
+    // Try sprite-based rendering first
+    const soldierSprite = AssetManager.get('soldier');
+    const rpgCharsSprite = AssetManager.get('rpg_characters');
+
+    if (soldierSprite && soldierSprite.complete && soldierSprite.naturalWidth > 0) {
+        // Use the soldier sprite sheet - it has detailed animations
+        // Image is 288x175, layout: 9 columns, 5 rows
+        // Includes standing, walking, jumping animations in multiple directions
+        const frameW = 32;
+        const frameH = 35;
+
+        // Determine direction row
+        let row = 0;
+        let dir = survivor.direction || 1;
+        if (dir === 1) row = 0;        // Down
+        else if (dir === 2) row = 1;   // Left
+        else if (dir === 0) row = 2;   // Right
+        else if (dir === 3) row = 3;   // Up
+
+        // Animation frame (use first 3 columns for walk cycle)
+        const isMoving = !!survivor.isMoving;
+        const animSpeed = 8;
+        const cols = isMoving ? 3 : 1;
+        const frame = isMoving ? Math.floor((survivor.animTimer || 0) * animSpeed) % cols : 0;
+
+        // Add variety based on survivor role (offset into character sheet)
+        const roleOffset = getSurvivorSpriteOffset(survivor.role);
+
+        const sourceX = (frame + roleOffset) * frameW;
+        const sourceY = row * frameH;
+
+        // Scale for display
+        const scale = 2.5;
+        const drawW = frameW * scale;
+        const drawH = frameH * scale;
+
+        const dx = sx + s * 0.5 - drawW / 2;
+        const dy = sy + s * 0.5 - drawH * 0.85;
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.beginPath();
+        ctx.ellipse(sx + s * 0.5, sy + s * 0.9, s * 0.3, s * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw sprite
+        if (sourceY + frameH <= soldierSprite.height && sourceX + frameW <= soldierSprite.width) {
+            ctx.drawImage(soldierSprite, sourceX, sourceY, frameW, frameH, dx, dy, drawW, drawH);
+        } else {
+            // Fallback to first frame
+            ctx.drawImage(soldierSprite, 0, 0, frameW, frameH, dx, dy, drawW, drawH);
+        }
+
+        // Draw role badge and health bar
+        renderSurvivorUI(survivor, sx, sy, s);
+        return;
+    }
+
+    // Fallback to procedural rendering
     // Role badge colors
     const colors = {
         'Soldier': { main: '#aa4444', light: '#cc5555' },
@@ -403,7 +524,7 @@ function renderZombieEnhanced(z, renderX, renderY, camX, camY) {
 
     if (sx < -s * 2 || sx > canvas.width + s || sy < -s * 2 || sy > canvas.height + s) return;
 
-    // Glowing Red Eyes Glow
+    // Glowing Red Eyes Glow at night
     if (isNight) {
         const eyeGlow = ctx.createRadialGradient(sx, sy - s * 0.4, 0, sx, sy - s * 0.4, s * 0.4);
         eyeGlow.addColorStop(0, 'rgba(255, 0, 0, 0.4)');
@@ -412,7 +533,78 @@ function renderZombieEnhanced(z, renderX, renderY, camX, camY) {
         ctx.fillRect(sx - s * 0.5, sy - s * 0.8, s, s);
     }
 
-    // Procedural Rendering
+    // Try to use sprite-based rendering first
+    const zombieSpriteSheet = AssetManager.get('zombie_skeleton');
+    if (zombieSpriteSheet && zombieSpriteSheet.complete && zombieSpriteSheet.naturalWidth > 0) {
+        // Sprite sheet layout: 6 columns (3 zombie walk + 3 skeleton walk), 4 rows (directions)
+        // Zombie is left 3 columns, skeleton is right 3 columns
+        // Image is 288x256, so each frame is 48x64 pixels
+        const frameW = 48;
+        const frameH = 64;
+        const cols = 3; // 3 frames per direction for zombie
+
+        // Determine direction row (Down=0, Left=1, Right=2, Up=3)
+        let row = 0;
+        let dir = z.direction || 1;
+        if (dir === 1) row = 0;        // Down
+        else if (dir === 2) row = 1;   // Left
+        else if (dir === 0) row = 2;   // Right
+        else if (dir === 3) row = 3;   // Up
+
+        // Animation frame (3-frame walk cycle)
+        const animSpeed = 6;
+        const frame = Math.floor((z.animTimer || 0) * animSpeed) % cols;
+
+        // Choose zombie (column 0-2) or skeleton (column 3-5) based on zombie type
+        const isSkeleton = z.type === 'skeleton' || (z.variant && z.variant === 'skeleton');
+        const colOffset = isSkeleton ? 3 : 0;
+
+        const sourceX = (frame + colOffset) * frameW;
+        const sourceY = row * frameH;
+
+        // Draw size - scale to match game tile size
+        const scale = 2.2;
+        const drawW = frameW * scale;
+        const drawH = frameH * scale;
+
+        // Position (centered on tile, feet at ground)
+        const dx = sx - drawW / 2;
+        const dy = sy - drawH * 0.85;
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+        ctx.beginPath();
+        ctx.ellipse(sx, sy, s * 0.35, s * 0.12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw the zombie sprite
+        ctx.drawImage(zombieSpriteSheet, sourceX, sourceY, frameW, frameH, dx, dy, drawW, drawH);
+    } else {
+        // Fallback to procedural rendering
+        renderZombieProcedural(z, sx, sy, s);
+    }
+
+    // ======= HEALTH BAR =======
+    if (z.health < z.maxHealth) {
+        const barWidth = s * 0.8;
+        const healthPercent = z.health / z.maxHealth;
+
+        ctx.fillStyle = PALETTE.outline;
+        ctx.fillRect(sx - barWidth / 2 - 1, sy - s * 0.1, barWidth + 2, 7);
+        ctx.fillStyle = '#333';
+        ctx.fillRect(sx - barWidth / 2, sy - s * 0.1 + 1, barWidth, 5);
+
+        const healthColor = healthPercent > 0.5 ? '#44dd44' : healthPercent > 0.25 ? '#dddd44' : '#dd4444';
+        ctx.fillStyle = healthColor;
+        ctx.fillRect(sx - barWidth / 2, sy - s * 0.1 + 1, barWidth * healthPercent, 5);
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillRect(sx - barWidth / 2, sy - s * 0.1 + 1, barWidth * healthPercent, 2);
+    }
+}
+
+// Fallback procedural zombie rendering
+function renderZombieProcedural(z, sx, sy, s) {
     const bob = Math.sin(z.animTimer * 12) * 1.5;
     const shamble = Math.sin(z.animTimer * 8) * 2;
     const armReach = Math.sin(z.animTimer * 8) * s * 0.08;
@@ -453,24 +645,6 @@ function renderZombieEnhanced(z, renderX, renderY, camX, camY) {
     ctx.fillRect(fsx + s * 0.54 - shamble * 0.5, fsy + s * 0.78, s * 0.18, s * 0.22);
     ctx.fillStyle = PALETTE.zombie2;
     ctx.fillRect(fsx + s * 0.56 - shamble * 0.5, fsy + s * 0.80, s * 0.14, s * 0.18);
-
-    // ======= HEALTH BAR =======
-    if (z.health < z.maxHealth) {
-        const barWidth = s * 0.8;
-        const healthPercent = z.health / z.maxHealth;
-
-        ctx.fillStyle = PALETTE.outline;
-        ctx.fillRect(sx + s * 0.1 - 1, sy - 6, barWidth + 2, 7);
-        ctx.fillStyle = '#333';
-        ctx.fillRect(sx + s * 0.1, sy - 5, barWidth, 5);
-
-        const healthColor = healthPercent > 0.5 ? '#44dd44' : healthPercent > 0.25 ? '#dddd44' : '#dd4444';
-        ctx.fillStyle = healthColor;
-        ctx.fillRect(sx + s * 0.1, sy - 5, barWidth * healthPercent, 5);
-
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.fillRect(sx + s * 0.1, sy - 5, barWidth * healthPercent, 2);
-    }
 }
 
 function renderProjectile(p, camX, camY) {

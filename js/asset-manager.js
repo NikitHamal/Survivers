@@ -38,6 +38,20 @@ const AssetManager = (function () {
 
         'slime': 'assets/images/enemies/slime.png',
 
+        // NEW: Zombie and Skeleton sprites (32x48, 3-frame walk, 4 directions)
+        'zombie_skeleton': 'assets/images/enemies/zombies/zombie_skeleton.png',
+
+        // NEW: NPC Character sprites (32x32, various characters)
+        'rpg_characters': 'assets/images/npcs/rpg_characters.png',
+        'soldier': 'assets/images/npcs/soldier.png',
+        'characters_tiny': 'assets/images/npcs/characters_tiny16.png',
+
+        // NEW: Item icons
+        'items': 'assets/images/items/items.png',
+
+        // NEW: Building/Wall tileset
+        'walls': 'assets/images/buildings/walls/lpc-walls/walls.png',
+
         // Environment
         'bush1': 'assets/images/environment/bush1.png',
         'bush2': 'assets/images/environment/bush2.png',
@@ -45,7 +59,12 @@ const AssetManager = (function () {
         'rock1': 'assets/images/environment/rock1.png',
         'rock2': 'assets/images/environment/rock2.png',
         'crystal_blue': 'assets/images/environment/crystal_blue.png',
-        'crystal_green': 'assets/images/environment/crystal_green.png'
+        'crystal_green': 'assets/images/environment/crystal_green.png',
+
+        // NEW: Environment tilesets
+        'basictiles': 'assets/images/environment/basictiles.png',
+        'things': 'assets/images/environment/things.png',
+        'base_landscape': 'assets/images/environment/base_landscape.png'
     };
 
     function load(callback) {

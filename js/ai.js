@@ -282,6 +282,19 @@ class ZombieAI extends EntityAI {
         const dx = targetX - this.entity.x;
         const dy = targetY - this.entity.y;
 
+        // Update direction for sprite animation (0=Right, 1=Down, 2=Left, 3=Up)
+        if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
+            if (Math.abs(dx) > Math.abs(dy)) {
+                this.entity.direction = dx > 0 ? 0 : 2; // Right or Left
+            } else {
+                this.entity.direction = dy > 0 ? 1 : 3; // Down or Up
+            }
+            this.entity.isMoving = true;
+            this.entity.animTimer = (this.entity.animTimer || 0) + dt;
+        } else {
+            this.entity.isMoving = false;
+        }
+
         // Try move
         const col = getCollidingTile(targetX, targetY, 0.3);
 

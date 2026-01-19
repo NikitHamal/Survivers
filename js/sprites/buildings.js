@@ -6,11 +6,54 @@ function seededRandom(x, y) {
     return n - Math.floor(n);
 }
 
-// Enhanced Wall with weathering and depth
+// Enhanced Wall with weathering and depth - now with sprite support
 function renderWall(x, y, s, wx, wy, level = 1) {
     const pattern = seededRandom(wx, wy);
     const pattern2 = seededRandom(wx + 100, wy + 100);
 
+    // Try to use sprite-based wall first
+    const wallsSprite = AssetManager.get('walls');
+    if (wallsSprite && wallsSprite.complete && wallsSprite.naturalWidth > 0) {
+        // The LPC walls tileset has 32x32 tiles
+        // Use different tiles based on level
+        const tileSize = 32;
+
+        // Select different wall styles based on level
+        // Row 0-2: Decorative walls, Row 3-5: Stone walls, Row 6+: Wood walls
+        let tileX, tileY;
+        if (level === 1) {
+            // Basic stone wall - use row 3-4
+            tileX = (Math.floor(pattern * 4)) * tileSize;
+            tileY = (3 + Math.floor(pattern2 * 2)) * tileSize;
+        } else if (level === 2) {
+            // Metal/reinforced wall - use decorative walls row 1-2
+            tileX = (Math.floor(pattern * 6)) * tileSize;
+            tileY = (1 + Math.floor(pattern2 * 2)) * tileSize;
+        } else {
+            // Level 3 obsidian - use dark decorative row 0
+            tileX = (Math.floor(pattern * 8)) * tileSize;
+            tileY = 0;
+        }
+
+        // Ensure we don't go out of bounds
+        if (tileX + tileSize <= wallsSprite.width && tileY + tileSize <= wallsSprite.height) {
+            // Draw shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(x + 2, y + 2, s, s);
+
+            // Draw wall sprite
+            ctx.drawImage(wallsSprite, tileX, tileY, tileSize, tileSize, x, y, s, s);
+
+            // Add level-specific overlays
+            if (level > 1) {
+                ctx.fillStyle = level > 2 ? 'rgba(255, 215, 0, 0.15)' : 'rgba(150, 200, 255, 0.1)';
+                ctx.fillRect(x, y, s, s);
+            }
+            return;
+        }
+    }
+
+    // Fallback to procedural rendering
     // Deep shadow for 3D effect
     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
     ctx.fillRect(x + 2, y + 2, s, s);
