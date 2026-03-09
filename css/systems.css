@@ -2,252 +2,232 @@
 #questListContainer {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    padding: 5px;
+    gap: 10px;
 }
 
 .quest-item {
     background: var(--bg-card);
     border: 1px solid var(--border-main);
     border-radius: var(--border-radius-md);
-    padding: 16px;
+    padding: 12px;
     position: relative;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    transition: transform 0.2s, border-color 0.2s;
+    transition: all 0.2s ease;
 }
 
 .quest-item:hover {
     border-color: var(--border-bright);
-    background: rgba(30, 31, 48, 0.8);
+    background: var(--bg-hover);
 }
 
-.quest-item.main {
-    border-left: 6px solid var(--primary-gold);
-}
-
-.quest-item.side {
-    border-left: 6px solid var(--success);
-}
-
-.quest-item.daily {
-    border-left: 6px solid var(--info);
-}
+.quest-item.main { border-left: 3px solid var(--primary-gold); }
+.quest-item.side { border-left: 3px solid var(--success); }
+.quest-item.daily { border-left: 3px solid var(--info); }
 
 .quest-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .quest-name {
-    font-weight: 700;
-    color: var(--primary-gold);
-    flex: 1;
-    margin-left: 12px;
-    font-size: 17px;
-    letter-spacing: 0.5px;
+    font-weight: 600;
+    color: var(--text-main);
+    font-size: 13px;
 }
 
 .quest-description {
-    font-size: 13px;
+    font-size: 11px;
     color: var(--text-sub);
-    margin-bottom: 14px;
-    line-height: 1.5;
+    margin-bottom: 10px;
+    line-height: 1.4;
 }
 
 .quest-abandon {
-    background: rgba(255, 71, 87, 0.1);
-    border: 1px solid rgba(255, 71, 87, 0.3);
+    background: rgba(192, 57, 43, 0.1);
+    border: 1px solid rgba(192, 57, 43, 0.3);
     color: var(--danger);
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
+    font-size: 10px;
 }
 
 .quest-abandon:hover {
     background: var(--danger);
     color: white;
-    transform: scale(1.1);
 }
 
 .quest-section h4 {
-    margin: 25px 0 12px 0;
+    margin: 16px 0 8px 0;
     color: var(--text-dim);
     text-transform: uppercase;
-    font-size: 12px;
-    letter-spacing: 2px;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.05);
-    padding-bottom: 8px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border-main);
+    padding-bottom: 4px;
 }
 
 .quest-available {
     display: flex;
     align-items: center;
-    background: rgba(255, 255, 255, 0.03);
-    padding: 12px 16px;
+    justify-content: space-between;
+    background: var(--bg-card);
+    padding: 8px 12px;
     border-radius: var(--border-radius-md);
-    margin-bottom: 10px;
-    border: 1px solid transparent;
+    margin-bottom: 6px;
+    border: 1px solid var(--border-main);
     transition: all 0.2s;
 }
 
 .quest-available:hover {
-    background: rgba(255, 255, 255, 0.07);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: var(--bg-hover);
+    border-color: var(--border-bright);
 }
 
 .quest-available button {
-    background: var(--success);
-    border: none;
-    color: #0f101a;
-    padding: 6px 14px;
-    border-radius: var(--border-radius-sm);
+    background: rgba(39, 174, 96, 0.2);
+    border: 1px solid rgba(39, 174, 96, 0.4);
+    color: var(--success);
+    padding: 4px 10px;
+    border-radius: var(--border-radius-pill);
     cursor: pointer;
-    font-family: inherit;
-    font-size: 12px;
-    font-weight: bold;
-    margin-left: auto;
+    font-size: 10px;
+    font-weight: 600;
     transition: all 0.2s;
 }
 
 .quest-available button:hover {
-    filter: brightness(1.1);
-    transform: translateY(-1px);
+    background: rgba(39, 174, 96, 0.3);
 }
 
 /* Skill & Perk Styling */
 #skillPointsDisplay {
-    background: linear-gradient(90deg, rgba(248, 231, 28, 0.1), rgba(248, 231, 28, 0.05));
+    background: var(--bg-card);
     color: var(--primary-gold);
-    padding: 15px;
+    padding: 10px;
     border-radius: var(--border-radius-md);
     text-align: center;
-    margin-bottom: 25px;
-    font-weight: bold;
-    font-size: 15px;
-    border: 1px solid rgba(248, 231, 28, 0.2);
-    box-shadow: inset 0 0 20px rgba(248, 231, 28, 0.05);
+    margin-bottom: 16px;
+    font-weight: 600;
+    font-size: 12px;
+    border: 1px solid var(--border-accent);
 }
 
 .skill-tabs {
     display: flex;
-    gap: 12px;
-    margin-bottom: 25px;
+    gap: 8px;
+    margin-bottom: 16px;
     justify-content: center;
 }
 
 .tab-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-card);
+    border: 1px solid var(--border-main);
     color: var(--text-dim);
-    padding: 10px 30px;
+    padding: 6px 20px;
     cursor: pointer;
-    border-radius: var(--border-radius-sm);
-    font-family: inherit;
+    border-radius: var(--border-radius-pill);
     transition: all 0.2s;
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
 }
 
 .tab-btn.active {
     background: rgba(255, 255, 255, 0.1);
-    border-color: var(--primary-gold);
+    border-color: var(--border-bright);
     color: var(--text-main);
-    box-shadow: 0 0 15px rgba(248, 231, 28, 0.15);
 }
 
 .tab-btn:hover:not(.active) {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--bg-hover);
     color: var(--text-sub);
 }
 
 .skill-category,
 .perk-category {
     background: var(--bg-card);
-    padding: 20px;
-    border-radius: var(--border-radius-lg);
-    margin-bottom: 25px;
-    border: 1px solid rgba(255, 255, 255, 0.03);
+    padding: 16px;
+    border-radius: var(--border-radius-md);
+    margin-bottom: 16px;
+    border: 1px solid var(--border-main);
 }
 
 .skill-category h4,
 .perk-category h4 {
-    margin-bottom: 15px;
-    font-size: 13px;
+    margin-bottom: 10px;
+    font-size: 11px;
     color: var(--text-dim);
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
 }
 
 .skill-slot,
 .perk-slot {
     display: flex;
     align-items: center;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    padding: 14px;
+    background: var(--bg-dark);
+    border: 1px solid var(--border-main);
+    padding: 10px;
     border-radius: var(--border-radius-md);
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     transition: all 0.2s;
+    font-size: 12px;
 }
 
 .skill-slot.unlocked,
 .perk-slot.unlocked {
-    border-color: rgba(46, 213, 115, 0.3);
-    background: rgba(46, 213, 115, 0.02);
+    border-color: rgba(39, 174, 96, 0.3);
+    background: rgba(39, 174, 96, 0.05);
 }
 
 .skill-slot.maxed {
-    border-color: rgba(248, 231, 28, 0.3);
-    background: rgba(248, 231, 28, 0.02);
+    border-color: rgba(229, 181, 0, 0.3);
+    background: rgba(229, 181, 0, 0.05);
 }
 
 .skill-xp-bar {
-    width: 140px;
-    height: 8px;
-    background: #0a0a0f;
-    margin: 0 20px;
-    border-radius: 4px;
+    width: 100px;
+    height: 4px;
+    background: rgba(0,0,0,0.5);
+    margin: 0 16px;
+    border-radius: 2px;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-main);
 }
 
 .skill-xp-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--success), #4cd137);
-    box-shadow: 0 0 10px rgba(46, 213, 115, 0.4);
+    background: var(--success);
 }
 
 .skill-upgrade-btn,
 .perk-unlock-btn {
-    background: var(--success);
-    border: none;
-    color: #0f101a;
-    padding: 8px 16px;
-    border-radius: var(--border-radius-sm);
+    background: rgba(39, 174, 96, 0.2);
+    border: 1px solid rgba(39, 174, 96, 0.4);
+    color: var(--success);
+    padding: 4px 10px;
+    border-radius: var(--border-radius-pill);
     cursor: pointer;
-    font-family: inherit;
-    font-size: 12px;
-    font-weight: bold;
+    font-size: 10px;
+    font-weight: 600;
     transition: all 0.2s;
+    margin-left: auto;
 }
 
 .skill-upgrade-btn:hover,
 .perk-unlock-btn:hover {
-    filter: brightness(1.1);
-    transform: scale(1.05);
+    background: rgba(39, 174, 96, 0.3);
 }
 
 .perk-locked {
     color: var(--text-dim);
-    font-size: 22px;
+    font-size: 16px;
     margin-left: auto;
     opacity: 0.5;
 }
@@ -255,157 +235,149 @@
 /* Achievement Styling */
 .achievement-stats {
     text-align: center;
-    margin-bottom: 25px;
-    font-size: 14px;
+    margin-bottom: 16px;
+    font-size: 11px;
     color: var(--text-sub);
-    background: rgba(255, 255, 255, 0.02);
-    padding: 12px;
+    background: var(--bg-card);
+    padding: 8px;
     border-radius: var(--border-radius-md);
+    border: 1px solid var(--border-main);
 }
 
 .achievement-item {
     display: flex;
     align-items: center;
     background: var(--bg-card);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    padding: 18px;
-    border-radius: var(--border-radius-lg);
-    opacity: 0.6;
-    filter: grayscale(0.8);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    margin-bottom: 12px;
+    border: 1px solid var(--border-main);
+    padding: 12px;
+    border-radius: var(--border-radius-md);
+    opacity: 0.5;
+    filter: grayscale(1);
+    transition: all 0.3s ease;
+    margin-bottom: 8px;
 }
 
 .achievement-item.unlocked {
     opacity: 1;
     filter: none;
-    background: rgba(30, 31, 48, 0.8);
-    border-color: var(--primary-gold);
-    box-shadow: 0 5px 20px rgba(248, 231, 28, 0.1);
+    background: var(--bg-hover);
+    border-color: var(--border-bright);
 }
 
 .achievement-icon {
-    font-size: 38px;
-    margin-right: 22px;
+    font-size: 24px;
+    margin-right: 16px;
 }
 
 .achievement-name {
-    font-size: 17px;
-    font-weight: bold;
-    color: var(--primary-gold);
-    margin-bottom: 6px;
-    letter-spacing: 0.5px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 4px;
 }
 
 .achievement-desc {
-    font-size: 13px;
+    font-size: 10px;
     color: var(--text-sub);
-    line-height: 1.4;
 }
 
 .achievement-progress-container {
-    margin-top: 12px;
-    font-size: 11px;
+    margin-top: 8px;
+    font-size: 9px;
     color: var(--text-dim);
 }
 
 .achievement-bar {
-    height: 5px;
-    background: #0a0a0f;
-    margin-top: 6px;
-    border-radius: 3px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    height: 3px;
+    background: rgba(0,0,0,0.5);
+    margin-top: 4px;
+    border-radius: 2px;
     overflow: hidden;
 }
 
 .achievement-fill {
     height: 100%;
     background: var(--primary-gold);
-    box-shadow: 0 0 12px rgba(248, 231, 28, 0.5);
 }
 
 /* Crafting & Research UI */
 .craft-category-header {
     grid-column: 1 / -1;
-    color: var(--primary-gold);
-    border-bottom: 1px solid rgba(248, 231, 28, 0.3);
-    padding-bottom: 5px;
-    margin: 15px 0 10px 0;
-    font-size: 16px;
+    color: var(--text-main);
+    border-bottom: 1px solid var(--border-main);
+    padding-bottom: 4px;
+    margin: 12px 0 8px 0;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
+    opacity: 0.8;
 }
 
 .craft-slot, .research-slot {
     background: var(--bg-card);
     border: 1px solid var(--border-main);
-    padding: 15px;
+    padding: 12px;
     border-radius: var(--border-radius-md);
     position: relative;
     transition: all 0.2s;
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
     text-align: center;
 }
 
 .craft-slot:hover, .research-slot:hover {
-    border-color: var(--primary-gold);
-    background: rgba(255, 255, 255, 0.05);
-    transform: translateY(-3px);
+    border-color: var(--border-bright);
+    background: var(--bg-hover);
+    transform: translateY(-2px);
 }
 
 .craft-slot.unavailable, .research-slot.unavailable {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
-    filter: grayscale(0.8);
+    filter: grayscale(1);
 }
 
 .craft-icon, .research-icon {
-    font-size: 32px;
+    font-size: 24px;
 }
 
 .craft-name, .research-name {
-    font-weight: bold;
+    font-weight: 600;
     color: var(--text-main);
-    font-size: 14px;
+    font-size: 12px;
 }
 
 .craft-materials, .research-cost {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-sub);
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 5px;
+    gap: 4px;
 }
 
-.sufficient {
-    color: var(--success);
-}
-
-.insufficient {
-    color: var(--danger);
-}
+.sufficient { color: var(--success); }
+.insufficient { color: var(--danger); }
 
 .locked-overlay, .unlocked-overlay {
     position: absolute;
-    top: 5px;
-    right: 5px;
-    font-size: 14px;
+    top: 4px;
+    right: 4px;
+    font-size: 10px;
 }
 
 .research-desc {
-    font-size: 11px;
+    font-size: 9px;
     color: var(--text-dim);
-    line-height: 1.3;
+    line-height: 1.2;
 }
 
 .research-slot.unlocked {
-    border-color: var(--success);
-    background: rgba(46, 213, 115, 0.05);
+    border-color: rgba(39, 174, 96, 0.3);
+    background: rgba(39, 174, 96, 0.05);
     cursor: default;
 }
 

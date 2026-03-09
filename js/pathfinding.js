@@ -1,14 +1,21 @@
 // ============= PATHFINDING SYSTEM =============
 const PATHFINDING_CONFIG = {
-    MAX_SEARCH_STEPS: 5000,
+    MAX_SEARCH_STEPS: 8000,
     GRID_SIZE: 1,
     REPATH_BOREDOM: 2.0,
     NODE_REACH_THRESHOLD: 0.2, // Slightly larger for smoother movement
-    DIAGONAL_COST: 1.414
+    DIAGONAL_COST: 1.414,
+    PATH_CACHE_TTL_MS: 1500,
+    PATH_CACHE_MAX: 600,
+    LOS_STEP: 0.35,
+    CROWD_PENALTY_RADIUS: 0.9,
+    CROWD_PENALTY_WEIGHT: 0.35
 };
 
 class Pathfinder {
     constructor() {
+        this.pathCache = new Map();
+        this.lastCachePrune = 0;
         this.directions = [
             { x: 0, y: -1, cost: 1 },     // Up
             { x: 1, y: 0, cost: 1 },      // Right
@@ -19,6 +26,121 @@ class Pathfinder {
             { x: -1, y: 1, cost: PATHFINDING_CONFIG.DIAGONAL_COST },  // Down-Left
             { x: -1, y: -1, cost: PATHFINDING_CONFIG.DIAGONAL_COST }  // Up-Left
         ];
+    }
+
+    makeCacheKey(sx, sy, ex, ey) {
+        return `${sx},${sy}->${ex},${ey}`;
+    }
+
+    getCachedPath(key) {
+        const entry = this.pathCache.get(key);
+        if (!entry) return null;
+        if (Date.now() - entry.time > PATHFINDING_CONFIG.PATH_CACHE_TTL_MS) {
+            this.pathCache.delete(key);
+            return null;
+        }
+        return entry.path.map(n => ({ x: n.x, y: n.y }));
+    }
+
+    setCachedPath(key, path) {
+        if (!Array.isArray(path)) return;
+        this.pathCache.set(key, {
+            time: Date.now(),
+            path: path.map(n => ({ x: n.x, y: n.y }))
+        });
+    }
+
+    prunePathCache() {
+        const now = Date.now();
+        if (now - this.lastCachePrune < 500) return;
+        this.lastCachePrune = now;
+
+        for (const [k, v] of this.pathCache) {
+            if (now - v.time > PATHFINDING_CONFIG.PATH_CACHE_TTL_MS) {
+                this.pathCache.delete(k);
+            }
+        }
+
+        if (this.pathCache.size <= PATHFINDING_CONFIG.PATH_CACHE_MAX) return;
+
+        const oldest = Array.from(this.pathCache.entries())
+            .sort((a, b) => a[1].time - b[1].time);
+        const removeCount = this.pathCache.size - PATHFINDING_CONFIG.PATH_CACHE_MAX;
+        for (let i = 0; i < removeCount; i++) {
+            this.pathCache.delete(oldest[i][0]);
+        }
+    }
+
+    hasDirectPath(startX, startY, endX, endY, radius = 0.2) {
+        const dx = endX - startX;
+        const dy = endY - startY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 0.001) return true;
+
+        const steps = Math.max(2, Math.ceil(dist / PATHFINDING_CONFIG.LOS_STEP));
+        for (let i = 1; i <= steps; i++) {
+            const t = i / steps;
+            const x = startX + dx * t;
+            const y = startY + dy * t;
+            if (isSolidAt(x, y, radius)) return false;
+        }
+        return true;
+    }
+
+    getCrowdPenalty(x, y) {
+        const r = PATHFINDING_CONFIG.CROWD_PENALTY_RADIUS;
+        const rSq = r * r;
+        let penalty = 0;
+
+        if (Array.isArray(survivors)) {
+            for (const s of survivors) {
+                if (!s || s.health <= 0) continue;
+                const dx = s.x - x;
+                const dy = s.y - y;
+                const dSq = dx * dx + dy * dy;
+                if (dSq > 0 && dSq < rSq) penalty += (rSq - dSq) / rSq;
+            }
+        }
+
+        if (Array.isArray(zombies)) {
+            for (const z of zombies) {
+                if (!z || z.health <= 0) continue;
+                const dx = z.x - x;
+                const dy = z.y - y;
+                const dSq = dx * dx + dy * dy;
+                if (dSq > 0 && dSq < rSq) penalty += 0.5 * ((rSq - dSq) / rSq);
+            }
+        }
+
+        return penalty * PATHFINDING_CONFIG.CROWD_PENALTY_WEIGHT;
+    }
+
+    smoothPath(path, startX, startY) {
+        if (!Array.isArray(path) || path.length <= 2) return path;
+
+        const smoothed = [];
+        let anchorX = startX;
+        let anchorY = startY;
+        let i = 0;
+
+        while (i < path.length) {
+            let furthest = i;
+            for (let j = path.length - 1; j >= i; j--) {
+                const node = path[j];
+                if (this.hasDirectPath(anchorX, anchorY, node.x, node.y, 0.22)) {
+                    furthest = j;
+                    break;
+                }
+            }
+
+            const chosen = path[furthest];
+            smoothed.push(chosen);
+            anchorX = chosen.x;
+            anchorY = chosen.y;
+            i = furthest + 1;
+        }
+
+        return smoothed;
     }
 
     // Heuristic: Octile distance (better for 8-directional movement)
@@ -61,6 +183,8 @@ class Pathfinder {
         let ex = Math.floor(endX);
         let ey = Math.floor(endY);
 
+        this.prunePathCache();
+
         // If target is unwalkable, find nearest walkable neighbor
         let targetX = ex;
         let targetY = ey;
@@ -79,6 +203,16 @@ class Pathfinder {
         // Same tile check - return empty path (already there)
         if (sx === targetX && sy === targetY) {
             return [];
+        }
+
+        const cacheKey = this.makeCacheKey(sx, sy, targetX, targetY);
+        const cached = this.getCachedPath(cacheKey);
+        if (cached) return cached;
+
+        if (this.hasDirectPath(startX, startY, targetX + 0.5, targetY + 0.5, 0.22)) {
+            const direct = [{ x: targetX + 0.5, y: targetY + 0.5 }];
+            this.setCachedPath(cacheKey, direct);
+            return direct;
         }
 
         const openSet = new PriorityQueue();
@@ -101,7 +235,13 @@ class Pathfinder {
             steps++;
             if (steps > PATHFINDING_CONFIG.MAX_SEARCH_STEPS) {
                 console.debug('Pathfinding: Max steps reached, returning partial path');
-                return this.reconstructPath(cameFrom, closestKey, sx, sy);
+                const partial = this.smoothPath(
+                    this.reconstructPath(cameFrom, closestKey, sx, sy),
+                    startX,
+                    startY
+                );
+                this.setCachedPath(cacheKey, partial);
+                return partial;
             }
 
             const currentKey = openSet.dequeue();
@@ -116,7 +256,10 @@ class Pathfinder {
 
             // Check if we reached the target
             if (cx === targetX && cy === targetY) {
-                return this.reconstructPath(cameFrom, currentKey, sx, sy);
+                const rawPath = this.reconstructPath(cameFrom, currentKey, sx, sy);
+                const finalPath = this.smoothPath(rawPath, startX, startY);
+                this.setCachedPath(cacheKey, finalPath);
+                return finalPath;
             }
 
             // Track closest node to target for partial paths
@@ -148,7 +291,8 @@ class Pathfinder {
                     }
                 }
 
-                const tentativeG = currentG + cost * dir.cost;
+                const crowdPenalty = this.getCrowdPenalty(nx + 0.5, ny + 0.5);
+                const tentativeG = currentG + cost * dir.cost + crowdPenalty;
                 const neighborG = gScore.has(neighborKey) ? gScore.get(neighborKey) : Infinity;
 
                 if (tentativeG < neighborG) {
@@ -163,7 +307,13 @@ class Pathfinder {
         // No full path found - return partial path to closest point
         if (closestKey !== startKey) {
             console.debug('Pathfinding: Returning partial path');
-            return this.reconstructPath(cameFrom, closestKey, sx, sy);
+            const partial = this.smoothPath(
+                this.reconstructPath(cameFrom, closestKey, sx, sy),
+                startX,
+                startY
+            );
+            this.setCachedPath(cacheKey, partial);
+            return partial;
         }
 
         return null;

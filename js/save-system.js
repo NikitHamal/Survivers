@@ -16,7 +16,7 @@ const SaveSystem = (function () {
         MAX_SAVE_SLOTS: 5,
         AUTOSAVE_INTERVAL: 60000, // 1 minute
         COMPRESSION_ENABLED: true,
-        MAX_CHUNKS_TO_SAVE: 50,
+        MAX_CHUNKS_TO_SAVE: null, // null = no cap, preserve all modified chunks
         BACKUP_COUNT: 3
     };
 
@@ -32,6 +32,10 @@ const SaveSystem = (function () {
             timestamp: Date.now(),
             gameTime: timing?.gameTime || 0,
             seed: seed,
+            startingBase: {
+                x: startingBase.x,
+                y: startingBase.y
+            },
 
             // Player state
             player: {
@@ -141,12 +145,14 @@ const SaveSystem = (function () {
     // ============= SERIALIZATION =============
     function serializeModifiedChunks() {
         const serialized = {};
-
-        // Limit chunks to save for performance
         let chunkCount = 0;
 
         for (const [key, modifications] of modifiedChunks) {
-            if (chunkCount >= CONFIG.MAX_CHUNKS_TO_SAVE) break;
+            if (Number.isFinite(CONFIG.MAX_CHUNKS_TO_SAVE) &&
+                chunkCount >= CONFIG.MAX_CHUNKS_TO_SAVE) {
+                console.warn(`Modified chunk save limit reached (${CONFIG.MAX_CHUNKS_TO_SAVE})`);
+                break;
+            }
 
             if (modifications && modifications.size > 0) {
                 const chunk = chunks.get(key);
@@ -228,7 +234,7 @@ const SaveSystem = (function () {
     }
 
     // ============= SAVE OPERATIONS =============
-    function save(slotIndex = 0) {
+    function save(slotIndex = 0, retryCount = 0) {
         if (saveInProgress) {
             console.warn('Save already in progress');
             return false;
@@ -272,8 +278,10 @@ const SaveSystem = (function () {
 
             if (e.name === 'QuotaExceededError') {
                 // LocalStorage full - try to clear old data
-                clearOldSaves();
-                return save(slotIndex); // Retry
+                const cleared = clearOldSaves();
+                if (cleared && retryCount < 1) {
+                    return save(slotIndex, retryCount + 1); // Single bounded retry
+                }
             }
 
             return false;
@@ -412,6 +420,13 @@ const SaveSystem = (function () {
     function applySaveData(saveData) {
         // Apply seed first for world generation
         seed = saveData.seed;
+        if (saveData.startingBase) {
+            startingBase.x = saveData.startingBase.x;
+            startingBase.y = saveData.startingBase.y;
+        } else {
+            startingBase.x = 0;
+            startingBase.y = 0;
+        }
 
         // Clear existing state
         chunks.clear();
@@ -649,7 +664,16 @@ const SaveSystem = (function () {
         if (slots.length > 0) {
             const [oldestSlot] = slots[0];
             deleteSave(parseInt(oldestSlot, 10));
+            return true;
         }
+
+        // If no slot metadata exists, attempt clearing autosave.
+        if (localStorage.getItem(CONFIG.AUTOSAVE_KEY) !== null) {
+            localStorage.removeItem(CONFIG.AUTOSAVE_KEY);
+            return true;
+        }
+
+        return false;
     }
 
     function getStorageUsage() {

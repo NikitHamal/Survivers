@@ -14,8 +14,7 @@ const EventSystem = (function() {
         MAX_ACTIVE_EVENTS: 3,           // Maximum simultaneous events
         ENCOUNTER_SPAWN_RANGE: 15,      // How far encounters spawn from player
         EVENT_MARKER_DURATION: 60,      // How long event markers last
-        MERCHANT_STAY_DURATION: 300,    // How long merchants stay
-        SUPPLY_DROP_LIFETIME: 180       // How long supply drops last
+        MERCHANT_STAY_DURATION: 300     // How long merchants stay
     };
 
     // ============= EVENT CATEGORIES =============
@@ -50,32 +49,6 @@ const EventSystem = (function() {
             },
             interaction: (event) => {
                 openMerchantShop(event.merchant);
-            }
-        },
-
-        supply_drop: {
-            id: 'supply_drop',
-            name: 'Supply Drop',
-            category: EVENT_CATEGORIES.ENCOUNTER,
-            description: 'A supply crate has been spotted nearby!',
-            icon: '📦',
-            rarity: 0.12,
-            duration: CONFIG.SUPPLY_DROP_LIFETIME,
-            rewards: {
-                resources: { wood: 50, stone: 30, iron: 20, food: 40 },
-                itemChance: 0.3,
-                items: ['health_potion', 'stamina_elixir', 'iron_sword']
-            },
-            onStart: (event) => {
-                event.collected = false;
-                if (typeof spawnParticles === 'function') {
-                    spawnParticles(event.x, event.y, '#ffff00', 20);
-                }
-            },
-            interaction: (event) => {
-                if (event.collected) return;
-                event.collected = true;
-                collectSupplyDrop(event);
             }
         },
 
@@ -218,40 +191,6 @@ const EventSystem = (function() {
                 }
             },
             duration: 90
-        },
-
-        infected_wildlife: {
-            id: 'infected_wildlife',
-            name: 'Infected Wildlife',
-            category: EVENT_CATEGORIES.ENCOUNTER,
-            description: 'Infected creatures are approaching!',
-            icon: '🐺',
-            rarity: 0.08,
-            hostile: true,
-            onStart: (event) => {
-                // Spawn fast, weak infected
-                const count = 5 + Math.floor(Math.random() * 8);
-                for (let i = 0; i < count; i++) {
-                    const angle = Math.random() * Math.PI * 2;
-                    const dist = 10 + Math.random() * 5;
-                    const x = event.x + Math.cos(angle) * dist;
-                    const y = event.y + Math.sin(angle) * dist;
-
-                    const infected = {
-                        x, y,
-                        health: 20,
-                        maxHealth: 20,
-                        speed: ZOMBIE_CONFIG.BASE_SPEED * 1.8,
-                        damage: 5,
-                        attackCooldown: 0,
-                        frame: 0,
-                        animTimer: 0,
-                        isInfected: true
-                    };
-                    zombies.push(infected);
-                }
-            },
-            duration: 60
         },
 
         bandit_raid: {
@@ -969,30 +908,6 @@ const EventSystem = (function() {
             { id: 'iron_sword', name: 'Iron Sword', price: 50 },
             { id: 'hunters_ring', name: "Hunter's Ring", price: 100 }
         ];
-    }
-
-    function collectSupplyDrop(event) {
-        // Grant resources
-        for (const [resource, amount] of Object.entries(event.rewards.resources)) {
-            resources[resource] = (resources[resource] || 0) + amount;
-        }
-
-        // Chance for item
-        if (Math.random() < event.rewards.itemChance) {
-            const itemId = event.rewards.items[Math.floor(Math.random() * event.rewards.items.length)];
-            if (typeof EquipmentSystem !== 'undefined') {
-                const item = EquipmentSystem.createItem(itemId);
-                if (item) EquipmentSystem.addToInventory(item);
-            }
-        }
-
-        if (typeof showNotification === 'function') {
-            showNotification('<i class="material-icons">inventory</i> Supply Drop collected!', []);
-        }
-
-        if (typeof spawnParticles === 'function') {
-            spawnParticles(event.x, event.y, '#00ff00', 15);
-        }
     }
 
     function spawnEventZombies(x, y, count, event) {

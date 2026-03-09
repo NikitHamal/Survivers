@@ -33,16 +33,6 @@ function render(alpha = 1) {
         }
     }
 
-    // Render ground layer first
-    for (let y = startTileY; y <= endTileY; y++) {
-        for (let x = startTileX; x <= endTileX; x++) {
-            const tile = getTile(x, y);
-            const sx = x * TILE_SIZE * SCALE - camX;
-            const sy = y * TILE_SIZE * SCALE - camY;
-            renderGroundLayer(tile, sx, sy, x, y);
-        }
-    }
-
     // Collect all entities for Y-sorting
     const entities = [];
 
@@ -90,11 +80,12 @@ function render(alpha = 1) {
 
     // Render entity shadows first
     entities.forEach(e => {
-        if (e.type === 'tree') return; // Trees have their own shadows
+        // Trees/survivors/animals render their own shadows for proper grounding.
+        if (e.type === 'tree' || e.type === 'survivor' || e.type === 'animal') return;
         const s = TILE_SIZE * SCALE;
-        const sx = (e.x - 0.5) * s - camX;
-        const sy = (e.y - 0.5) * s - camY;
-        renderEntityShadow(ctx, sx + s / 2, sy + s * 0.9, s * 0.35);
+        const cx = e.x * s - camX;
+        const cy = (e.y + 0.5) * s - camY;
+        renderEntityShadow(ctx, cx, cy, s * 0.35);
     });
 
     // Render entities

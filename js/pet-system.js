@@ -22,6 +22,12 @@ const PetSystem = (function () {
         WANDER_DISTANCE: 4,
         FLEE_DISTANCE: 6,
         FLEE_SPEED_MULTIPLIER: 1.5,
+        PATH_REPATH_INTERVAL: 1.0,
+        PATH_STUCK_TIMEOUT: 0.45,
+        PATH_NODE_REACH: 0.2,
+        PATH_LOOKAHEAD_RADIUS: 0.24,
+        DIRECTION_MIN_DELTA: 0.006,
+        DIRECTION_REVERSE_MIN_DELTA: 0.02,
 
         // Slime behavior
         SLIME_BOUNCE_INTERVAL: 1.5,
@@ -139,6 +145,10 @@ const PetSystem = (function () {
             this.wanderTimer = Math.random() * CONFIG.WANDER_INTERVAL_MAX;
             this.fleeTimer = 0;
             this.fleeFrom = null;
+            this.path = null;
+            this.pathIndex = 0;
+            this.repathTimer = 0;
+            this.stuckTimer = 0;
 
             // Animation
             this.animTimer = Math.random() * Math.PI * 2;
@@ -214,17 +224,60 @@ const PetSystem = (function () {
             }
 
             if (this.wanderTarget && this.aiState === 'wander') {
-                const dx = this.wanderTarget.x - this.x;
-                const dy = this.wanderTarget.y - this.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+                const dxToGoal = this.wanderTarget.x - this.x;
+                const dyToGoal = this.wanderTarget.y - this.y;
+                const distToGoal = Math.sqrt(dxToGoal * dxToGoal + dyToGoal * dyToGoal);
 
-                if (dist > 0.3) {
-                    this.moveToward(this.wanderTarget.x, this.wanderTarget.y, dt, this.speed);
-                    this.isMoving = true;
+                if (distToGoal > 0.3) {
+                    this.repathTimer -= dt;
+                    if (!this.path || this.pathIndex >= this.path.length || this.repathTimer <= 0) {
+                        this.planPathToTarget();
+                    }
+
+                    let moveTarget = this.wanderTarget;
+                    if (this.path && this.pathIndex < this.path.length) {
+                        if (typeof pathfinder !== 'undefined' && this.pathIndex < this.path.length - 1) {
+                            for (let i = this.path.length - 1; i > this.pathIndex; i--) {
+                                const candidate = this.path[i];
+                                if (pathfinder.hasDirectPath(this.x, this.y, candidate.x, candidate.y, CONFIG.PATH_LOOKAHEAD_RADIUS)) {
+                                    this.pathIndex = i;
+                                    break;
+                                }
+                            }
+                        }
+
+                        while (this.pathIndex < this.path.length) {
+                            const node = this.path[this.pathIndex];
+                            const ndx = node.x - this.x;
+                            const ndy = node.y - this.y;
+                            const nDist = Math.sqrt(ndx * ndx + ndy * ndy);
+                            if (nDist < CONFIG.PATH_NODE_REACH) {
+                                this.pathIndex++;
+                            } else {
+                                moveTarget = node;
+                                break;
+                            }
+                        }
+                    }
+
+                    const moved = this.moveToward(moveTarget.x, moveTarget.y, dt, this.speed);
+                    this.isMoving = moved;
+                    if (moved) {
+                        this.stuckTimer = 0;
+                    } else {
+                        this.stuckTimer += dt;
+                        if (this.stuckTimer >= CONFIG.PATH_STUCK_TIMEOUT) {
+                            this.planPathToTarget(true);
+                            this.stuckTimer = 0;
+                        }
+                    }
                 } else {
                     this.aiState = 'idle';
                     this.isMoving = false;
                     this.wanderTarget = null;
+                    this.path = null;
+                    this.pathIndex = 0;
+                    this.repathTimer = 0;
                 }
             } else {
                 this.isMoving = false;
@@ -260,7 +313,7 @@ const PetSystem = (function () {
                             const jumpDist = Math.min(dist, 2);
                             this.vx = (dx / dist) * jumpDist * 3;
                             this.vy = (dy / dist) * jumpDist * 3;
-                            this.direction = dx > 0 ? 1 : -1;
+                            this.updateDirectionFromMotion(this.vx, this.vy, dx, dy);
                         }
                     }
                 }
@@ -306,6 +359,29 @@ const PetSystem = (function () {
             if (!this.isPositionBlocked(targetX, targetY)) {
                 this.wanderTarget = { x: targetX, y: targetY };
                 this.aiState = 'wander';
+                this.planPathToTarget(true);
+            }
+        }
+
+        planPathToTarget(force = false) {
+            if (!this.wanderTarget) return;
+            if (!force && this.repathTimer > 0) return;
+
+            this.repathTimer = CONFIG.PATH_REPATH_INTERVAL + Math.random() * 0.4;
+
+            if (typeof pathfinder === 'undefined' || typeof pathfinder.findPath !== 'function') {
+                this.path = null;
+                this.pathIndex = 0;
+                return;
+            }
+
+            const path = pathfinder.findPath(this.x, this.y, this.wanderTarget.x, this.wanderTarget.y);
+            if (Array.isArray(path) && path.length > 0) {
+                this.path = path;
+                this.pathIndex = 0;
+            } else {
+                this.path = null;
+                this.pathIndex = 0;
             }
         }
 
@@ -325,62 +401,97 @@ const PetSystem = (function () {
             }
 
             const fleeSpeed = this.speed * CONFIG.FLEE_SPEED_MULTIPLIER;
-            const fleeX = this.x + (dx / dist) * fleeSpeed * dt;
-            const fleeY = this.y + (dy / dist) * fleeSpeed * dt;
-
-            if (!this.isPositionBlocked(fleeX, fleeY)) {
-                this.x = fleeX;
-                this.y = fleeY;
-
-                if (Math.abs(dx) > Math.abs(dy)) {
-                    this.direction = dx > 0 ? 0 : 2;
-                } else {
-                    this.direction = dy > 0 ? 1 : 3;
-                }
-            }
-            this.isMoving = true;
+            const moved = this.moveToward(
+                this.x + (dx / dist),
+                this.y + (dy / dist),
+                dt,
+                fleeSpeed
+            );
+            this.isMoving = moved;
         }
 
         moveToward(targetX, targetY, dt, speed) {
+            const startX = this.x;
+            const startY = this.y;
             const dx = targetX - this.x;
             const dy = targetY - this.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
-            if (dist < 0.1) return;
+            if (dist < 0.1) return false;
 
-            const moveX = (dx / dist) * speed * dt;
-            const moveY = (dy / dist) * speed * dt;
-            const newX = this.x + moveX;
-            const newY = this.y + moveY;
+            // Clamp step to avoid overshooting the target and direction flicker near stop.
+            const step = Math.min(speed * dt, dist);
+            const moveX = (dx / dist) * step;
+            const moveY = (dy / dist) * step;
+            let moved = false;
 
-            if (!this.isPositionBlocked(newX, newY)) {
-                this.x = newX;
-                this.y = newY;
-
-                // Update direction (4-way) with hysteresis to prevent flicker
-                const absDx = Math.abs(dx);
-                const absDy = Math.abs(dy);
-
-                // Only change axis preference if clearly dominant (avoid diagonal flicker)
-                // If currently horizontal (0 or 2), start with horizontal buffer
-                // If currently vertical (1 or 3), start with vertical buffer
-                const isHorz = (this.direction === 0 || this.direction === 2);
-                const buffer = 0.2; // 20% buffer
-
-                if (isHorz) {
-                    if (absDy > absDx * (1 + buffer)) {
-                        this.direction = dy > 0 ? 1 : 3;
-                    } else if (dx !== 0) {
-                        this.direction = dx > 0 ? 0 : 2;
+            const fullX = this.x + moveX;
+            const fullY = this.y + moveY;
+            if (!this.isPositionBlocked(fullX, fullY)) {
+                this.x = fullX;
+                this.y = fullY;
+                moved = true;
+            } else {
+                // Slide on the most promising axis first, then the other axis.
+                if (Math.abs(moveX) >= Math.abs(moveY)) {
+                    if (!this.isPositionBlocked(this.x + moveX, this.y)) {
+                        this.x += moveX;
+                        moved = true;
+                    } else if (!this.isPositionBlocked(this.x, this.y + moveY)) {
+                        this.y += moveY;
+                        moved = true;
                     }
                 } else {
-                    if (absDx > absDy * (1 + buffer)) {
-                        this.direction = dx > 0 ? 0 : 2;
-                    } else if (dy !== 0) {
-                        this.direction = dy > 0 ? 1 : 3;
+                    if (!this.isPositionBlocked(this.x, this.y + moveY)) {
+                        this.y += moveY;
+                        moved = true;
+                    } else if (!this.isPositionBlocked(this.x + moveX, this.y)) {
+                        this.x += moveX;
+                        moved = true;
                     }
                 }
             }
+
+            const actualDx = this.x - startX;
+            const actualDy = this.y - startY;
+            this.updateDirectionFromMotion(actualDx, actualDy, dx, dy);
+            return moved;
+        }
+
+        updateDirectionFromMotion(actualDx, actualDy, intendedDx, intendedDy) {
+            let dirDx = actualDx;
+            let dirDy = actualDy;
+
+            const absDx = Math.abs(dirDx);
+            const absDy = Math.abs(dirDy);
+            if (absDx < CONFIG.DIRECTION_MIN_DELTA && absDy < CONFIG.DIRECTION_MIN_DELTA) return;
+
+            const buffer = 0.12;
+            const wasDir = this.direction;
+            let nextDir = this.direction;
+
+            if (absDx > absDy * (1 + buffer)) {
+                nextDir = dirDx >= 0 ? 0 : 2;
+            } else if (absDy > absDx * (1 + buffer)) {
+                nextDir = dirDy >= 0 ? 1 : 3;
+            } else {
+                // In near-diagonal ties, keep current axis preference for visual stability.
+                const isHorz = (this.direction === 0 || this.direction === 2);
+                nextDir = isHorz ? (dirDx >= 0 ? 0 : 2) : (dirDy >= 0 ? 1 : 3);
+            }
+
+            const isReverse =
+                (wasDir === 0 && nextDir === 2) ||
+                (wasDir === 2 && nextDir === 0) ||
+                (wasDir === 1 && nextDir === 3) ||
+                (wasDir === 3 && nextDir === 1);
+
+            if (isReverse) {
+                const moveMag = Math.sqrt(dirDx * dirDx + dirDy * dirDy);
+                if (moveMag < CONFIG.DIRECTION_REVERSE_MIN_DELTA) return;
+            }
+
+            this.direction = nextDir;
         }
 
         isPositionBlocked(x, y) {

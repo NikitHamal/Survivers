@@ -62,6 +62,7 @@ let selectedBuildingData = null; // { x, y, tile, building } - currently selecte
 
 // Seeded random for world gen
 let seed = Date.now() % 100000;
+let startingBase = { x: 0, y: 0 };
 
 // Building Drag State
 let isDraggingBuilding = false;

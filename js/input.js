@@ -214,7 +214,6 @@ function handleMouseUp(e) {
 
     // Cleanup simple drag attempts that didn't become drags
     draggedBuilding = null;
-    inputState.keysPressedThisFrame.clear(); // Cleanup hack if needed
 }
 
 function handleClickInteraction(clickX, clickY, tileX, tileY) {

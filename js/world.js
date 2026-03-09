@@ -131,13 +131,14 @@ function cleanupChunks(force = false) {
     lastCleanupTime = now;
 
     const { cx: pcx, cy: pcy } = worldToChunk(player.x, player.y);
+    const { cx: spawnCX, cy: spawnCY } = worldToChunk(startingBase.x, startingBase.y);
     const chunksToRemove = [];
 
     for (const [key, chunk] of chunks) {
         const { cx, cy } = parseChunkKey(key);
 
-        // Never unload spawn chunk
-        if (cx === 0 && cy === 0) continue;
+        // Never unload the starting base chunk
+        if (cx === spawnCX && cy === spawnCY) continue;
 
         const dist = Math.max(Math.abs(cx - pcx), Math.abs(cy - pcy));
 
@@ -156,8 +157,8 @@ function cleanupChunks(force = false) {
         const sortedChunks = Array.from(chunks.entries())
             .filter(([key]) => {
                 const { cx, cy } = parseChunkKey(key);
-                // Don't evict spawn or nearby chunks
-                if (cx === 0 && cy === 0) return false;
+                // Don't evict the starting base chunk or nearby chunks
+                if (cx === spawnCX && cy === spawnCY) return false;
                 const dist = Math.max(Math.abs(cx - pcx), Math.abs(cy - pcy));
                 return dist > CHUNK_CONFIG.KEEP_RADIUS;
             })
@@ -218,8 +219,9 @@ function unloadChunk(key) {
 }
 
 function forceUnloadAllChunks() {
-    // Keep spawn chunk and modified chunks
-    const keysToKeep = ['0,0'];
+    // Keep the starting base chunk and modified chunks
+    const { cx: spawnCX, cy: spawnCY } = worldToChunk(startingBase.x, startingBase.y);
+    const keysToKeep = [getChunkKey(spawnCX, spawnCY)];
 
     for (const [key] of chunks) {
         if (!keysToKeep.includes(key) && !modifiedChunks.has(key)) {
@@ -264,10 +266,33 @@ function generateChunk(cx, cy) {
 }
 
 function isInBaseArea(wx, wy) {
-    return wx >= CHUNK_CONFIG.BASE_MIN &&
-        wx <= CHUNK_CONFIG.BASE_MAX &&
-        wy >= CHUNK_CONFIG.BASE_MIN &&
-        wy <= CHUNK_CONFIG.BASE_MAX;
+    return wx >= startingBase.x + CHUNK_CONFIG.BASE_MIN &&
+        wx <= startingBase.x + CHUNK_CONFIG.BASE_MAX &&
+        wy >= startingBase.y + CHUNK_CONFIG.BASE_MIN &&
+        wy <= startingBase.y + CHUNK_CONFIG.BASE_MAX;
+}
+
+function setStartingBaseOrigin(x, y) {
+    startingBase.x = Math.round(x);
+    startingBase.y = Math.round(y);
+}
+
+function getStartingBaseOrigin() {
+    return { x: startingBase.x, y: startingBase.y };
+}
+
+function chooseRandomStartingBaseOrigin() {
+    const minChunkDist = 3;
+    const maxChunkDist = 10;
+    const chunkOffsetX = minChunkDist + Math.floor(Math.random() * (maxChunkDist - minChunkDist + 1));
+    const chunkOffsetY = minChunkDist + Math.floor(Math.random() * (maxChunkDist - minChunkDist + 1));
+    const signX = Math.random() < 0.5 ? -1 : 1;
+    const signY = Math.random() < 0.5 ? -1 : 1;
+
+    return {
+        x: signX * chunkOffsetX * CHUNK_SIZE_LOCAL,
+        y: signY * chunkOffsetY * CHUNK_SIZE_LOCAL
+    };
 }
 
 function generateTileAt(wx, wy) {
@@ -649,14 +674,14 @@ function generateStartingBase() {
     // Clear expanded area around base (grass for natural look)
     for (let y = -8; y <= 8; y++) {
         for (let x = -8; x <= 8; x++) {
-            setTile(x, y, TILES.GRASS);
+            setTile(startingBase.x + x, startingBase.y + y, TILES.GRASS);
         }
     }
 
     // Floor inside base - larger 5x5 floor area for movement
     for (let y = -4; y <= 4; y++) {
         for (let x = -4; x <= 4; x++) {
-            setTile(x, y, TILES.FLOOR);
+            setTile(startingBase.x + x, startingBase.y + y, TILES.FLOOR);
         }
     }
 
@@ -664,62 +689,62 @@ function generateStartingBase() {
     for (let i = -5; i <= 5; i++) {
         // North wall (y = -5)
         if (i !== 0 && i !== -1) { // 2-tile gap at center
-            setTile(i, -5, TILES.WALL);
+            setTile(startingBase.x + i, startingBase.y - 5, TILES.WALL);
         }
 
         // South wall (y = 5)
         if (i !== 0 && i !== 1) {
-            setTile(i, 5, TILES.WALL);
+            setTile(startingBase.x + i, startingBase.y + 5, TILES.WALL);
         }
 
         // West wall (x = -5)
         if (i !== 0 && i !== -1 && i > -5 && i < 5) {
-            setTile(-5, i, TILES.WALL);
+            setTile(startingBase.x - 5, startingBase.y + i, TILES.WALL);
         }
 
         // East wall (x = 5)
         if (i !== 0 && i !== 1 && i > -5 && i < 5) {
-            setTile(5, i, TILES.WALL);
+            setTile(startingBase.x + 5, startingBase.y + i, TILES.WALL);
         }
     }
 
     // Corner walls
-    setTile(-5, -5, TILES.WALL);
-    setTile(5, -5, TILES.WALL);
-    setTile(-5, 5, TILES.WALL);
-    setTile(5, 5, TILES.WALL);
+    setTile(startingBase.x - 5, startingBase.y - 5, TILES.WALL);
+    setTile(startingBase.x + 5, startingBase.y - 5, TILES.WALL);
+    setTile(startingBase.x - 5, startingBase.y + 5, TILES.WALL);
+    setTile(startingBase.x + 5, startingBase.y + 5, TILES.WALL);
 
     // House in northwest corner (2x2)
-    setTile(-4, -4, TILES.HOUSE);
-    setTile(-3, -4, TILES.HOUSE_BASE);
-    setTile(-4, -3, TILES.HOUSE_BASE);
-    setTile(-3, -3, TILES.HOUSE_BASE);
+    setTile(startingBase.x - 4, startingBase.y - 4, TILES.HOUSE);
+    setTile(startingBase.x - 3, startingBase.y - 4, TILES.HOUSE_BASE);
+    setTile(startingBase.x - 4, startingBase.y - 3, TILES.HOUSE_BASE);
+    setTile(startingBase.x - 3, startingBase.y - 3, TILES.HOUSE_BASE);
 
     // Chest in northeast area
-    setTile(3, -3, TILES.CHEST);
-    initializeStartingChest(3, -3);
+    setTile(startingBase.x + 3, startingBase.y - 3, TILES.CHEST);
+    initializeStartingChest(startingBase.x + 3, startingBase.y - 3);
 
     // Campfire in south-center (not directly on spawn)
-    setTile(0, 3, TILES.CAMPFIRE);
+    setTile(startingBase.x, startingBase.y + 3, TILES.CAMPFIRE);
 
     // Workbench in southeast
-    setTile(3, 3, TILES.WORKBENCH);
+    setTile(startingBase.x + 3, startingBase.y + 3, TILES.WORKBENCH);
 
     // Some bushes outside walls for resources
-    setTile(-6, -3, TILES.BUSH);
-    setTile(-6, 3, TILES.BUSH);
-    setTile(6, -3, TILES.BUSH);
-    setTile(6, 3, TILES.BUSH);
+    setTile(startingBase.x - 6, startingBase.y - 3, TILES.BUSH);
+    setTile(startingBase.x - 6, startingBase.y + 3, TILES.BUSH);
+    setTile(startingBase.x + 6, startingBase.y - 3, TILES.BUSH);
+    setTile(startingBase.x + 6, startingBase.y + 3, TILES.BUSH);
 
     // Nearby trees outside the walls
-    setTile(-7, -6, TILES.TREE);
-    setTile(7, -6, TILES.TREE);
-    setTile(-7, 6, TILES.TREE);
-    setTile(7, 6, TILES.TREE);
+    setTile(startingBase.x - 7, startingBase.y - 6, TILES.TREE);
+    setTile(startingBase.x + 7, startingBase.y - 6, TILES.TREE);
+    setTile(startingBase.x - 7, startingBase.y + 6, TILES.TREE);
+    setTile(startingBase.x + 7, startingBase.y + 6, TILES.TREE);
 
     // Stone deposits outside
-    setTile(-7, 0, TILES.STONE);
-    setTile(7, 0, TILES.STONE);
+    setTile(startingBase.x - 7, startingBase.y, TILES.STONE);
+    setTile(startingBase.x + 7, startingBase.y, TILES.STONE);
 }
 
 function initializeStartingChest(x, y) {

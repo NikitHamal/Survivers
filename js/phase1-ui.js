@@ -4,16 +4,18 @@
 // Toggle functions for the new Phase 1 system menus
 
 // Pet Menu - Now shows wild animals in the area
-let petMenuOpen = false;
 function togglePetMenu() {
     const menu = document.getElementById('petMenu');
     if (!menu) return;
 
-    petMenuOpen = !petMenuOpen;
-    menu.style.display = petMenuOpen ? 'block' : 'none';
-
-    if (petMenuOpen) {
+    if (menu.style.display === 'block') {
+        menu.style.display = 'none';
+        gameState.paused = false;
+    } else {
+        closeAllMenus();
+        menu.style.display = 'block';
         updatePetMenuUI();
+        gameState.paused = true;
     }
 }
 
@@ -83,16 +85,18 @@ function petCommand(petId, command) {
 }
 
 // Farm Menu
-let farmMenuOpen = false;
 function toggleFarmMenu() {
     const menu = document.getElementById('farmMenu');
     if (!menu) return;
 
-    farmMenuOpen = !farmMenuOpen;
-    menu.style.display = farmMenuOpen ? 'block' : 'none';
-
-    if (farmMenuOpen) {
+    if (menu.style.display === 'block') {
+        menu.style.display = 'none';
+        gameState.paused = false;
+    } else {
+        closeAllMenus();
+        menu.style.display = 'block';
         updateFarmMenuUI();
+        gameState.paused = true;
     }
 }
 
@@ -232,16 +236,18 @@ function fertilizeCrop(tileId) {
 }
 
 // Shelter Menu
-let shelterMenuOpen = false;
 function toggleShelterMenu() {
     const menu = document.getElementById('shelterMenu');
     if (!menu) return;
 
-    shelterMenuOpen = !shelterMenuOpen;
-    menu.style.display = shelterMenuOpen ? 'block' : 'none';
-
-    if (shelterMenuOpen) {
+    if (menu.style.display === 'block') {
+        menu.style.display = 'none';
+        gameState.paused = false;
+    } else {
+        closeAllMenus();
+        menu.style.display = 'block';
         updateShelterMenuUI();
+        gameState.paused = true;
     }
 }
 
@@ -301,16 +307,18 @@ function updateShelterMenuUI() {
 }
 
 // Cooking Menu
-let cookingMenuOpen = false;
 function toggleCookingMenu() {
     const menu = document.getElementById('cookingMenu');
     if (!menu) return;
 
-    cookingMenuOpen = !cookingMenuOpen;
-    menu.style.display = cookingMenuOpen ? 'block' : 'none';
-
-    if (cookingMenuOpen) {
+    if (menu.style.display === 'block') {
+        menu.style.display = 'none';
+        gameState.paused = false;
+    } else {
+        closeAllMenus();
+        menu.style.display = 'block';
         updateCookingMenuUI();
+        gameState.paused = true;
     }
 }
 

@@ -202,9 +202,15 @@ function renderTree(x, y, s, wx, wy) {
         ctx.ellipse(x + s / 2, y + s - 2, s * 0.5, s * 0.2, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // 2. Draw Image
-        const drawW = s * 3.0;
-        const drawH = s * 4.0;
+        // 2. Draw Image (trim transparency first so trunk roots line up with shadow)
+        const trim = getTrimmedImageMetrics(img);
+        const srcX = trim ? trim.srcX : 0;
+        const srcY = trim ? trim.srcY : 0;
+        const srcW = trim ? trim.srcW : img.width;
+        const srcH = trim ? trim.srcH : img.height;
+
+        const drawW = s * 3.0 * (srcW / img.width);
+        const drawH = s * 4.0 * (srcH / img.height);
 
         const anchorX = x + s / 2;
         const anchorY = y + s - 2;
@@ -212,7 +218,7 @@ function renderTree(x, y, s, wx, wy) {
         ctx.save();
         ctx.translate(anchorX, anchorY);
         ctx.rotate(swayAngle);
-        ctx.drawImage(img, -drawW / 2, -drawH + s * 0.8, drawW, drawH);
+        ctx.drawImage(img, srcX, srcY, srcW, srcH, -drawW / 2, -drawH, drawW, drawH);
         ctx.restore();
     } else {
         const swayAngle = Math.sin(pixelTime * 1.5 + wx) * 0.05;

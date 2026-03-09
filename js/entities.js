@@ -29,6 +29,8 @@ const SURVIVOR_CONFIG = {
     FOLLOW_DISTANCE: 1.5,
     FOLLOW_SPEED: 2.5,
     FOLLOW_THRESHOLD: 0.5,
+    REPATH_INTERVAL: 1.2,
+    STUCK_REPATH_INTERVAL: 0.4,
     COMBAT_RANGE: 2.5,
     COMBAT_DAMAGE: 8,
     COMBAT_COOLDOWN: 0.5,
@@ -241,7 +243,7 @@ function updateSurvivors(dt) {
                 if (!s.path || s.pathIndex >= s.path.length || s.repathTimer <= 0) {
                     s.path = pathfinder.findPath(s.x, s.y, targetX, targetY);
                     s.pathIndex = 0;
-                    s.repathTimer = 2.0;
+                    s.repathTimer = SURVIVOR_CONFIG.REPATH_INTERVAL;
                 }
                 if (followPath(s, dt)) {
                     s.isMoving = true;
@@ -322,6 +324,17 @@ function updateSurvivors(dt) {
 function followPath(entity, dt) {
     if (!entity.path || entity.pathIndex >= entity.path.length) return false;
 
+    // Path lookahead reduces zig-zagging and unsticks entities on short corners.
+    if (typeof pathfinder !== 'undefined' && entity.pathIndex < entity.path.length - 1) {
+        for (let i = entity.path.length - 1; i > entity.pathIndex; i--) {
+            const candidate = entity.path[i];
+            if (pathfinder.hasDirectPath(entity.x, entity.y, candidate.x, candidate.y, 0.28)) {
+                entity.pathIndex = i;
+                break;
+            }
+        }
+    }
+
     const target = entity.path[entity.pathIndex];
     if (!target) return false;
 
@@ -394,6 +407,18 @@ function updateSurvivorIdleMode(s, dt) {
             if (s.role === 'Woodcutter') isTargetStillValid = (targetTile === TILES.TREE);
             else if (s.role === 'Miner') isTargetStillValid = (targetTile === TILES.STONE || targetTile === TILES.IRON);
             else if (s.role === 'Farmer') isTargetStillValid = (targetTile === TILES.FARM);
+            else if (s.role === 'Builder') {
+                const b = s.taskTarget.building;
+                isTargetStillValid = !!(b && b.health !== undefined && b.maxHealth !== undefined && b.health < b.maxHealth);
+            } else if (s.role === 'Medic') {
+                const targetEntity = s.taskTarget.entity ||
+                    (s.taskTarget.isPlayer ? player : null);
+                if (targetEntity && targetEntity.health !== undefined && targetEntity.maxHealth !== undefined) {
+                    isTargetStillValid = targetEntity.health < targetEntity.maxHealth * 0.95;
+                } else {
+                    isTargetStillValid = player.health < player.maxHealth * 0.95;
+                }
+            }
 
             if (!isTargetStillValid) {
                 s.state = 'IDLE';
@@ -411,6 +436,12 @@ function updateSurvivorIdleMode(s, dt) {
                 } else {
                     moveTarget = node;
                 }
+            } else if ((s.repathTimer || 0) <= 0) {
+                s.path = pathfinder.findPath(s.x, s.y, s.taskTarget.x, s.taskTarget.y);
+                s.pathIndex = 0;
+                s.repathTimer = SURVIVOR_CONFIG.REPATH_INTERVAL;
+            } else {
+                s.repathTimer -= dt;
             }
 
             const dx = moveTarget.x - s.x;
@@ -418,14 +449,28 @@ function updateSurvivorIdleMode(s, dt) {
             const distSq = (s.taskTarget.x - s.x) ** 2 + (s.taskTarget.y - s.y) ** 2;
 
             if (distSq < 1.0) { // Reached target
-                s.state = 'WORKING';
-                s.taskTimer = 0;
+                if (isCombatRole(s.role)) {
+                    s.state = 'IDLE';
+                    s.taskTarget = null;
+                    s.path = null;
+                } else {
+                    s.state = 'WORKING';
+                    s.taskTimer = 0;
+                }
             } else {
                 const dist = Math.sqrt((moveTarget.x - s.x) ** 2 + (moveTarget.y - s.y) ** 2);
                 if (dist > 0.1) {
                     const speed = SURVIVOR_CONFIG.WANDER_SPEED * dt;
                     if (tryMoveEntity(s, (dx / dist) * speed, (dy / dist) * speed)) {
                         s.isMoving = true;
+                        s.moveFailTimer = 0;
+                    } else {
+                        s.moveFailTimer = (s.moveFailTimer || 0) + dt;
+                        if (s.moveFailTimer >= SURVIVOR_CONFIG.STUCK_REPATH_INTERVAL) {
+                            s.path = pathfinder.findPath(s.x, s.y, s.taskTarget.x, s.taskTarget.y);
+                            s.pathIndex = 0;
+                            s.moveFailTimer = 0;
+                        }
                     }
                 }
             }
@@ -473,15 +518,48 @@ function findTaskTarget(s) {
     let target = null;
 
     switch (s.role) {
+        case 'Builder': {
+            let damaged = null;
+            let bestDist = Infinity;
+            for (const b of buildings) {
+                if (!b || b.health === undefined || b.maxHealth === undefined) continue;
+                if (b.health >= b.maxHealth) continue;
+                const d = (b.x + 0.5 - s.x) ** 2 + (b.y + 0.5 - s.y) ** 2;
+                if (d < bestDist) {
+                    bestDist = d;
+                    damaged = { x: b.x + 0.5, y: b.y + 0.5, building: b };
+                }
+            }
+            return damaged;
+        }
+        case 'Soldier':
+        case 'Hunter': {
+            let nearest = null;
+            let minDist = (s.role === 'Hunter' ? 16 : 12) ** 2;
+            for (const z of zombies) {
+                if (!z || z.health <= 0) continue;
+                const d = (z.x - s.x) ** 2 + (z.y - s.y) ** 2;
+                if (d < minDist) {
+                    minDist = d;
+                    nearest = { x: z.x, y: z.y };
+                }
+            }
+            if (nearest) return nearest;
+            return { x: player.x + (Math.random() - 0.5) * 6, y: player.y + (Math.random() - 0.5) * 6 };
+        }
         case 'Woodcutter': targetType = TILES.TREE; break;
         case 'Miner': targetType = TILES.STONE; break; // Scan stone primarily
         case 'Farmer': targetType = TILES.FARM; break;
         case 'Medic':
             // Heal player if needed
-            if (player.health < player.maxHealth * 0.8) return { x: player.x, y: player.y };
+            if (player.health < player.maxHealth * 0.8) {
+                return { x: player.x, y: player.y, entity: player, isPlayer: true };
+            }
             // Or heal other survivors
             for (const other of survivors) {
-                if (other !== s && other.health < other.maxHealth * 0.8) return { x: other.x, y: other.y };
+                if (other !== s && other.health < other.maxHealth * 0.8) {
+                    return { x: other.x, y: other.y, entity: other };
+                }
             }
             return null;
         case 'Guard':
@@ -564,13 +642,26 @@ function performTaskWork(s) {
             spawnParticles(s.x, s.y - 0.5, '#90ee90', 5);
             addDamageNumber(s.x, s.y - 0.5, '+1', '#90ee90');
             break;
+        case 'Builder':
+            if (s.taskTarget.building && s.taskTarget.building.health !== undefined) {
+                const b = s.taskTarget.building;
+                const before = b.health;
+                b.health = Math.min(b.maxHealth || b.health, b.health + 12);
+                if (b.health > before) {
+                    spawnParticles(s.x, s.y - 0.5, '#66ccff', 5);
+                    addDamageNumber(s.x, s.y - 0.5, '+repair', '#66ccff');
+                }
+            }
+            break;
         case 'Medic':
             // Heal nearby target
-            if (s.taskTarget.health !== undefined) {
-                s.taskTarget.health = Math.min(s.taskTarget.maxHealth, s.taskTarget.health + 10);
-                showNotification(`Medic ${s.name} healed someone!`);
+            if (s.taskTarget.entity && s.taskTarget.entity.health !== undefined) {
+                const healed = s.taskTarget.entity;
+                healed.health = Math.min(healed.maxHealth, healed.health + 10);
+                spawnParticles(s.x, s.y - 0.5, '#77ffcc', 4);
             } else if (distSq(s, player) < 4) {
                 player.health = Math.min(player.maxHealth, player.health + 10);
+                spawnParticles(s.x, s.y - 0.5, '#77ffcc', 4);
             }
             break;
     }
@@ -590,14 +681,24 @@ function updateSurvivorCombat(s, dt) {
         return;
     }
 
+    const range = s.role === 'Hunter' ? SURVIVOR_CONFIG.COMBAT_RANGE + 1 : SURVIVOR_CONFIG.COMBAT_RANGE;
+    const damage = s.role === 'Soldier' ? SURVIVOR_CONFIG.COMBAT_DAMAGE + 2 : SURVIVOR_CONFIG.COMBAT_DAMAGE;
+    let target = null;
+    let nearest = range;
+
     for (const z of zombies) {
+        if (!z || z.health <= 0) continue;
         const dist = Math.sqrt((z.x - s.x) ** 2 + (z.y - s.y) ** 2);
-        if (dist < SURVIVOR_CONFIG.COMBAT_RANGE) {
-            z.health -= SURVIVOR_CONFIG.COMBAT_DAMAGE;
-            addDamageNumber(z.x, z.y - 0.3, SURVIVOR_CONFIG.COMBAT_DAMAGE, '#00ff00');
-            s.attackCooldown = SURVIVOR_CONFIG.COMBAT_COOLDOWN;
-            break;
+        if (dist < nearest) {
+            nearest = dist;
+            target = z;
         }
+    }
+
+    if (target) {
+        target.health -= damage;
+        addDamageNumber(target.x, target.y - 0.3, damage, '#00ff00');
+        s.attackCooldown = SURVIVOR_CONFIG.COMBAT_COOLDOWN;
     }
 }
 

@@ -17,6 +17,39 @@ const ANIMAL_PALETTE = {
     }
 };
 
+const SHEEP_REFERENCE_SCALE = 1.0;
+const ANIMAL_SCALE_RELATIVE_TO_SHEEP = {
+    sheep: 0.9,
+    pig: 1.0,
+    chicken: 0.68,
+    rooster: 0.74,
+    chick: 0.5,
+    cow: 1.12
+};
+
+const ANIMAL_MOVING_FRAME_CAP = {
+    sheep: 4,
+    pig: 4,
+    chick: 4,
+    cow: 4,
+    chicken: 6,
+    rooster: 6
+};
+
+const ANIMAL_FOOT_RATIO = {
+    sheep: 0.81,
+    pig: 0.81,
+    chick: 0.81,
+    chicken: 0.78,
+    rooster: 0.78,
+    cow: 0.67,
+    slime: 0.63
+};
+
+// Sprite sheet direction rows in this project:
+// row 0 = Down, row 1 = Up, row 2 = Left, row 3 = Right
+const ANIMAL_DIRECTION_TO_ROW = [3, 0, 2, 1]; // dir 0/1/2/3 => row
+
 // Main render function - called from pet-system.js
 window.renderAnimalSprite = function (ctx, animal, cam) {
     const s = TILE_SIZE * SCALE;
@@ -74,9 +107,15 @@ window.renderAnimalSprite = function (ctx, animal, cam) {
 
 function renderAnimatedAnimalSprite(ctx, animal, img, sx, sy, s) {
     const isSlime = animal.type?.id === 'slime';
+    const typeId = animal.type?.id || animal.typeId?.toLowerCase() || 'sheep';
     const size = animal.size || 1.0;
-    // Visually scale slimes significantly
-    const drawSize = s * size * (isSlime ? 2.2 : 1.5);
+
+    let drawScale = size * 2.2;
+    if (!isSlime) {
+        const relativeScale = ANIMAL_SCALE_RELATIVE_TO_SHEEP[typeId];
+        drawScale = 1.5 * (relativeScale || SHEEP_REFERENCE_SCALE);
+    }
+    const drawSize = s * drawScale;
 
     // Dynamic detection of rows and cols
     // Assumption: Frames are roughly square or the sheet uses standard rows (1, 4, or 8)
@@ -88,37 +127,59 @@ function renderAnimatedAnimalSprite(ctx, animal, img, sx, sy, s) {
     const cols = Math.round(img.width / frameH);
     const frameW = img.width / cols;
 
+    const motionX = (animal.x ?? 0) - (animal.prevX ?? animal.x ?? 0);
+    const motionY = (animal.y ?? 0) - (animal.prevY ?? animal.y ?? 0);
+    const hasPositionDelta = (motionX * motionX + motionY * motionY) > 1e-4;
+
     let dir = animal.direction;
+    if (hasPositionDelta && (isSlime || !!animal.isMoving)) {
+        if (Math.abs(motionX) > Math.abs(motionY)) dir = motionX > 0 ? 0 : 2;
+        else dir = motionY > 0 ? 1 : 3;
+        // Keep logical facing synced with real displacement so idle pose does not snap.
+        animal.direction = dir;
+    }
     if (dir === undefined || dir === null) dir = 1;
 
-    // Mapping: 0=Right, 1=Down, 2=Left, 3=Up
-    // Target Rows: 0=Down, 1=Left, 2=Right, 3=Up
-    let row = 0;
-    if (dir === 1) row = 0;        // Down
-    else if (dir === 2) row = 1;   // Left
-    else if (dir === 0) row = 2;   // Right
-    else if (dir === 3) row = 3;   // Up
+    // Internal direction enum: 0=Right, 1=Down, 2=Left, 3=Up
+    let row = ANIMAL_DIRECTION_TO_ROW[dir] ?? 0;
 
-    // If moving, offset by 4 rows IF we have enough rows
-    if (animal.isMoving && rows >= 8) {
+    const isMoving = isSlime
+        ? (animal.bouncePhase === 2 || !!animal.isMoving)
+        : !!animal.isMoving;
+
+    // For 8-row sheets used by these animals:
+    // top half (0-3) is walk cycle, bottom half (4-7) is idle/alt.
+    if (!isMoving && rows >= 8) {
         row += 4;
     }
 
     // Special case for single-row sheets or forced rows
     if (rows === 1) row = 0;
 
-    const frameCount = cols;
+    let frameCount = cols;
+    if (!isMoving) {
+        frameCount = 1; // Keep animals in true idle pose when not moving
+    } else if (rows >= 8) {
+        frameCount = Math.max(1, Math.min(cols, ANIMAL_MOVING_FRAME_CAP[typeId] || cols));
+    }
     // Faster, snappier animations for slimes
     const animSpeed = isSlime ? 12 : 8;
-    const frame = Math.floor((animal.animTimer || 0) * animSpeed) % frameCount;
+    const frame = isMoving
+        ? Math.floor((animal.animTimer || 0) * animSpeed) % frameCount
+        : 0;
 
     const sourceX = frame * frameW;
     const sourceY = row * frameH;
 
-    // Grounded placement
-    const dx = sx - drawSize / 2;
-    // Lower grounding for slimes to make them look more "squashed" on the grass
-    const dy = sy - drawSize * (isSlime ? 0.75 : 0.85);
+    const centerX = sx + s * 0.5;
+    const groundY = sy + s * 0.82;
+
+    const footRatio = ANIMAL_FOOT_RATIO[typeId] ?? (isSlime ? 0.63 : 0.8);
+    renderEntityShadow(ctx, centerX, groundY, s * (isSlime ? 0.42 * size : 0.34 * (drawScale / 1.5)));
+
+    // Place the sprite so the detected feet row lands on the same ground as its shadow.
+    const dx = centerX - drawSize / 2;
+    const dy = groundY - drawSize * footRatio;
 
     if (sourceY + frameH <= img.height && sourceX + frameW <= img.width) {
         ctx.drawImage(
@@ -131,6 +192,10 @@ function renderAnimatedAnimalSprite(ctx, animal, img, sx, sy, s) {
     }
 }
 
+function getProceduralFacingSign(direction) {
+    return direction === 2 ? -1 : 1;
+}
+
 // ============= SHEEP SPRITE =============
 function renderSheepSprite(ctx, animal, sx, sy, s) {
     const p = ANIMAL_PALETTE.sheep;
@@ -138,7 +203,7 @@ function renderSheepSprite(ctx, animal, sx, sy, s) {
     const w = s * size;
     const cx = sx + s * 0.5;
     const cy = sy + s * 0.55;
-    const dir = animal.direction || 1;
+    const dir = getProceduralFacingSign(animal.direction);
 
     // Animation
     const walkCycle = animal.isMoving ? Math.sin(animal.animTimer * 10) : 0;
@@ -231,7 +296,7 @@ function renderChickenSprite(ctx, animal, sx, sy, s) {
     const w = s * size;
     const cx = sx + s * 0.5;
     const cy = sy + s * 0.6;
-    const dir = animal.direction || 1;
+    const dir = getProceduralFacingSign(animal.direction);
 
     // Animation - pecking and walking
     const walkCycle = animal.isMoving ? Math.sin(animal.animTimer * 15) : 0;
@@ -351,7 +416,7 @@ function renderPigSprite(ctx, animal, sx, sy, s) {
     const w = s * size;
     const cx = sx + s * 0.5;
     const cy = sy + s * 0.55;
-    const dir = animal.direction || 1;
+    const dir = getProceduralFacingSign(animal.direction);
 
     // Animation
     const walkCycle = animal.isMoving ? Math.sin(animal.animTimer * 8) : 0;

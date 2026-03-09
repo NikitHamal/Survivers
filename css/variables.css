@@ -1,32 +1,38 @@
 :root {
-    /* Main Palette */
-    --primary-gold: #f1c40f;
-    --primary-gold-rgb: 241, 196, 15;
-    --primary-orange: #e67e22;
-    --primary-blue: #3498db;
-    --success: #2ecc71;
-    --danger: #e74c3c;
-    --info: #00d2ff;
+    /* Modern, Sophisticated Palette */
+    --primary-gold: #e5b500;
+    --primary-gold-rgb: 229, 181, 0;
+    --primary-orange: #d35400;
+    --primary-blue: #2980b9;
+    --success: #27ae60;
+    --danger: #c0392b;
+    --info: #0097e6;
 
-    /* Backgrounds */
-    --bg-dark: #0a0a15;
-    --bg-panel: rgba(15, 16, 26, 0.9);
-    --bg-card: rgba(255, 255, 255, 0.03);
+    /* Sleek Backgrounds (Glassmorphism ready) */
+    --bg-dark: #07070a;
+    --bg-panel: rgba(12, 12, 16, 0.85);
+    --bg-card: rgba(255, 255, 255, 0.02);
+    --bg-hover: rgba(255, 255, 255, 0.06);
 
-    /* Borders */
-    --border-main: rgba(255, 255, 255, 0.1);
-    --border-bright: rgba(255, 255, 255, 0.2);
+    /* Minimalist Borders */
+    --border-main: rgba(255, 255, 255, 0.08);
+    --border-bright: rgba(255, 255, 255, 0.15);
+    --border-accent: rgba(229, 181, 0, 0.3);
 
-    /* Text */
-    --text-main: #ffffff;
-    --text-sub: #b2bec3;
-    --text-dim: #636e72;
+    /* High Contrast Text */
+    --text-main: #f5f6fa;
+    --text-sub: #a4b0be;
+    --text-dim: #747d8c;
 
-    /* Effects */
-    --shadow-main: 0 10px 30px rgba(0, 0, 0, 0.5);
+    /* Modern UI Effects */
+    --shadow-main: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
+    
+    /* Compact Radiuses */
     --border-radius-sm: 4px;
-    --border-radius-md: 8px;
-    --border-radius-lg: 16px;
+    --border-radius-md: 6px;
+    --border-radius-lg: 12px;
+    --border-radius-pill: 30px;
 
     /* Legacy compatibility mappings */
     --primary-color: var(--primary-gold);

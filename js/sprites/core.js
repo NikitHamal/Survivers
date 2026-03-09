@@ -123,3 +123,49 @@ function renderEntityShadow(ctx, cx, cy, radius) {
     ctx.ellipse(cx, cy, radius, radius * 0.4, 0, 0, Math.PI * 2);
     ctx.fill();
 }
+
+// Cache per-image non-transparent bounds so large sprites can be grounded by
+// their visible pixels instead of transparent padding.
+const trimmedImageCache = new WeakMap();
+const trimProbeCanvas = document.createElement('canvas');
+const trimProbeCtx = trimProbeCanvas.getContext('2d', { willReadFrequently: true });
+
+function getTrimmedImageMetrics(img) {
+    if (!img || !img.complete || img.naturalWidth <= 0 || img.naturalHeight <= 0) return null;
+
+    const cached = trimmedImageCache.get(img);
+    if (cached) return cached;
+
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+    trimProbeCanvas.width = w;
+    trimProbeCanvas.height = h;
+    trimProbeCtx.clearRect(0, 0, w, h);
+
+    try {
+        trimProbeCtx.drawImage(img, 0, 0, w, h);
+        const pixels = trimProbeCtx.getImageData(0, 0, w, h).data;
+
+        let minX = w, minY = h, maxX = -1, maxY = -1;
+        for (let i = 3; i < pixels.length; i += 4) {
+            if (pixels[i] === 0) continue;
+            const p = (i - 3) / 4;
+            const x = p % w;
+            const y = Math.floor(p / w);
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+        }
+
+        const metrics = (maxX < minX || maxY < minY)
+            ? { srcX: 0, srcY: 0, srcW: w, srcH: h }
+            : { srcX: minX, srcY: minY, srcW: maxX - minX + 1, srcH: maxY - minY + 1 };
+
+        trimmedImageCache.set(img, metrics);
+        return metrics;
+    } catch (err) {
+        console.warn('Sprite trim probe failed:', err);
+        return { srcX: 0, srcY: 0, srcW: w, srcH: h };
+    }
+}

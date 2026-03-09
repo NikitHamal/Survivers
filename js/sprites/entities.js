@@ -6,6 +6,9 @@ function renderPlayerEnhanced(renderX, renderY, camX, camY) {
     const sx = renderX * s - camX;
     const sy = (renderY + 0.5) * s - camY;
 
+    // Player-controlled shadow to keep body/shadow alignment consistent.
+    renderEntityShadow(ctx, sx, sy, s * 0.34);
+
     // Hit flash
     if (player.hitTimer > 0) {
         ctx.globalAlpha = 0.5 + Math.sin(player.hitTimer * 30) * 0.3;
@@ -74,7 +77,7 @@ function renderPlayerEnhanced(renderX, renderY, camX, camY) {
 
             // Anchoring at feet: Bottom center of frame is at (sx, sy)
             const dx = sx - drawSize / 2;
-            const dy = sy - drawSize * 0.85; // Adjusted to ground precisely on the tile
+            const dy = sy - drawSize * 0.69; // Match swordsman sheet foot anchor
 
             ctx.drawImage(img, sourceX, sourceY, frameW, frameH, dx, dy, drawSize, drawSize);
         }

@@ -61,7 +61,9 @@ function selectInventorySlot(idx) {
 
 function showNotification(text, buttons = []) {
     const notif = document.getElementById('notification');
-    document.getElementById('notifText').innerHTML = text;
+    // Strip out <i> tags which break text alignment in the new layout
+    const cleanText = text.replace(/<i[^>]*>.*?<\/i>/g, '').trim();
+    document.getElementById('notifText').innerHTML = cleanText;
 
     const btnContainer = document.getElementById('notifButtons');
     btnContainer.innerHTML = '';
@@ -143,6 +145,9 @@ function canBuild(x, y, buildingType = null, ignorePos = null) {
 
     const tile = getTile(x, y);
     const dist = Math.sqrt((x + 0.5 - player.x) ** 2 + (y + 0.5 - player.y) ** 2);
+    const MAX_BUILD_DISTANCE = 6;
+
+    if (!ignorePos && dist > MAX_BUILD_DISTANCE) return false;
 
     // Houses are 2x2
     if (type.tile === TILES.HOUSE) {

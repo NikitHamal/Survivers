@@ -6,7 +6,11 @@ const AI_CONFIG = {
     COHESION_FORCE: 0.1,
     OBSTACLE_AVOIDANCE_FORCE: 4.0,
     PATH_FOLLOW_FORCE: 2.0,
-    MAX_STEER_FORCE: 5.0
+    MAX_STEER_FORCE: 5.0,
+    ZOMBIE_REPATH_BASE: 0.8,
+    ZOMBIE_REPATH_JITTER: 0.4,
+    ZOMBIE_STUCK_REPATH: 0.35,
+    ZOMBIE_TARGET_SHIFT_REPATH: 1.0
 };
 
 class SteeringBehavior {
@@ -93,6 +97,7 @@ class EntityAI {
         this.repathTimer = 0;
         this.stuckTimer = 0;
         this.lastPos = { x: 0, y: 0 };
+        this.lastTargetPos = null;
     }
 
     update(dt) {
@@ -101,6 +106,18 @@ class EntityAI {
 
     followPath(dt) {
         if (!this.path || this.pathIndex >= this.path.length) return null;
+
+        if (typeof pathfinder !== 'undefined' &&
+            typeof pathfinder.hasDirectPath === 'function' &&
+            this.pathIndex < this.path.length - 1) {
+            for (let i = this.path.length - 1; i > this.pathIndex; i--) {
+                const node = this.path[i];
+                if (pathfinder.hasDirectPath(this.entity.x, this.entity.y, node.x, node.y, 0.28)) {
+                    this.pathIndex = i;
+                    break;
+                }
+            }
+        }
 
         const node = this.path[this.pathIndex];
         const distSq = (node.x - this.entity.x) ** 2 + (node.y - this.entity.y) ** 2;
@@ -180,23 +197,39 @@ class ZombieAI extends EntityAI {
 
     updateNightBehavior(dt) {
         this.repathTimer -= dt;
+        const nextTarget = this.findTarget();
+        const targetChanged = nextTarget !== this.target;
+        this.target = nextTarget;
 
-        // Find target
-        if (!this.target || this.repathTimer <= 0) {
-            this.target = this.findTarget();
-            this.repathTimer = 2.0 + Math.random();
+        if (!this.target) {
+            this.path = null;
+            this.pathIndex = 0;
+            this.moveTarget = null;
+            this.lastTargetPos = null;
+            return;
+        }
 
-            // Generate path
-            if (this.target) {
-                // Check direct line of sight first
-                if (this.hasLineOfSight(this.target)) {
-                    this.path = null;
-                    this.moveTarget = { x: this.target.x, y: this.target.y };
-                } else {
-                    this.path = pathfinder.findPath(this.entity.x, this.entity.y, this.target.x, this.target.y);
-                    this.pathIndex = 0;
-                }
+        const targetShiftSq = this.lastTargetPos
+            ? (this.target.x - this.lastTargetPos.x) ** 2 + (this.target.y - this.lastTargetPos.y) ** 2
+            : Infinity;
+        const targetMoved = targetShiftSq >= (AI_CONFIG.ZOMBIE_TARGET_SHIFT_REPATH ** 2);
+        const needsPathRefresh = targetChanged ||
+            !this.path ||
+            this.pathIndex >= this.path.length ||
+            this.repathTimer <= 0 ||
+            targetMoved;
+
+        if (needsPathRefresh) {
+            if (this.hasLineOfSight(this.target)) {
+                this.path = null;
+                this.pathIndex = 0;
+                this.moveTarget = { x: this.target.x, y: this.target.y };
+            } else {
+                this.path = pathfinder.findPath(this.entity.x, this.entity.y, this.target.x, this.target.y);
+                this.pathIndex = 0;
             }
+            this.lastTargetPos = { x: this.target.x, y: this.target.y };
+            this.repathTimer = AI_CONFIG.ZOMBIE_REPATH_BASE + Math.random() * AI_CONFIG.ZOMBIE_REPATH_JITTER;
         }
 
         // Follow path
@@ -209,6 +242,10 @@ class ZombieAI extends EntityAI {
             }
         } else if (this.target) {
             this.moveTarget = { x: this.target.x, y: this.target.y };
+        }
+
+        if (this.checkStuck(dt)) {
+            this.repathTimer = Math.min(this.repathTimer, AI_CONFIG.ZOMBIE_STUCK_REPATH);
         }
 
         // Attack logic
@@ -236,7 +273,7 @@ class ZombieAI extends EntityAI {
         const dy = this.entity.y - player.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist < ZOMBIE_CONFIG.FLEE_RANGE) {
+        if (dist < ZOMBIE_CONFIG.FLEE_RANGE && dist > 0.001) {
             // Flee target position
             this.moveTarget = {
                 x: this.entity.x + (dx / dist) * 10,
@@ -264,15 +301,19 @@ class ZombieAI extends EntityAI {
     }
 
     hasLineOfSight(target) {
-        // Raycast check (simplified)
-        // Ideally use Bresenham's or step ray
-        const steps = 10;
-        const dx = (target.x - this.entity.x) / steps;
-        const dy = (target.y - this.entity.y) / steps;
+        if (typeof pathfinder !== 'undefined' && typeof pathfinder.hasDirectPath === 'function') {
+            return pathfinder.hasDirectPath(this.entity.x, this.entity.y, target.x, target.y, 0.28);
+        }
+
+        const dx = target.x - this.entity.x;
+        const dy = target.y - this.entity.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const steps = Math.max(2, Math.ceil(dist / 0.5));
 
         for (let i = 1; i < steps; i++) {
-            const tx = this.entity.x + dx * i;
-            const ty = this.entity.y + dy * i;
+            const t = i / steps;
+            const tx = this.entity.x + dx * t;
+            const ty = this.entity.y + dy * t;
             if (isSolidAt(tx, ty, 0.1)) return false;
         }
         return true;

@@ -11,62 +11,67 @@
 
 #notification {
     position: absolute;
-    top: 50%;
+    top: 65px;
     left: 50%;
-    transform: translate(-50%, -50%);
-    background: var(--bg-panel);
-    border: 3px solid var(--primary-gold);
-    padding: 35px 50px;
+    transform: translateX(-50%);
+    background: rgba(12, 12, 16, 0.95);
+    border: 1px solid var(--border-main);
+    padding: 12px 24px;
     color: var(--text-main);
     text-align: center;
     display: none;
     z-index: 1500;
-    border-radius: var(--border-radius-lg);
-    max-width: 550px;
-    box-shadow: 0 0 100px rgba(0, 0, 0, 0.9);
-    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-radius: var(--border-radius-pill);
+    max-width: 400px;
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(20px);
+    animation: slideDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    font-size: 13px;
+    font-weight: 600;
 }
 
-@keyframes popIn {
-    from {
-        opacity: 0;
-        transform: translate(-50%, -60%) scale(0.9);
-    }
-
-    to {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-    }
+@keyframes slideDown {
+    from { opacity: 0; transform: translate(-50%, -20px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 .notif-btn {
-    margin: 20px 10px 0;
-    padding: 12px 30px;
+    margin: 8px 4px 0;
+    padding: 6px 16px;
     background: var(--bg-card);
-    border: 2px solid var(--border-main);
+    border: 1px solid var(--border-main);
     color: var(--text-main);
     cursor: pointer;
-    border-radius: var(--border-radius-sm);
+    border-radius: var(--border-radius-pill);
     font-family: inherit;
-    font-weight: 600;
-    transition: all 0.2s;
+    font-weight: 500;
+    font-size: 11px;
+    transition: all 0.2s ease;
 }
 
 .notif-btn:hover {
-    border-color: var(--primary-gold);
-    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--border-bright);
+    background: var(--bg-hover);
 }
 
 .notif-btn.accept {
-    background: var(--success);
-    border: none;
-    color: #0f101a;
+    background: rgba(39, 174, 96, 0.2);
+    border-color: rgba(39, 174, 96, 0.4);
+    color: var(--success);
+}
+
+.notif-btn.accept:hover {
+    background: rgba(39, 174, 96, 0.3);
 }
 
 .notif-btn.reject {
-    background: var(--danger);
-    border: none;
-    color: white;
+    background: rgba(192, 57, 43, 0.2);
+    border-color: rgba(192, 57, 43, 0.4);
+    color: var(--danger);
+}
+
+.notif-btn.reject:hover {
+    background: rgba(192, 57, 43, 0.3);
 }
 
 #startScreen,
@@ -82,75 +87,99 @@
     justify-content: center;
     z-index: 2000;
     text-align: center;
+    backdrop-filter: blur(10px);
 }
 
 #startScreen {
-    background: radial-gradient(circle, #1a1a2e 0%, #0a0a15 100%);
+    background: rgba(7, 7, 10, 0.85);
 }
 
 #startScreen h1 {
-    color: var(--primary-gold);
-    font-size: 64px;
-    margin-bottom: 30px;
-    text-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
-    letter-spacing: 8px;
+    color: var(--text-main);
+    font-size: 42px;
+    margin-bottom: 16px;
+    letter-spacing: 4px;
     text-transform: uppercase;
+    font-weight: 600;
 }
 
 #startScreen p {
     color: var(--text-sub);
-    max-width: 700px;
-    line-height: 1.6;
-    margin-bottom: 20px;
+    max-width: 500px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+    font-size: 13px;
 }
 
 .controls-info {
     color: var(--text-dim);
-    font-size: 13px;
-    margin-top: 30px;
-    background: rgba(255, 255, 255, 0.02);
-    padding: 20px 40px;
+    font-size: 11px;
+    margin-top: 24px;
+    background: var(--bg-card);
+    padding: 16px 32px;
     border-radius: var(--border-radius-md);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-main);
+    line-height: 2.2;
 }
 
 .controls-info span {
-    color: var(--primary-orange);
-    font-weight: bold;
+    color: var(--text-main);
+    font-weight: 600;
+    background: rgba(255,255,255,0.05);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.1);
+    display: inline-block;
+    line-height: 1.2;
 }
 
 #startBtn {
-    margin-top: 50px;
-    padding: 20px 80px;
-    font-size: 28px;
-    background: linear-gradient(180deg, var(--success), #27ae60);
-    border: 4px solid var(--primary-gold);
-    color: #fff;
+    margin-top: 32px;
+    padding: 12px 48px;
+    font-size: 16px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: var(--text-main);
     cursor: pointer;
     font-family: inherit;
-    font-weight: 900;
-    border-radius: var(--border-radius-lg);
+    font-weight: 600;
+    border-radius: var(--border-radius-pill);
     text-transform: uppercase;
-    letter-spacing: 4px;
+    letter-spacing: 2px;
+    transition: all 0.3s ease;
+}
+
+#startBtn:hover {
+    background: var(--text-main);
+    color: var(--bg-dark);
 }
 
 #gameOver {
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.95);
     display: none;
 }
 
 #gameOver h1 {
     color: var(--danger);
-    font-size: 80px;
-    text-shadow: 0 0 40px rgba(255, 71, 87, 0.5);
-    margin-bottom: 20px;
+    font-size: 48px;
+    margin-bottom: 16px;
+    letter-spacing: 2px;
 }
 
-#fpsCounter {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    color: var(--text-dim);
-    font-size: 11px;
-    opacity: 0.5;
+#retryBtn {
+    margin-top: 24px;
+    padding: 10px 32px;
+    font-size: 14px;
+    background: transparent;
+    border: 1px solid var(--border-main);
+    color: var(--text-main);
+    cursor: pointer;
+    font-family: inherit;
+    border-radius: var(--border-radius-pill);
+    transition: all 0.2s ease;
+}
+
+#retryBtn:hover {
+    background: var(--bg-hover);
+    border-color: var(--text-main);
 }

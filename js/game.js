@@ -208,6 +208,7 @@ function updatePlayerMovement(dt) {
     let moveX = 0;
     let moveY = 0;
     let usingKeyboard = false;
+    const PLAYER_RADIUS = 0.25;
 
     // Check movement keys
     if (isKeyDown('KeyW') || isKeyDown('ArrowUp')) { moveY = -1; usingKeyboard = true; }
@@ -222,6 +223,17 @@ function updatePlayerMovement(dt) {
 
     // If not using keyboard, follow click-to-move path
     if (!usingKeyboard && player.path && player.path.length > 0) {
+        // Aggressive lookahead: jump to the farthest visible waypoint.
+        if (typeof pathfinder !== 'undefined' && player.pathIndex < player.path.length - 1) {
+            for (let i = player.path.length - 1; i > player.pathIndex; i--) {
+                const candidate = player.path[i];
+                if (pathfinder.hasDirectPath(player.x, player.y, candidate.x, candidate.y, PLAYER_RADIUS)) {
+                    player.pathIndex = i;
+                    break;
+                }
+            }
+        }
+
         // CRITICAL FIX: Loop to handle reaching multiple waypoints in one frame
         // and immediately start moving to the next one
         while (player.pathIndex < player.path.length) {
@@ -267,9 +279,6 @@ function updatePlayerMovement(dt) {
         const newX = player.x + moveX * speed;
         const newY = player.y + moveY * speed;
 
-        // Smaller collision radius allows passing through 1-tile gaps
-        const PLAYER_RADIUS = 0.25;
-
         // Try full movement first
         let movedX = false;
         let movedY = false;
@@ -304,19 +313,18 @@ function updatePlayerMovement(dt) {
         if (!movedX && !movedY && player.path && player.pathIndex < player.path.length) {
             player.stuckTime = (player.stuckTime || 0) + dt;
 
-            if (player.stuckTime > 0.5) {
-                // Stuck for too long, try to repath
-                console.debug('Player stuck, attempting repath');
+            player.repathCooldown = Math.max(0, (player.repathCooldown || 0) - dt);
+            if (player.stuckTime > 0.35 && player.repathCooldown <= 0) {
+                // Stuck: immediate bounded re-path attempt.
                 const target = player.moveTarget;
                 if (target) {
-                    cancelPlayerPath();
-                    // Small delay before repathing to avoid spam
-                    setTimeout(() => {
-                        if (!player.path && target) {
-                            setPlayerMoveTarget(target.x, target.y);
-                        }
-                    }, 100);
+                    const repath = pathfinder.findPath(player.x, player.y, target.x, target.y);
+                    if (repath && repath.length > 0) {
+                        player.path = repath;
+                        player.pathIndex = 0;
+                    }
                 }
+                player.repathCooldown = 0.35;
                 player.stuckTime = 0;
             }
         } else {
@@ -710,36 +718,32 @@ function removeAllEventListeners() {
 function resize() {
     if (!canvas) return;
 
-    // Get device pixel ratio for high DPI support
-    const dpr = window.devicePixelRatio || 1;
-
     // Set display size
     const displayWidth = window.innerWidth;
     const displayHeight = window.innerHeight;
 
-    // Set actual size in memory (scaled for DPI)
-    canvas.width = displayWidth * dpr;
-    canvas.height = displayHeight * dpr;
+    // Use display-space canvas coordinates to keep culling/camera math consistent.
+    canvas.width = displayWidth;
+    canvas.height = displayHeight;
 
     // Scale canvas CSS to fit display
     canvas.style.width = displayWidth + 'px';
     canvas.style.height = displayHeight + 'px';
 
-    // Scale context to match DPI
     if (ctx) {
-        ctx.scale(dpr, dpr);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.imageSmoothingEnabled = false;
 
         // Fill background to prevent flickering
         ctx.fillStyle = '#1a2a1a';
-        ctx.fillRect(0, 0, displayWidth, displayHeight);
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
     // Store dimensions for rendering
     if (!canvas._displaySize) canvas._displaySize = {};
     canvas._displaySize.width = displayWidth;
     canvas._displaySize.height = displayHeight;
-    canvas._displaySize.dpr = dpr;
+    canvas._displaySize.dpr = 1;
 }
 
 // ============= GAME START/STOP =============
@@ -762,6 +766,15 @@ function startGame() {
         // Generate world
         seed = Date.now() % 100000;
         chunks.clear();
+        if (typeof chooseRandomStartingBaseOrigin === 'function' &&
+            typeof setStartingBaseOrigin === 'function') {
+            const baseOrigin = chooseRandomStartingBaseOrigin();
+            setStartingBaseOrigin(baseOrigin.x, baseOrigin.y);
+        }
+        player.x = startingBase.x;
+        player.y = startingBase.y;
+        player.prevX = startingBase.x;
+        player.prevY = startingBase.y;
         generateStartingBase();
 
         // Initialize player survivor entry
@@ -843,6 +856,8 @@ function resetGameState() {
     timeOfDay = 0.25; // Start in morning
     dayCount = 1;
     isNight = false;
+    startingBase.x = 0;
+    startingBase.y = 0;
 
     // Clear entities
     zombies = [];

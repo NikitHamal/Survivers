@@ -5,8 +5,8 @@
 }
 
 body {
-    background-color: #050510;
-    color: #eee;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
     font-family: 'Pixelify Sans', sans-serif;
     overflow: hidden;
     user-select: none;
@@ -30,24 +30,23 @@ body {
     max-height: 100%;
 }
 
-/* Premium Scrollbar */
+/* Minimal Scrollbar */
 ::-webkit-scrollbar {
-    width: 8px;
+    width: 4px;
+    height: 4px;
 }
 
 ::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--primary-gold);
-    border: 2px solid rgba(0, 0, 0, 0.2);
+    background: rgba(255, 255, 255, 0.15);
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    filter: brightness(1.2);
+    background: rgba(255, 255, 255, 0.3);
 }
 
 .hidden {
